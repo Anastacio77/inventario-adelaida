@@ -1914,24 +1914,14 @@ tipoTexto
 
 }
 
-function Q(v){
+function Q(v) {
+  const n = Number(v);
 
-const n=
-Number(v);
-
-return
-'Q'+
-(
-Number.isFinite(n)
-?
-n
-:
-0
-)
-.toFixed(
-2
-);
-
+  return 'Q' + (
+    Number.isFinite(n)
+      ? n
+      : 0
+  ).toFixed(2);
 }
 
 function L(v){
