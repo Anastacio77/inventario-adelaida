@@ -586,44 +586,49 @@ renderCarrito();
 
 function vista(v){
 
-function vista(v){
-
-  [
+  const secciones = [
     'pos',
     'ventas',
     'inventario',
     'nuevo',
     'config'
-  ]
-  .forEach(
-    n=>{
+  ];
 
-      const M=
-        n[0].toUpperCase()+
-        n.slice(1);
+  secciones.forEach(function(n){
 
-      document
-        .getElementById(
-          'vista'+M
-        )
-        .classList
-        .toggle(
-          'oculto',
-          n!==v
-        );
+    const M =
+      n.charAt(0).toUpperCase() +
+      n.slice(1);
 
-      document
-        .getElementById(
-          'tab'+M
-        )
-        .classList
-        .toggle(
-          'activo',
-          n===v
-        );
+    const contenido =
+      document.getElementById(
+        'vista' + M
+      );
+
+    const boton =
+      document.getElementById(
+        'tab' + M
+      );
+
+    if(contenido){
+
+      contenido.classList.toggle(
+        'oculto',
+        n !== v
+      );
 
     }
-  );
+
+    if(boton){
+
+      boton.classList.toggle(
+        'activo',
+        n === v
+      );
+
+    }
+
+  });
 
 }
   function auto(
