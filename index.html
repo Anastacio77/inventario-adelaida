@@ -14,7 +14,7 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ari
 .card,.header{background:#fff;border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 3px 14px rgba(0,0,0,.06)}
 h1{margin:0;font-size:24px}
 .sub{color:#666;margin-top:4px}
-.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px}
 button{border:0;border-radius:12px;padding:12px;font:inherit;font-weight:700;cursor:pointer}
 .tabs button{background:#e9e9ee}
 .tabs button.activo{background:#222;color:#fff}
@@ -89,7 +89,13 @@ label{display:block;font-size:13px;font-weight:700;margin-top:10px;margin-bottom
 </div>
 
 <div class="tabs">
-<button id="tabPos" class="activo" onclick="vista('pos')">🛒 Punto de venta</button>
+<button id="tabPos" class="activo" onclick="vista('pos')">🛒 Punto de venta</button><button
+  id="tabVentas"
+  onclick="vista('ventas');buscarVentas()">
+
+🧾 Ventas realizadas
+
+</button>
 <button id="tabInventario" onclick="vista('inventario')">Inventario</button>
 <button id="tabNuevo" onclick="vista('nuevo')">+ Producto</button>
 <button id="tabConfig" onclick="vista('config')">⚙ Configuración</button>
@@ -218,7 +224,79 @@ Nueva venta
 
 </div>
 
-<div id="vistaInventario" class="oculto">
+<div
+  id="vistaVentas"
+  class="oculto">
+
+<div class="card">
+
+<h3 style="margin-top:0">
+Ventas realizadas
+</h3>
+
+<div class="fila">
+
+<input
+  id="buscarVentaTexto"
+  placeholder="Número de venta, cliente, NIT o fecha"
+  onkeydown="if(event.key==='Enter')buscarVentas()">
+
+<button
+  class="btnNegro"
+  onclick="buscarVentas()">
+
+Buscar
+
+</button>
+
+</div>
+
+<div class="sub"
+style="margin-top:8px">
+
+Puede buscar por número de venta,
+cliente, NIT o fecha.
+
+</div>
+
+<div id="mensajeVentas"></div>
+
+<div id="listaVentas"></div>
+
+</div>
+
+
+<div
+  id="ticketHistorialCard"
+  class="card oculto">
+
+<div
+  id="ticketHistorial"
+  class="ticket">
+</div>
+
+<button
+  class="btnNegro noPrint"
+  style="width:100%;margin-top:10px"
+  onclick="window.print()">
+
+🖨 Reimprimir comprobante
+
+</button>
+
+<button
+  class="btnGris noPrint"
+  style="width:100%;margin-top:8px"
+  onclick="ticketHistorialCard.classList.add('oculto')">
+
+Cerrar
+
+</button>
+
+</div>
+
+</div>
+  <div id="vistaInventario" class="oculto">
 
 <div class="card">
 
@@ -508,45 +586,47 @@ renderCarrito();
 
 function vista(v){
 
-[
-'pos',
-'inventario',
-'nuevo',
-'config'
-]
-.forEach(
-n=>{
+function vista(v){
 
-const M=
-n[0].toUpperCase()+
-n.slice(1);
+  [
+    'pos',
+    'ventas',
+    'inventario',
+    'nuevo',
+    'config'
+  ]
+  .forEach(
+    n=>{
 
-document
-.getElementById(
-'vista'+M
-)
-.classList
-.toggle(
-'oculto',
-n!==v
-);
+      const M=
+        n[0].toUpperCase()+
+        n.slice(1);
 
-document
-.getElementById(
-'tab'+M
-)
-.classList
-.toggle(
-'activo',
-n===v
-);
+      document
+        .getElementById(
+          'vista'+M
+        )
+        .classList
+        .toggle(
+          'oculto',
+          n!==v
+        );
+
+      document
+        .getElementById(
+          'tab'+M
+        )
+        .classList
+        .toggle(
+          'activo',
+          n===v
+        );
+
+    }
+  );
 
 }
-);
-
-}
-
-function auto(
+  function auto(
 id,
 modo,
 getT,
@@ -1388,7 +1468,394 @@ msg(
 
 }
 
-function consultar(cod){
+function buscarVentas(){
+
+  const q=
+    document
+    .getElementById(
+      'buscarVentaTexto'
+    )
+    .value
+    .trim();
+
+  msg(
+    'mensajeVentas',
+    'Buscando ventas…',
+    'info'
+  );
+
+  api(
+    'buscarventas',
+    {
+      q:q
+    },
+    r=>{
+
+      if(!r.ok){
+
+        return msg(
+          'mensajeVentas',
+          r.error||
+          'No se pudo buscar.',
+          'error'
+        );
+      }
+
+      const ventas=
+        r.ventas||[];
+
+      listaVentas.innerHTML='';
+
+      if(!ventas.length){
+
+        return msg(
+          'mensajeVentas',
+          'No se encontraron ventas.',
+          'error'
+        );
+      }
+
+      mensajeVentas.innerHTML='';
+
+      ventas.forEach(
+        v=>{
+
+          const d=
+            document
+            .createElement(
+              'div'
+            );
+
+          d.className=
+            'cartItem';
+
+          d.innerHTML=
+
+            '<div class="cartTop">'+
+
+              '<div>'+
+
+                '<b>'+
+                  esc(
+                    v.numeroVenta
+                  )+
+                '</b>'+
+
+                '<div class="cartMeta">'+
+
+                  esc(
+                    v.fecha
+                  )+
+
+                  ' · '+
+
+                  esc(
+                    v.cliente||
+                    'CF'
+                  )+
+
+                  ' · '+
+
+                  esc(
+                    v.metodoPago
+                  )+
+
+                '</div>'+
+
+              '</div>'+
+
+              '<b>'+
+                Q(
+                  v.total
+                )+
+              '</b>'+
+
+            '</div>'+
+
+            '<div class="fila" style="margin-top:10px">'+
+
+              '<button class="btnGris" style="flex:1">'+
+                '👁 Ver comprobante'+
+              '</button>'+
+
+              '<button class="btnNegro" style="flex:1">'+
+                '🖨 Reimprimir'+
+              '</button>'+
+
+            '</div>';
+
+
+          const botones=
+            d.querySelectorAll(
+              'button'
+            );
+
+
+          botones[0].onclick=
+            ()=>abrirVenta(
+              v.numeroVenta,
+              false
+            );
+
+
+          botones[1].onclick=
+            ()=>abrirVenta(
+              v.numeroVenta,
+              true
+            );
+
+
+          listaVentas
+            .appendChild(
+              d
+            );
+
+        }
+      );
+
+    }
+  );
+}
+
+
+function abrirVenta(
+  numeroVenta,
+  imprimir
+){
+
+  msg(
+    'mensajeVentas',
+    'Cargando comprobante…',
+    'info'
+  );
+
+  api(
+    'detalleventa',
+    {
+      numeroVenta:
+        numeroVenta
+    },
+    r=>{
+
+      if(!r.ok){
+
+        return msg(
+          'mensajeVentas',
+          r.error||
+          'No se pudo cargar.',
+          'error'
+        );
+      }
+
+
+      let filas='';
+
+
+      (r.items||[])
+      .forEach(
+        x=>{
+
+          filas+=
+
+            '<tr>'+
+
+              '<td>'+
+
+                esc(
+                  x.modelo
+                )+
+
+                '<br>'+
+
+                '<small>'+
+
+                  esc(
+                    x.color
+                  )+
+
+                  ' T.'+
+
+                  esc(
+                    x.talla
+                  )+
+
+                '</small>'+
+
+              '</td>'+
+
+              '<td class="derecha">'+
+
+                x.cantidad+
+
+              '</td>'+
+
+              '<td class="derecha">'+
+
+                Q(
+                  x.subtotal
+                )+
+
+              '</td>'+
+
+            '</tr>';
+
+        }
+      );
+
+
+      ticketHistorial.innerHTML=
+
+        '<h2>COMERCIAL ADELAIDA</h2>'+
+
+        '<div class="centro">'+
+          'Comprobante de venta'+
+        '</div>'+
+
+        '<hr>'+
+
+        '<div>Venta: '+
+          esc(
+            r.numeroVenta
+          )+
+        '</div>'+
+
+        '<div>Fecha: '+
+          esc(
+            r.fecha
+          )+
+        '</div>'+
+
+        (
+          r.cliente
+          ?
+          '<div>Cliente: '+
+            esc(
+              r.cliente
+            )+
+          '</div>'
+          :
+          ''
+        )+
+
+        (
+          r.nit
+          ?
+          '<div>NIT: '+
+            esc(
+              r.nit
+            )+
+          '</div>'
+          :
+          ''
+        )+
+
+        '<hr>'+
+
+        '<table>'+
+          filas+
+        '</table>'+
+
+        '<hr>'+
+
+        '<div class="lineaTotal">'+
+          '<span>Subtotal</span>'+
+          '<b>'+
+            Q(
+              r.subtotal
+            )+
+          '</b>'+
+        '</div>'+
+
+        '<div class="lineaTotal">'+
+          '<span>Descuento</span>'+
+          '<b>'+
+            Q(
+              r.descuento
+            )+
+          '</b>'+
+        '</div>'+
+
+        '<div class="lineaTotal">'+
+          '<span>TOTAL</span>'+
+          '<b>'+
+            Q(
+              r.total
+            )+
+          '</b>'+
+        '</div>'+
+
+        '<div>Pago: '+
+          esc(
+            r.metodoPago
+          )+
+        '</div>'+
+
+        (
+          r.metodoPago===
+          'EFECTIVO'
+          ?
+          '<div>Recibido: '+
+            Q(
+              r.efectivoRecibido
+            )+
+          '</div>'+
+          '<div>Cambio: '+
+            Q(
+              r.cambio
+            )+
+          '</div>'
+          :
+          ''
+        )+
+
+        (
+          r.usuario
+          ?
+          '<div>Vendedor: '+
+            esc(
+              r.usuario
+            )+
+          '</div>'
+          :
+          ''
+        )+
+
+        '<hr>'+
+
+        '<div class="centro">'+
+          '¡Gracias por su compra!'+
+        '</div>';
+
+
+      ticketHistorialCard
+        .classList
+        .remove(
+          'oculto'
+        );
+
+
+      mensajeVentas.innerHTML='';
+
+
+      ticketHistorialCard
+        .scrollIntoView({
+          behavior:'smooth'
+        });
+
+
+      if(imprimir){
+
+        setTimeout(
+          ()=>window.print(),
+          300
+        );
+
+      }
+
+    }
+  );
+}
+  function consultar(cod){
 
 const c=
 (
