@@ -542,48 +542,79 @@ let ultimoTs=0;
 let t1=null;
 let t2=null;
 
-document.addEventListener(
-'DOMContentLoaded',
-()=>{
+document.addEventListener('DOMContentLoaded', function(){
 
-apiUrl.value=API_URL;
-apiClave.value=API_CLAVE;
+  const apiUrlEl =
+    document.getElementById('apiUrl');
 
-auto(
-'posCodigo',
-'pos',
-()=>t1,
-v=>t1=v
-);
+  const apiClaveEl =
+    document.getElementById('apiClave');
 
-auto(
-'codigo',
-'inv',
-()=>t2,
-v=>t2=v
-);
+  const posCodigoEl =
+    document.getElementById('posCodigo');
 
-posCodigo.addEventListener(
-'keydown',
-e=>{
-if(e.key==='Enter')agregar()
-}
-);
+  const codigoEl =
+    document.getElementById('codigo');
 
-codigo.addEventListener(
-'keydown',
-e=>{
-if(e.key==='Enter')consultar()
-}
-);
+  if(apiUrlEl){
+    apiUrlEl.value = API_URL;
+  }
 
-if(API_URL)probar();
+  if(apiClaveEl){
+    apiClaveEl.value = API_CLAVE;
+  }
 
-renderCarrito();
+  auto(
+    'posCodigo',
+    'pos',
+    ()=>t1,
+    v=>t1=v
+  );
 
-}
-);
+  auto(
+    'codigo',
+    'inv',
+    ()=>t2,
+    v=>t2=v
+  );
 
+  if(posCodigoEl){
+
+    posCodigoEl.addEventListener(
+      'keydown',
+      function(e){
+
+        if(e.key === 'Enter'){
+          agregar();
+        }
+
+      }
+    );
+
+  }
+
+  if(codigoEl){
+
+    codigoEl.addEventListener(
+      'keydown',
+      function(e){
+
+        if(e.key === 'Enter'){
+          consultar();
+        }
+
+      }
+    );
+
+  }
+
+  if(API_URL){
+    probar();
+  }
+
+  renderCarrito();
+
+});
 function vista(v){
 
   const secciones = [
@@ -2131,26 +2162,35 @@ r.codigo,
 
 function guardarConfig(){
 
-API_URL=
-apiUrl.value.trim();
+  const apiUrlEl =
+    document.getElementById('apiUrl');
 
-API_CLAVE=
-apiClave.value.trim();
+  const apiClaveEl =
+    document.getElementById('apiClave');
 
-localStorage.setItem(
-'adelaida_api_url',
-API_URL
-);
+  API_URL =
+    apiUrlEl
+      ? apiUrlEl.value.trim()
+      : '';
 
-localStorage.setItem(
-'adelaida_api_clave',
-API_CLAVE
-);
+  API_CLAVE =
+    apiClaveEl
+      ? apiClaveEl.value.trim()
+      : '';
 
-probar();
+  localStorage.setItem(
+    'adelaida_api_url',
+    API_URL
+  );
+
+  localStorage.setItem(
+    'adelaida_api_clave',
+    API_CLAVE
+  );
+
+  probar();
 
 }
-
 function probar(){
 
 api(
