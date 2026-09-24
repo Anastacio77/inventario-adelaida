@@ -473,6 +473,73 @@ label{
 
 }
 
+/* ===== IMPRESIÓN DE TICKET ===== */
+
+@page ticketMediaCarta {
+  size: 8.5in 5.5in;
+  margin: 0.25in;
+}
+
+@page ticketCartaVertical {
+  size: Letter portrait;
+  margin: 0.35in;
+}
+
+.ticket-media-carta{
+  page: ticketMediaCarta;
+}
+
+.ticket-carta-vertical{
+  page: ticketCartaVertical;
+}
+
+@media print{
+
+  body *{
+    visibility:hidden !important;
+  }
+
+  .ticket.imprimir,
+  .ticket.imprimir *{
+    visibility:visible !important;
+  }
+
+  .ticket.imprimir{
+    position:absolute;
+    left:0;
+    top:0;
+    margin:0;
+    width:100%;
+    max-width:none;
+    font-size:10px;
+    line-height:1.15;
+  }
+
+  .ticket.imprimir table{
+    width:100%;
+    border-collapse:collapse;
+  }
+
+  .ticket.imprimir th,
+  .ticket.imprimir td{
+    padding:2px 3px;
+    font-size:9px;
+  }
+
+  .ticket.imprimir h2{
+    font-size:18px;
+    margin:0 0 2px 0;
+  }
+
+  .ticket.imprimir hr{
+    margin:3px 0;
+  }
+
+  .noPrint{
+    display:none !important;
+  }
+
+}
 </style>
 
 </head>
@@ -968,9 +1035,18 @@ class="ticket">
 <button
 class="btnNegro noPrint w100"
 style="margin-top:10px"
-onclick="imprimirTicket('ticketHistorial')">
+onclick="imprimirTicket('ticketHistorial','MEDIA')">
 
-🖨 Reimprimir comprobante
+🖨 Media carta horizontal
+
+</button>
+
+<button
+class="btnGris noPrint w100"
+style="margin-top:8px"
+onclick="imprimirTicket('ticketHistorial','CARTA')">
+
+🖨 Carta vertical
 
 </button>
 
@@ -984,7 +1060,7 @@ Cerrar
 </button>
 
 </div>
-
+  
 </div>
 
 
@@ -3744,38 +3820,73 @@ function ticketHTML(
 
 }
 
-function imprimirTicket(id){
+function imprimirTicket(
+  id,
+  formato='MEDIA'
+){
 
   document
   .querySelectorAll(
     '.ticket'
   )
   .forEach(
-    x=>
-      x.classList
-      .remove(
-        'imprimir'
-      )
+    x=>{
+
+      x.classList.remove(
+        'imprimir',
+        'ticket-media-carta',
+        'ticket-carta-vertical'
+      );
+
+    }
   );
 
 
-  $(id)
-  .classList
-  .add(
+  const t=
+    document
+    .getElementById(id);
+
+
+  if(!t){
+    return;
+  }
+
+
+  t.classList.add(
     'imprimir'
   );
+
+
+  if(
+    formato==='CARTA'
+  ){
+
+    t.classList.add(
+      'ticket-carta-vertical'
+    );
+
+  }else{
+
+    t.classList.add(
+      'ticket-media-carta'
+    );
+
+  }
 
 
   window.print();
 
 
   setTimeout(
-    ()=>
-      $(id)
-      .classList
-      .remove(
-        'imprimir'
-      ),
+    ()=>{
+
+      t.classList.remove(
+        'imprimir',
+        'ticket-media-carta',
+        'ticket-carta-vertical'
+      );
+
+    },
     500
   );
 
@@ -4449,10 +4560,23 @@ function buscarVentas(){
             '👁 Ver'+
             '</button>'+
 
-            '<button class="btnNegro" style="flex:1">'+
-            '🖨 Reimprimir'+
-            '</button>'+
+            <button
+class="btnNegro noPrint w100"
+style="margin-top:10px"
+onclick="imprimirTicket('ticket','MEDIA')">
 
+🖨 Media carta horizontal
+
+</button>
+
+<button
+class="btnGris noPrint w100"
+style="margin-top:8px"
+onclick="imprimirTicket('ticket','CARTA')">
+
+🖨 Carta vertical
+
+</button>
             '</div>';
 
 
