@@ -1142,7 +1142,202 @@ class="vistaApp oculto">
 <div class="card">
 
 <h3 style="margin-top:0">
-Nuevo producto
+Nuevo producto<label>
+Tipo de ingreso
+</label>
+
+<select
+id="tipoIngreso"
+onchange="cambiarTipoIngreso()">
+
+<option value="INDIVIDUAL">
+Producto individual
+</option>
+
+<option value="CORRIDA">
+Corrida / Escala
+</option>
+
+</select><div
+id="corridaBox"
+class="card oculto">
+
+<h3>
+Ingreso por corrida
+</h3>
+
+<label>
+Artículo
+</label>
+
+<input
+id="cArticulo"
+placeholder="Ej. Bota">
+
+
+<div class="grid2">
+
+<div>
+
+<label>
+Marca
+</label>
+
+<input
+id="cMarca">
+
+</div>
+
+
+<div>
+
+<label>
+Modelo
+</label>
+
+<input
+id="cModelo">
+
+</div>
+
+
+<div>
+
+<label>
+Color
+</label>
+
+<input
+id="cColor">
+
+</div>
+
+
+<div>
+
+<label>
+Escala
+</label>
+
+<select
+id="cEscala"
+onchange="dibujarCorrida()">
+
+<option value="A">
+A
+</option>
+
+<option value="B">
+B
+</option>
+
+<option value="C">
+C
+</option>
+
+<option value="D">
+D
+</option>
+
+</select>
+
+</div>
+
+
+<div>
+
+<label>
+Costo
+</label>
+
+<input
+id="cCosto"
+type="number"
+step="0.01">
+
+</div>
+
+
+<div>
+
+<label>
+Precio
+</label>
+
+<input
+id="cPrecio"
+type="number"
+step="0.01">
+
+</div>
+
+
+<div>
+
+<label>
+Stock mínimo
+</label>
+
+<input
+id="cStockMinimo"
+type="number"
+value="2">
+
+</div>
+
+
+<div>
+
+<label>
+Ubicación
+</label>
+
+<input
+id="cUbicacion">
+
+</div>
+
+</div>
+
+
+<div
+id="tablaCorrida"
+style="margin-top:15px">
+</div>
+
+
+<div
+id="totalCorrida"
+class="codigoAuto">
+
+Total corrida: 0 pares
+
+</div>
+
+
+<label>
+Nota
+</label>
+
+<textarea
+id="cNota">
+</textarea>
+
+
+<button
+class="btnMorado w100"
+style="margin-top:12px"
+onclick="guardarCorrida()">
+
+Guardar corrida
+
+</button>
+
+
+<div id="mensajeCorrida">
+</div>
+
+</div>
 </h3>
 
 <div class="sub">
@@ -4545,7 +4740,41 @@ function esc(v){
   );
 
 }
+function escalaPorTalla_(talla){
 
+  const t=
+    Number(talla);
+
+  if(t>=20 && t<=26){
+    return 'A';
+  }
+
+  if(t>=27 && t<=32){
+    return 'B';
+  }
+
+  if(t>=33 && t<=36){
+    return 'C';
+  }
+
+  if(t>=37 && t<=43){
+    return 'D';
+  }
+
+  return '';
+
+}
+
+
+function codigo_(
+  m,
+  c,
+  t
+){
+
+  // continúa aquí su función actual
+
+}
 </script>
 
 </body>
