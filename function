@@ -3289,7 +3289,68 @@ function ticketHTML(
   id
 ){
 
-  let f='';
+  const ESCALAS_TICKET={
+
+    A:[
+      '20','21','22','23','24','25','26'
+    ],
+
+    B:[
+      '27','28','29','30','31','32'
+    ],
+
+    C:[
+      '33','34','35','36'
+    ],
+
+    D:[
+      '37','38','39','40','41','42','43'
+    ]
+
+  };
+
+
+  function escalaDeTalla(talla){
+
+    const t=
+      Number(
+        talla
+      );
+
+    if(
+      t>=20 &&
+      t<=26
+    ){
+      return 'A';
+    }
+
+    if(
+      t>=27 &&
+      t<=32
+    ){
+      return 'B';
+    }
+
+    if(
+      t>=33 &&
+      t<=36
+    ){
+      return 'C';
+    }
+
+    if(
+      t>=37 &&
+      t<=43
+    ){
+      return 'D';
+    }
+
+    return '';
+
+  }
+
+
+  const grupos={};
 
 
   (
@@ -3297,25 +3358,216 @@ function ticketHTML(
     []
   )
   .forEach(
-    x=>
-      f+=
+    x=>{
+
+      const escala=
+        escalaDeTalla(
+          x.talla
+        );
+
+
+      const descripcion=
+        [
+          x.marca,
+          x.modelo,
+          x.color
+        ]
+        .filter(Boolean)
+        .join(' ');
+
+
+      const clave=
+        descripcion+
+        '||'+
+        escala+
+        '||'+
+        x.precio;
+
+
+      if(
+        !grupos[clave]
+      ){
+
+        grupos[clave]={
+
+          descripcion:
+            descripcion,
+
+          escala:
+            escala,
+
+          precio:
+            Number(
+              x.precio||
+              0
+            ),
+
+          cantidades:{},
+
+          cantidadTotal:0,
+
+          total:0
+
+        };
+
+      }
+
+
+      grupos[clave]
+      .cantidades[
+        String(
+          x.talla
+        )
+      ]=
+        (
+          grupos[clave]
+          .cantidades[
+            String(
+              x.talla
+            )
+          ]||
+          0
+        )+
+        Number(
+          x.cantidad||
+          0
+        );
+
+
+      grupos[clave]
+      .cantidadTotal+=
+        Number(
+          x.cantidad||
+          0
+        );
+
+
+      grupos[clave]
+      .total+=
+        Number(
+          x.subtotal||
+          0
+        );
+
+    }
+  );
+
+
+  let encabezadoEscalas='';
+
+
+  Object.keys(
+    ESCALAS_TICKET
+  )
+  .forEach(
+    escala=>{
+
+      encabezadoEscalas+=
+
         '<tr>'+
-        '<td>'+
-        esc(x.modelo)+
-        '<br>'+
-        '<small>'+
-        esc(x.color)+
-        ' T.'+
-        esc(x.talla)+
-        '</small>'+
-        '</td>'+
-        '<td class="derecha">'+
-        x.cantidad+
-        '</td>'+
-        '<td class="derecha">'+
-        Q(x.subtotal)+
-        '</td>'+
-        '</tr>'
+
+          '<td style="border:1px solid #333;text-align:center;font-weight:bold">'+
+            escala+
+          '</td>'+
+
+          ESCALAS_TICKET[
+            escala
+          ]
+          .map(
+            talla=>
+
+              '<td style="border:1px solid #333;text-align:center">'+
+                talla+
+              '</td>'
+
+          )
+          .join('')+
+
+        '</tr>';
+
+    }
+  );
+
+
+  let filas='';
+
+
+  Object.values(
+    grupos
+  )
+  .forEach(
+    g=>{
+
+      const tallas=
+        ESCALAS_TICKET[
+          g.escala
+        ]||
+        [];
+
+
+      let cantidades='';
+
+
+      tallas.forEach(
+        talla=>{
+
+          const cant=
+            g.cantidades[
+              talla
+            ]||
+            '';
+
+
+          cantidades+=
+
+            '<td style="border:1px solid #333;text-align:center">'+
+              (
+                cant||
+                ''
+              )+
+            '</td>';
+
+        }
+      );
+
+
+      filas+=
+
+        '<tr>'+
+
+          '<td style="border:1px solid #333;text-align:center">'+
+            g.cantidadTotal+
+          '</td>'+
+
+          '<td style="border:1px solid #333;padding:4px">'+
+            esc(
+              g.descripcion
+            )+
+          '</td>'+
+
+          '<td style="border:1px solid #333;text-align:center;font-weight:bold">'+
+            esc(
+              g.escala
+            )+
+          '</td>'+
+
+          cantidades+
+
+          '<td style="border:1px solid #333;text-align:right">'+
+            Q(
+              g.precio
+            )+
+          '</td>'+
+
+          '<td style="border:1px solid #333;text-align:right">'+
+            Q(
+              g.total
+            )+
+          '</td>'+
+
+        '</tr>';
+
+    }
   );
 
 
@@ -3325,111 +3577,172 @@ function ticketHTML(
     '<h2>COMERCIAL ADELAIDA</h2>'+
 
     '<div class="centro">'+
-    esc(
-      v.sucursal||
-      SUCURSAL
-    )+
+      esc(
+        v.sucursal||
+        SUCURSAL
+      )+
     '</div>'+
 
     '<div class="centro">'+
-    'Comprobante de venta'+
+      'Comprobante de venta'+
     '</div>'+
 
     '<hr>'+
 
     '<div>Venta: '+
-    esc(v.numeroVenta)+
+      esc(
+        v.numeroVenta
+      )+
     '</div>'+
 
     '<div>Fecha: '+
-    esc(v.fecha)+
+      esc(
+        v.fecha
+      )+
     '</div>'+
 
     (
       v.cliente
-        ?
-        '<div>Cliente: '+
-        esc(v.cliente)+
-        '</div>'
-        :
-        ''
+      ?
+      '<div>Cliente: '+
+        esc(
+          v.cliente
+        )+
+      '</div>'
+      :
+      ''
     )+
 
     (
       v.nit
-        ?
-        '<div>NIT: '+
-        esc(v.nit)+
-        '</div>'
-        :
-        ''
+      ?
+      '<div>NIT: '+
+        esc(
+          v.nit
+        )+
+      '</div>'
+      :
+      ''
     )+
 
     '<hr>'+
 
-    '<table>'+
-    f+
-    '</table>'+
+    '<div style="overflow-x:auto">'+
+
+      '<table style="width:100%;border-collapse:collapse;font-size:11px">'+
+
+        '<thead>'+
+
+          '<tr>'+
+
+            '<th rowspan="5" style="border:1px solid #333;padding:4px">'+
+              'CANT'+
+            '</th>'+
+
+            '<th rowspan="5" style="border:1px solid #333;padding:4px">'+
+              'DESCRIPCIÓN'+
+            '</th>'+
+
+            '<th colspan="8" style="border:1px solid #333;padding:4px">'+
+              'NUMERACIÓN'+
+            '</th>'+
+
+            '<th rowspan="5" style="border:1px solid #333;padding:4px">'+
+              'P/UNI'+
+            '</th>'+
+
+            '<th rowspan="5" style="border:1px solid #333;padding:4px">'+
+              'TOTAL'+
+            '</th>'+
+
+          '</tr>'+
+
+          encabezadoEscalas+
+
+        '</thead>'+
+
+        '<tbody>'+
+
+          filas+
+
+        '</tbody>'+
+
+      '</table>'+
+
+    '</div>'+
 
     '<hr>'+
 
     '<div class="lineaTotal">'+
-    '<span>Subtotal</span>'+
-    '<b>'+
-    Q(v.subtotal)+
-    '</b>'+
+      '<span>Subtotal</span>'+
+      '<b>'+
+        Q(
+          v.subtotal
+        )+
+      '</b>'+
     '</div>'+
 
     '<div class="lineaTotal">'+
-    '<span>Descuento</span>'+
-    '<b>'+
-    Q(v.descuento)+
-    '</b>'+
+      '<span>Descuento</span>'+
+      '<b>'+
+        Q(
+          v.descuento
+        )+
+      '</b>'+
     '</div>'+
 
     '<div class="lineaTotal">'+
-    '<span>TOTAL</span>'+
-    '<b>'+
-    Q(v.total)+
-    '</b>'+
+      '<span>TOTAL</span>'+
+      '<b>'+
+        Q(
+          v.total
+        )+
+      '</b>'+
     '</div>'+
 
     '<div>Pago: '+
-    esc(v.metodoPago)+
+      esc(
+        v.metodoPago
+      )+
     '</div>'+
 
     (
       v.metodoPago===
       'EFECTIVO'
-        ?
-        '<div>Recibido: '+
-        Q(v.efectivoRecibido)+
-        '</div>'+
-        '<div>Cambio: '+
-        Q(v.cambio)+
-        '</div>'
-        :
-        ''
+      ?
+      '<div>Recibido: '+
+        Q(
+          v.efectivoRecibido
+        )+
+      '</div>'+
+      '<div>Cambio: '+
+        Q(
+          v.cambio
+        )+
+      '</div>'
+      :
+      ''
     )+
 
     (
       v.usuario
-        ?
-        '<div>Usuario: '+
-        esc(v.usuario)+
-        '</div>'
-        :
-        ''
+      ?
+      '<div>Usuario: '+
+        esc(
+          v.usuario
+        )+
+      '</div>'
+      :
+      ''
     )+
 
     '<hr>'+
 
     '<div class="centro">'+
-    '¡Gracias por su compra!'+
+      '¡Gracias por su compra!'+
     '</div>';
 
 }
-
 
 function imprimirTicket(id){
 
