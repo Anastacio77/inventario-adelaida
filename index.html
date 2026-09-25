@@ -4285,58 +4285,66 @@ function imprimirTicket(
 
 
   if(
-    formato==='CARTA'
-  ){
+  formato==='CARTA'
+){
 
-    ticket.classList.add(
-      'ticket-carta-vertical'
-    );
+  ticket.classList.add(
+    'ticket-carta-vertical'
+  );
 
 
-    estilo.innerHTML=`
+  estilo.innerHTML=`
 
-      @page{
-        size: Letter portrait;
-        margin: 0.28in;
+    @page{
+      size: 215.9mm 279.4mm;
+      margin: 7mm;
+    }
+
+    @media print{
+
+      .ticket.imprimir{
+        width:201mm!important;
+        max-width:201mm!important;
+        min-height:auto!important;
       }
 
-      @media print{
+    }
 
-        .ticket.imprimir{
-          width:7.9in!important;
-          max-width:7.9in!important;
-        }
+  `;
 
+}else{
+
+  ticket.classList.add(
+    'ticket-media-carta'
+  );
+
+
+  estilo.innerHTML=`
+
+    @page{
+      size: 215.9mm 139.7mm;
+      margin: 4mm;
+    }
+
+    @media print{
+
+      html,
+      body{
+        width:215.9mm!important;
+        height:139.7mm!important;
       }
 
-    `;
-
-  }else{
-
-    ticket.classList.add(
-      'ticket-media-carta'
-    );
-
-
-    estilo.innerHTML=`
-
-      @page{
-        size:8.5in 5.5in;
-        margin:0.15in;
+      .ticket.imprimir{
+        width:207.9mm!important;
+        max-width:207.9mm!important;
+        min-height:auto!important;
       }
 
-      @media print{
+    }
 
-        .ticket.imprimir{
-          width:8.15in!important;
-          max-width:8.15in!important;
-        }
+  `;
 
-      }
-
-    `;
-
-  }
+}
 
 
   document.head
