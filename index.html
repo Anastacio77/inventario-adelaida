@@ -1685,39 +1685,23 @@ function ticketHTML(v,id){
   const grupos={};
 
   (v.items||[]).forEach(x=>{
-    const tipo=
-      String(
-        x.tipoIngreso||
-        'INDIVIDUAL'
-      ).toUpperCase();
+    const tipo=String(
+      x.tipoIngreso||'INDIVIDUAL'
+    ).toUpperCase();
 
     const escala=
       tipo==='CORRIDA'
-      ?
-      String(
-        x.escala||
-        ''
-      )
-      :
-      '';
+        ? String(x.escala||'')
+        : '';
 
-    const precio=
-      Number(
-        x.precio
-      )||0;
+    const precio=Number(x.precio)||0;
 
     const descripcion=
       descripcionTicket(x)||
       (
-        (
-          x.modelo||
-          ''
-        )+
+        (x.modelo||'')+
         ' '+
-        (
-          x.color||
-          ''
-        )
+        (x.color||'')
       ).trim();
 
     const clave=
@@ -1741,21 +1725,12 @@ function ticketHTML(v,id){
       };
     }
 
-    const g=
-      grupos[clave];
+    const g=grupos[clave];
+    const cant=Number(x.cantidad)||0;
 
-    const cant=
-      Number(
-        x.cantidad
-      )||0;
-
-    g.cantidades[
-      String(x.talla)
-    ]=
+    g.cantidades[String(x.talla)]=
       (
-        g.cantidades[
-          String(x.talla)
-        ]||
+        g.cantidades[String(x.talla)]||
         0
       )+
       cant;
@@ -1763,321 +1738,303 @@ function ticketHTML(v,id){
     g.cantidad+=cant;
 
     g.total+=
-      Number(
-        x.subtotal
-      )||
+      Number(x.subtotal)||
       precio*cant;
   });
 
+  /* ESCALAS QUE REALMENTE APARECEN EN LA VENTA */
   const escalasUsadas=[];
 
-  Object.values(
-    grupos
-  ).forEach(g=>{
+  Object.values(grupos).forEach(g=>{
     if(
       g.tipo==='CORRIDA' &&
       g.escala &&
-      !escalasUsadas.includes(
-        g.escala
-      )
+      !escalasUsadas.includes(g.escala)
     ){
-      escalasUsadas.push(
-        g.escala
-      );
+      escalasUsadas.push(g.escala);
     }
   });
 
-  escalasUsadas.sort(
-    (a,b)=>
-      ESCALAS.findIndex(
-        x=>x.nombre===a
-      )-
-      ESCALAS.findIndex(
-        x=>x.nombre===b
-      )
-  );
+  /* RESPETA EL ORDEN DE LAS ESCALAS DEL SISTEMA */
+  escalasUsadas.sort((a,b)=>{
+    return(
+      ESCALAS.findIndex(x=>x.nombre===a)-
+      ESCALAS.findIndex(x=>x.nombre===b)
+    );
+  });
 
+  /*
+    Cantidad máxima de espacios de numeración.
+
+    Ejemplo:
+    B = 27,28,29,30,31,32        = 6
+    D = 37,38,39,40,41,42,43     = 7
+
+    Entonces usamos 7 espacios.
+    Más 1 columna para B / D / ✓.
+  */
   let maxSlots=1;
 
   escalasUsadas.forEach(e=>{
     maxSlots=Math.max(
       maxSlots,
-      (
-        ESCALAS_MAP[e]||
-        []
-      ).length
+      (ESCALAS_MAP[e]||[]).length
     );
   });
 
-  maxSlots=
-    Math.max(
-      maxSlots,
-      1
-    );
+  /*
+    ENCABEZADO DE NUMERACIÓN
 
+    B | 27 | 28 | 29 | 30 | 31 | 32 |
+    D | 37 | 38 | 39 | 40 | 41 | 42 | 43
+  */
   let encabezado='';
 
   escalasUsadas.forEach(e=>{
+    const tallas=ESCALAS_MAP[e]||[];
+
+    encabezado+='<tr>';
+
     encabezado+=
-      '<tr>'+
       '<th>'+
       esc(e)+
       '</th>';
 
-    for(
-      let i=0;
-      i<maxSlots;
-      i++
-    ){
+    for(let i=0;i<maxSlots;i++){
       encabezado+=
         '<th>'+
-        esc(
-          (
-            ESCALAS_MAP[e]||
-            []
-          )[i]||
-          ''
-        )+
+        esc(tallas[i]||'')+
         '</th>';
     }
 
-    encabezado+=
-      '</tr>';
+    encabezado+='</tr>';
   });
 
-  const hayIndividual=
-    Object.values(
-      grupos
-    ).some(
-      g=>g.tipo!=='CORRIDA'
-    );
-
-  if(hayIndividual){
-    encabezado+=
-      '<tr>'+
-      '<th>✓</th>'+
-      '<th>UNID.</th>';
-
-    for(
-      let i=1;
-      i<maxSlots;
-      i++
-    ){
-      encabezado+=
-        '<th>&nbsp;</th>';
-    }
-
-    encabezado+=
-      '</tr>';
-  }
-
+  /*
+    CANT, DESCRIPCIÓN, P/UNI y TOTAL abarcan:
+    fila principal + filas de las escalas.
+  */
   const filasEncabezado=
     1+
-    escalasUsadas.length+
-    (
-      hayIndividual
-      ?1
-      :0
-    );
+    escalasUsadas.length;
 
   let filas='';
 
-  Object.values(
-    grupos
-  ).forEach(g=>{
+  Object.values(grupos).forEach(g=>{
     let nums='';
 
     if(
-      g.tipo==='CORRIDA'
+      g.tipo==='CORRIDA' &&
+      g.escala
     ){
-      nums=
+      const tallas=
+        ESCALAS_MAP[g.escala]||
+        [];
+
+      nums+=
         '<td><b>'+
         esc(g.escala)+
         '</b></td>';
 
-      const ts=
-        ESCALAS_MAP[
-          g.escala
-        ]||
-        [];
+      for(let i=0;i<maxSlots;i++){
+        const talla=tallas[i];
 
-      for(
-        let i=0;
-        i<maxSlots;
-        i++
-      ){
-        const t=ts[i];
+        nums+='<td>';
 
-        nums+=
-          '<td>'+
-          (
-            t
-            ?
-            (
-              g.cantidades[
-                String(t)
-              ]||
-              ''
-            )
-            :
-            ''
-          )+
-          '</td>';
+        if(talla){
+          const cantidad=
+            g.cantidades[String(talla)]||
+            '';
+
+          nums+=cantidad;
+        }
+
+        nums+='</td>';
       }
 
     }else{
-      nums=
-        '<td><b>✓</b></td>'+
+
+      /*
+        PRODUCTO INDIVIDUAL
+
+        ✓ | cantidad | vacío | vacío...
+      */
+      nums+=
+        '<td><b>✓</b></td>';
+
+      nums+=
         '<td><b>'+
         g.cantidad+
         '</b></td>';
 
-      for(
-        let i=1;
-        i<maxSlots;
-        i++
-      ){
-        nums+=
-          '<td></td>';
+      for(let i=1;i<maxSlots;i++){
+        nums+='<td></td>';
       }
     }
 
     filas+=
       '<tr>'+
-      '<td><b>'+
-      g.cantidad+
-      '</b></td>'+
-      '<td class="descripcion">'+
-      esc(g.descripcion)+
-      '</td>'+
-      nums+
-      '<td class="derecha">'+
-      Q(g.precio)+
-      '</td>'+
-      '<td class="derecha"><b>'+
-      Q(g.total)+
-      '</b></td>'+
+
+        '<td><b>'+
+        g.cantidad+
+        '</b></td>'+
+
+        '<td class="descripcion">'+
+        esc(g.descripcion)+
+        '</td>'+
+
+        nums+
+
+        '<td class="derecha">'+
+        Q(g.precio)+
+        '</td>'+
+
+        '<td class="derecha"><b>'+
+        Q(g.total)+
+        '</b></td>'+
+
       '</tr>';
   });
 
   $(id).innerHTML=
+
     '<h2>COMERCIAL ADELAIDA</h2>'+
+
     '<div class="centro">Zapatería</div>'+
+
     '<div class="centro">'+
-    esc(
-      v.sucursal||
-      SUCURSAL
-    )+
+    esc(v.sucursal||SUCURSAL)+
     '</div>'+
+
     '<div class="centro">Comprobante de venta</div>'+
+
     '<hr>'+
+
     '<div><b>Venta:</b> '+
-    esc(
-      v.numeroVenta||
-      ''
-    )+
+    esc(v.numeroVenta||'')+
     '</div>'+
+
     '<div><b>Fecha:</b> '+
-    esc(
-      v.fecha||
-      ''
-    )+
+    esc(v.fecha||'')+
     '</div>'+
+
     (
       v.cliente
-      ?
-      '<div><b>Cliente:</b> '+
-      esc(v.cliente)+
-      '</div>'
-      :
-      ''
+        ?
+        '<div><b>Cliente:</b> '+
+        esc(v.cliente)+
+        '</div>'
+        :
+        ''
     )+
+
     (
       v.nit
-      ?
-      '<div><b>NIT:</b> '+
-      esc(v.nit)+
-      '</div>'
-      :
-      ''
+        ?
+        '<div><b>NIT:</b> '+
+        esc(v.nit)+
+        '</div>'
+        :
+        ''
     )+
+
     (
       v.usuario
-      ?
-      '<div><b>Atendió:</b> '+
-      esc(v.usuario)+
-      '</div>'
-      :
-      ''
+        ?
+        '<div><b>Atendió:</b> '+
+        esc(v.usuario)+
+        '</div>'
+        :
+        ''
     )+
+
     '<hr>'+
+
     '<table class="ticketTabla">'+
+
       '<thead>'+
+
         '<tr>'+
+
           '<th rowspan="'+
           filasEncabezado+
           '">CANT</th>'+
+
           '<th rowspan="'+
           filasEncabezado+
           '">DESCRIPCIÓN</th>'+
+
           '<th colspan="'+
           (maxSlots+1)+
           '">NUMERACIÓN</th>'+
+
           '<th rowspan="'+
           filasEncabezado+
           '">P/UNI</th>'+
+
           '<th rowspan="'+
           filasEncabezado+
           '">TOTAL</th>'+
+
         '</tr>'+
+
         encabezado+
+
       '</thead>'+
+
       '<tbody>'+
-        filas+
+      filas+
       '</tbody>'+
+
     '</table>'+
+
     '<hr>'+
+
     '<div class="lineaTotal">'+
       '<span>Subtotal</span>'+
       '<b>'+
       Q(v.subtotal)+
       '</b>'+
     '</div>'+
+
     '<div class="lineaTotal">'+
       '<span>Descuento</span>'+
       '<b>'+
       Q(v.descuento)+
       '</b>'+
     '</div>'+
+
     '<div class="lineaTotal" style="font-size:16px">'+
       '<span><b>TOTAL</b></span>'+
       '<b>'+
       Q(v.total)+
       '</b>'+
     '</div>'+
+
     '<div><b>Pago:</b> '+
-    esc(
-      v.metodoPago||
-      ''
-    )+
+    esc(v.metodoPago||'')+
     '</div>'+
+
     (
       v.metodoPago==='EFECTIVO'
-      ?
-      '<div><b>Recibido:</b> '+
-      Q(v.efectivoRecibido)+
-      '</div>'+
-      '<div><b>Cambio:</b> '+
-      Q(v.cambio)+
-      '</div>'
-      :
-      ''
+        ?
+        '<div><b>Recibido:</b> '+
+        Q(v.efectivoRecibido)+
+        '</div>'+
+        '<div><b>Cambio:</b> '+
+        Q(v.cambio)+
+        '</div>'
+        :
+        ''
     )+
-    '<hr>'+
-    '<div class="centro">¡Gracias por su compra!</div>';
-}
 
-function imprimirTicket(id,formato='MEDIA'){
+    '<hr>'+
+
+    '<div class="centro">'+
+    '¡Gracias por su compra!'+
+    '</div>';
+}
+  function imprimirTicket(id,formato='MEDIA'){
   const el=$(id);
 
   if(!el){
