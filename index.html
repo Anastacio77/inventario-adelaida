@@ -1,86 +1,38 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Comercial Adelaida - POS</title>
 
-<meta
-  name="viewport"
-  content="width=device-width,initial-scale=1,viewport-fit=cover">
-
-<title>
-Comercial Adelaida - POS
-</title>
-
-<script
-src="https://unpkg.com/html5-qrcode"
-type="text/javascript">
-</script>
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript" defer></script>
 
 <style>
-
-*{
-  box-sizing:border-box
-}
-
+*{box-sizing:border-box}
 body{
   margin:0;
-  font-family:
-  -apple-system,
-  BlinkMacSystemFont,
-  "Segoe UI",
-  Roboto,
-  Arial,
-  sans-serif;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
   background:#f4f4f6;
   color:#202124
 }
-
-.app{
-  max-width:960px;
-  margin:auto;
-  padding:14px
-}
-
-.card,
-.header{
+.app{max-width:960px;margin:auto;padding:14px}
+.card,.header{
   background:#fff;
   border-radius:18px;
   padding:16px;
   margin-bottom:14px;
-  box-shadow:
-  0 3px 14px
-  rgba(0,0,0,.06)
+  box-shadow:0 3px 14px rgba(0,0,0,.06)
 }
-
-h1{
-  margin:0;
-  font-size:24px
-}
-
-.sub{
-  color:#666;
-  margin-top:4px
-}
-
+h1{margin:0;font-size:24px}
+.sub{color:#666;margin-top:4px}
 .tabs{
   display:grid;
-  grid-template-columns:
-  repeat(7,1fr);
+  grid-template-columns:repeat(7,1fr);
   gap:8px;
   margin-bottom:14px
 }
-
-.tabs button{
-  background:#e9e9ee
-}
-
-.tabs button.activo{
-  background:#222;
-  color:#fff
-}
-
+.tabs button{background:#e9e9ee}
+.tabs button.activo{background:#222;color:#fff}
 button{
   border:0;
   border-radius:12px;
@@ -89,10 +41,7 @@ button{
   font-weight:700;
   cursor:pointer
 }
-
-input,
-select,
-textarea{
+input,select,textarea{
   width:100%;
   border:1px solid #d5d5db;
   border-radius:12px;
@@ -100,11 +49,7 @@ textarea{
   font-size:16px;
   background:#fff
 }
-
-textarea{
-  min-height:65px
-}
-
+textarea{min-height:65px}
 label{
   display:block;
   font-size:13px;
@@ -112,102 +57,41 @@ label{
   margin-top:10px;
   margin-bottom:5px
 }
-
-.fila{
-  display:flex;
-  gap:8px
-}
-
+.fila{display:flex;gap:8px}
 .grid2{
   display:grid;
-  grid-template-columns:
-  1fr 1fr;
+  grid-template-columns:1fr 1fr;
   gap:10px
 }
-
-.btnNegro{
-  background:#222;
-  color:#fff
-}
-
-.btnAzul{
-  background:#0d6efd;
-  color:#fff
-}
-
-.btnVerde{
-  background:#198754;
-  color:#fff
-}
-
-.btnRojo{
-  background:#c0392b;
-  color:#fff
-}
-
-.btnGris{
-  background:#e9e9ee
-}
-
-.btnMorado{
-  background:#5a3ec8;
-  color:#fff
-}
-
-.oculto{
-  display:none!important
-}
-
+.btnNegro{background:#222;color:#fff}
+.btnAzul{background:#0d6efd;color:#fff}
+.btnVerde{background:#198754;color:#fff}
+.btnRojo{background:#c0392b;color:#fff}
+.btnGris{background:#e9e9ee}
+.btnMorado{background:#5a3ec8;color:#fff}
+.oculto{display:none!important}
 .resumen{
   display:grid;
-  grid-template-columns:
-  repeat(4,1fr);
+  grid-template-columns:repeat(4,1fr);
   gap:8px;
   margin-top:12px
 }
-
 .dato{
   background:#f4f4f6;
   border-radius:12px;
   padding:10px
 }
-
-.dato b{
-  font-size:21px;
-  display:block
-}
-
-.dato span{
-  font-size:12px;
-  color:#666
-}
-
+.dato b{font-size:21px;display:block}
+.dato span{font-size:12px;color:#666}
 .mensaje{
   padding:11px;
   border-radius:12px;
   margin-top:10px
 }
-
-.ok{
-  background:#dcf4e5;
-  color:#135d31
-}
-
-.error{
-  background:#ffe3e3;
-  color:#8e2525
-}
-
-.info{
-  background:#e8f1ff;
-  color:#244d7c
-}
-
-.buscadorAuto{
-  position:relative;
-  flex:1
-}
-
+.ok{background:#dcf4e5;color:#135d31}
+.error{background:#ffe3e3;color:#8e2525}
+.info{background:#e8f1ff;color:#244d7c}
+.buscadorAuto{position:relative;flex:1}
 .listaSugerencias{
   position:absolute;
   top:calc(100% + 5px);
@@ -216,88 +100,61 @@ label{
   background:#fff;
   border:1px solid #ddd;
   border-radius:12px;
-  box-shadow:
-  0 8px 24px
-  rgba(0,0,0,.15);
+  box-shadow:0 8px 24px rgba(0,0,0,.15);
   max-height:320px;
   overflow:auto;
   z-index:9999
 }
-
 .itemSugerencia{
   padding:12px;
-  border-bottom:
-  1px solid #eee
+  border-bottom:1px solid #eee
 }
-
-.sugCodigo{
-  font-weight:800
-}
-
+.sugCodigo{font-weight:800}
 .sugDetalle{
   font-size:13px;
   color:#666;
   margin-top:3px
 }
-
 .scanner{
   width:100%;
   overflow:hidden;
   border-radius:14px;
   margin-top:10px
 }
-
 .cartItem{
   border:1px solid #e3e3e8;
   border-radius:14px;
   padding:12px;
   margin-top:10px
 }
-
 .cartTop{
   display:flex;
-  justify-content:
-  space-between;
+  justify-content:space-between;
   gap:8px
 }
-
-.cartMeta{
-  font-size:12px;
-  color:#666
-}
-
+.cartMeta{font-size:12px;color:#666}
 .cartControls{
   display:grid;
-  grid-template-columns:
-  45px 58px 45px 1fr;
+  grid-template-columns:45px 58px 45px 1fr;
   gap:6px;
   margin-top:9px
 }
-
-.cartControls input{
-  text-align:center;
-  padding:8px
-}
-
+.cartControls input{text-align:center;padding:8px}
 .totales{
   background:#f4f4f6;
   border-radius:14px;
   padding:14px;
   margin-top:14px
 }
-
 .lineaTotal{
   display:flex;
-  justify-content:
-  space-between;
+  justify-content:space-between;
   margin-top:5px
 }
-
 .totalGrande{
   font-size:30px;
   font-weight:900
 }
-
 .cambio{
   background:#dcf4e5;
   border-radius:12px;
@@ -305,30 +162,22 @@ label{
   margin-top:10px;
   text-align:center
 }
-
-.cambio b{
-  font-size:25px
-}
-
+.cambio b{font-size:25px}
 .producto{
   display:grid;
-  grid-template-columns:
-  1fr 1fr;
+  grid-template-columns:1fr 1fr;
   gap:9px
 }
-
 .campo{
   background:#f4f4f6;
   border-radius:11px;
   padding:10px
 }
-
 .campo span{
   font-size:11px;
   color:#777;
   display:block
 }
-
 .codigoAuto{
   text-align:center;
   font-weight:800;
@@ -337,7 +186,6 @@ label{
   border-radius:12px;
   margin-top:10px
 }
-
 .qrBox{
   text-align:center;
   padding:12px;
@@ -345,12 +193,10 @@ label{
   border-radius:14px;
   margin-top:12px
 }
-
 .qrBox img{
   max-width:220px;
   width:100%
 }
-
 .ticket{
   font-family:monospace;
   background:#fff;
@@ -358,58 +204,32 @@ label{
   max-width:360px;
   margin:auto
 }
-
-.ticket h2{
-  text-align:center;
-  margin:0
-}
-
+.ticket h2{text-align:center;margin:0}
 .ticket hr{
   border:0;
-  border-top:
-  1px dashed #333
+  border-top:1px dashed #333
 }
-
-.ticket table{
-  width:100%
-}
-
-.derecha{
-  text-align:right
-}
-
-.centro{
-  text-align:center
-}
-
+.ticket table{width:100%}
+.derecha{text-align:right}
+.centro{text-align:center}
 .sesionBar{
   display:grid;
-  grid-template-columns:
-  1fr 1fr auto;
+  grid-template-columns:1fr 1fr auto;
   gap:10px;
   align-items:end;
   margin-top:12px
 }
-
-.usuarioTag{
-  font-size:13px;
-  color:#555
-}
-
+.usuarioTag{font-size:13px;color:#555}
 .tabla{
   width:100%;
   border-collapse:collapse
 }
-
-.tabla th,
-.tabla td{
+.tabla th,.tabla td{
   padding:9px;
-  border-bottom:
-  1px solid #eee;
+  border-bottom:1px solid #eee;
   text-align:left;
   font-size:14px
 }
-
 .badge{
   display:inline-block;
   padding:4px 8px;
@@ -417,1604 +237,1168 @@ label{
   background:#eee;
   font-size:12px
 }
+.w100{width:100%}
+.botonEnlace{
+  display:block;
+  text-align:center;
+  text-decoration:none;
+  color:inherit
+}
 
-.w100{
-  width:100%
+#vistaConfig:target{
+  display:block!important
 }
 
 @media(max-width:780px){
-
-  .tabs{
-    grid-template-columns:
-    1fr 1fr
-  }
-
-  .resumen,
-  .grid2,
-  .producto,
-  .sesionBar{
-    grid-template-columns:
-    1fr
-  }
-
-  .fila{
-    flex-direction:
-    column
-  }
-
-  .cartControls{
-    grid-template-columns:
-    42px 52px 42px 1fr
-  }
-
+  .tabs{grid-template-columns:1fr 1fr}
+  .resumen,.grid2,.producto,.sesionBar{grid-template-columns:1fr}
+  .fila{flex-direction:column}
+  .cartControls{grid-template-columns:42px 52px 42px 1fr}
 }
 
 @media print{
-
-  body *{
-    visibility:hidden
-  }
-
-  .ticket.imprimir,
-  .ticket.imprimir *{
-    visibility:visible
-  }
-
+  body *{visibility:hidden}
+  .ticket.imprimir,.ticket.imprimir *{visibility:visible}
   .ticket.imprimir{
     position:absolute;
     left:0;
     top:0;
     width:100%
   }
-
-  .noPrint{
-    display:none!important
-  }
-
-}
-
-/* ===== IMPRESIÓN DE TICKET ===== */
-
-@page ticketMediaCarta {
-  size: 8.5in 5.5in;
-  margin: 0.25in;
-}
-
-@page ticketCartaVertical {
-  size: Letter portrait;
-  margin: 0.35in;
-}
-
-.ticket-media-carta{
-  page: ticketMediaCarta;
-}
-
-.ticket-carta-vertical{
-  page: ticketCartaVertical;
-}
-
-@media print{
-
-  body *{
-    visibility:hidden !important;
-  }
-
-  .ticket.imprimir,
-  .ticket.imprimir *{
-    visibility:visible !important;
-  }
-
-  .ticket.imprimir{
-    position:absolute;
-    left:0;
-    top:0;
-    margin:0;
-    width:100%;
-    max-width:none;
-    font-size:10px;
-    line-height:1.15;
-  }
-
-  .ticket.imprimir table{
-    width:100%;
-    border-collapse:collapse;
-  }
-
-  .ticket.imprimir th,
-  .ticket.imprimir td{
-    padding:2px 3px;
-    font-size:9px;
-  }
-
-  .ticket.imprimir h2{
-    font-size:18px;
-    margin:0 0 2px 0;
-  }
-
-  .ticket.imprimir hr{
-    margin:3px 0;
-  }
-
-  .noPrint{
-    display:none !important;
-  }
-
+  .noPrint{display:none!important}
 }
 </style>
-
 </head>
 
 <body>
 
 <div class="app">
 
-<div class="header">
-
-<h1>
-Punto de Venta — Comercial Adelaida
-</h1>
-
-<div class="sub">
-Ventas, inventario, sucursales,
-traslados y usuarios
-</div>
-
-<div id="estadoApi">
-Configure Google Sheets.
-</div>
-
-
-<div
-id="sesionBar"
-class="sesionBar oculto">
-
-<div>
-
-<div class="usuarioTag">
-Usuario
-</div>
-
-<b id="usuarioActual">
-—
-</b>
-
-</div>
-
-
-<div>
-
-<label style="margin-top:0">
-Sucursal actual
-</label>
-
-<select id="sucursalActual">
-</select>
-
-</div>
-
-
-<button
-class="btnGris"
-onclick="cerrarSesion()">
-
-Cerrar sesión
-
-</button>
-
-</div>
-
-
-<div
-id="resumen"
-class="resumen oculto">
-
-<div class="dato">
-<b id="rReferencias">—</b>
-<span>Referencias</span>
-</div>
-
-<div class="dato">
-<b id="rPares">—</b>
-<span>Pares</span>
-</div>
-
-<div class="dato">
-<b id="rVentasHoy">—</b>
-<span>Ventas hoy</span>
-</div>
-
-<div class="dato">
-<b id="rTotalHoy">—</b>
-<span>Vendido hoy</span>
-</div>
-
-</div>
-
-</div>
-
-
-<div
-id="loginCard"
-class="card">
-
-<h3 style="margin-top:0">
-Iniciar sesión
-</h3>
-
-<label>
-Usuario
-</label>
-
-<input
-id="loginUsuario"
-value="admin"
-autocomplete="username">
-
-
-<label>
-Clave
-</label>
-
-<input
-id="loginClave"
-type="password"
-autocomplete="current-password">
-
-
-<button
-class="btnNegro w100"
-style="margin-top:12px"
-onclick="login()">
-
-Entrar
-
-</button>
-
-
-<button
-class="btnGris w100"
-style="margin-top:8px"
-onclick="mostrarConfigDesdeLogin()">
-
-⚙ Configuración de conexión
-
-</button>
-
-
-<div id="mensajeLogin">
-</div>
-
-</div>
-
-
-<div
-id="tabs"
-class="tabs oculto">
-
-<button
-id="tabPos"
-class="activo"
-onclick="vista('pos')">
-🛒 Punto de venta
-</button>
-
-<button
-id="tabVentas"
-onclick="vista('ventas');buscarVentas()">
-🧾 Ventas
-</button>
-
-<button
-id="tabInventario"
-onclick="vista('inventario')">
-📦 Inventario
-</button>
-
-<button
-id="tabNuevo"
-onclick="vista('nuevo')">
-➕ Producto
-</button>
-
-<button
-id="tabTraslados"
-onclick="vista('traslados')">
-🔁 Traslados
-</button>
-
-<button
-id="tabUsuarios"
-onclick="vista('usuarios');cargarUsuarios()">
-👥 Usuarios
-</button>
-
-<button
-id="tabConfig"
-onclick="vista('config')">
-⚙ Configuración
-</button>
-
-</div>
-
-
-<div
-id="vistaPos"
-class="vistaApp oculto">
-
-<div class="card">
-
-<div class="fila">
-
-<div class="buscadorAuto">
-
-<input
-id="posCodigo"
-autocomplete="off"
-placeholder="Código, modelo, marca o color">
-
-<div
-id="sugerenciasPos"
-class="listaSugerencias oculto">
-</div>
-
-</div>
-
-<button
-class="btnNegro"
-onclick="agregar()">
-
-Agregar
-
-</button>
-
-</div>
-
-
-<button
-id="btnCamPos"
-class="btnAzul w100"
-style="margin-top:9px"
-onclick="toggleCam()">
-
-📷 Abrir cámara continua
-
-</button>
-
-
-<div
-id="scanPosBox"
-class="oculto">
-
-<div
-id="readerPos"
-class="scanner">
-</div>
-
-</div>
-
-
-<div id="mensajePos">
-</div>
-
-<div id="carritoLista">
-</div>
-
-
-<div class="totales">
-
-<div class="lineaTotal">
-<span>Pares</span>
-<strong id="posPares">0</strong>
-</div>
-
-<div class="lineaTotal">
-<span>Subtotal</span>
-<strong id="posSubtotal">Q0.00</strong>
-</div>
-
-<div class="lineaTotal">
-<span>Descuento</span>
-<strong id="posDescuentoVista">Q0.00</strong>
-</div>
-
-<div class="lineaTotal">
-<span>Total</span>
-<span
-class="totalGrande"
-id="posTotal">
-Q0.00
-</span>
-</div>
-
-</div>
-
-
-<div class="grid2">
-
-<div>
-<label>Cliente</label>
-<input
-id="posCliente"
-placeholder="Opcional">
-</div>
-
-<div>
-<label>NIT</label>
-<input
-id="posNit"
-placeholder="CF o NIT">
-</div>
-
-<div>
-
-<label>
-Forma de pago
-</label>
-
-<select
-id="posMetodo"
-onchange="actualizarPago()">
-
-<option>EFECTIVO</option>
-<option>TRANSFERENCIA</option>
-<option>TARJETA</option>
-
-</select>
-
-</div>
-
-<div>
-
-<label>
-Descuento Q
-</label>
-
-<input
-id="posDescuento"
-type="number"
-min="0"
-step="0.01"
-value="0"
-oninput="renderCarrito()">
-
-</div>
-
-
-<div id="efectivoBox">
-
-<label>
-Efectivo recibido Q
-</label>
-
-<input
-id="posEfectivo"
-type="number"
-min="0"
-step="0.01"
-value="0"
-oninput="actualizarCambio()">
-
-</div>
-
-
-<div>
-
-<label>
-Nota
-</label>
-
-<input id="posNota">
-
-</div>
-
-</div>
-
-
-<div
-id="cambioBox"
-class="cambio">
-
-Cambio:
-
-<b id="posCambio">
-Q0.00
-</b>
-
-</div>
-
-
-<button
-class="btnVerde w100"
-style="font-size:18px;margin-top:12px"
-onclick="cobrar()">
-
-COBRAR VENTA
-
-</button>
-
-
-<button
-class="btnGris w100"
-style="margin-top:8px"
-onclick="vaciar()">
-
-Vaciar carrito
-
-</button>
-
-</div>
-
-
-<div
-id="ticketCard"
-class="card oculto">
-
-<div
-id="ticket"
-class="ticket">
-</div>
-
-<button
-class="btnNegro noPrint w100"
-style="margin-top:10px"
-onclick="imprimirTicket('ticket')">
-
-🖨 Imprimir comprobante
-
-</button>
-
-<button
-class="btnGris noPrint w100"
-style="margin-top:8px"
-onclick="$('ticketCard').classList.add('oculto')">
-
-Nueva venta
-
-</button>
-
-</div>
-
-</div>
-
-
-<div
-id="vistaVentas"
-class="vistaApp oculto">
-
-<div class="card">
-
-<h3 style="margin-top:0">
-Ventas realizadas
-</h3>
-
-<div class="fila">
-
-<input
-id="buscarVentaTexto"
-placeholder="Número de venta, cliente, NIT o fecha"
-onkeydown="if(event.key==='Enter')buscarVentas()">
-
-<button
-class="btnNegro"
-onclick="buscarVentas()">
-
-Buscar
-
-</button>
-
-</div>
-
-
-<div
-class="sub"
-style="margin-top:8px">
-
-Busca dentro de la sucursal seleccionada.
-
-</div>
-
-
-<div id="mensajeVentas">
-</div>
-
-<div id="listaVentas">
-</div>
-
-</div>
-
-
-<div
-id="ticketHistorialCard"
-class="card oculto">
-
-<div
-id="ticketHistorial"
-class="ticket">
-</div>
-
-<button
-class="btnNegro noPrint w100"
-style="margin-top:10px"
-onclick="imprimirTicket('ticketHistorial','MEDIA')">
-
-🖨 Media carta horizontal
-
-</button>
-
-<button
-class="btnGris noPrint w100"
-style="margin-top:8px"
-onclick="imprimirTicket('ticketHistorial','CARTA')">
-
-🖨 Carta vertical
-
-</button>
-
-<button
-class="btnGris noPrint w100"
-style="margin-top:8px"
-onclick="$('ticketHistorialCard').classList.add('oculto')">
-
-Cerrar
-
-</button>
-
-</div>
-  
-</div>
-
-
-<div
-id="vistaInventario"
-class="vistaApp oculto">
-
-<div class="card">
-
-<div class="fila">
-
-<div class="buscadorAuto">
-
-<input
-id="codigo"
-autocomplete="off"
-placeholder="Código, modelo, marca o color">
-
-<div
-id="sugerenciasInv"
-class="listaSugerencias oculto">
-</div>
-
-</div>
-
-<button
-class="btnNegro"
-onclick="consultar()">
-
-Buscar
-
-</button>
-
-</div>
-
-<div id="mensaje">
-</div>
-
-</div>
-
-
-<div
-id="productoCard"
-class="card oculto">
-
-<div class="producto">
-
-<div class="campo">
-<span>Código</span>
-<b id="pCodigo"></b>
-</div>
-
-<div class="campo">
-<span>Marca</span>
-<b id="pMarca"></b>
-</div>
-
-<div class="campo">
-<span>Modelo</span>
-<b id="pModelo"></b>
-</div>
-
-<div class="campo">
-<span>Color</span>
-<b id="pColor"></b>
-</div>
-
-<div class="campo">
-<span>Talla</span>
-<b id="pTalla"></b>
-</div>
-
-<div class="campo">
-<span>Existencia sucursal</span>
-<b id="pExistencia"></b>
-</div>
-
-<div class="campo">
-<span>Existencia total</span>
-<b id="pExistenciaTotal"></b>
-</div>
-
-<div class="campo">
-<span>Precio</span>
-<b id="pPrecio"></b>
-</div>
-
-<div class="campo">
-<span>Ubicación</span>
-<b id="pUbicacion"></b>
-</div>
-
-<div class="campo">
-<span>Sucursal</span>
-<b id="pSucursal"></b>
-</div>
-
-</div>
-
-
-<div id="movimientoBox">
-
-<label>
-Cantidad
-</label>
-
-<input
-id="cantidad"
-type="number"
-min="1"
-value="1">
-
-<label>
-Nota
-</label>
-
-<textarea id="nota">
-</textarea>
-
-<div
-class="fila"
-style="margin-top:12px">
-
-<button
-class="btnVerde"
-style="flex:1"
-onclick="mover('ENTRADA')">
-
-+ Entrada
-
-</button>
-
-<button
-class="btnRojo"
-style="flex:1"
-onclick="mover('SALIDA')">
-
-− Salida
-
-</button>
-
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-
-<div
-id="vistaNuevo"
-class="vistaApp oculto">
-
-<div class="card">
-
-<h3 style="margin-top:0">
-Nuevo producto<label>
-Tipo de ingreso
-</label>
-
-<select
-id="tipoIngreso"
-onchange="cambiarTipoIngreso()">
-
-<option value="INDIVIDUAL">
-Producto individual
-</option>
-
-<option value="CORRIDA">
-Corrida / Escala
-</option>
-
-</select><div
-id="corridaBox"
-class="card oculto">
-
-<h3>
-Ingreso por corrida
-</h3>
-
-<label>
-Artículo
-</label>
-
-<input
-id="cArticulo"
-placeholder="Ej. Bota">
-
-
-<div class="grid2">
-
-<div>
-
-<label>
-Marca
-</label>
-
-<input
-id="cMarca">
-
-</div>
+  <div class="header">
+    <h1>Punto de Venta — Comercial Adelaida</h1>
+    <div class="sub">Ventas, inventario, sucursales, traslados y usuarios</div>
+    <div id="estadoApi">Configure Google Sheets.</div>
+
+    <div id="sesionBar" class="sesionBar oculto">
+      <div>
+        <div class="usuarioTag">Usuario</div>
+        <b id="usuarioActual">—</b>
+      </div>
+
+      <div>
+        <label style="margin-top:0">Sucursal actual</label>
+        <select id="sucursalActual"></select>
+      </div>
+
+      <button class="btnGris" onclick="cerrarSesion()">
+        Cerrar sesión
+      </button>
+    </div>
+
+    <div id="resumen" class="resumen oculto">
+      <div class="dato">
+        <b id="rReferencias">—</b>
+        <span>Referencias</span>
+      </div>
+
+      <div class="dato">
+        <b id="rPares">—</b>
+        <span>Pares</span>
+      </div>
+
+      <div class="dato">
+        <b id="rVentasHoy">—</b>
+        <span>Ventas hoy</span>
+      </div>
+
+      <div class="dato">
+        <b id="rTotalHoy">—</b>
+        <span>Vendido hoy</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="loginCard" class="card">
+
+    <h3 style="margin-top:0">
+      Iniciar sesión
+    </h3>
+
+    <label>Usuario</label>
+    <input
+      id="loginUsuario"
+      value="admin"
+      autocomplete="username">
+
+    <label>Clave</label>
+    <input
+      id="loginClave"
+      type="password"
+      autocomplete="current-password">
+
+    <button
+      class="btnNegro w100"
+      style="margin-top:12px"
+      onclick="login()">
+      Entrar
+    </button>
+
+    <a
+      class="btnGris w100 botonEnlace"
+      style="margin-top:8px"
+      href="#vistaConfig"
+      onclick="mostrarConfigDesdeLogin()">
+      ⚙ Configuración de conexión
+    </a>
+
+    <div id="mensajeLogin"></div>
+
+  </div>
+
+  <div id="tabs" class="tabs oculto">
+
+    <button id="tabPos"
+      class="activo"
+      onclick="vista('pos')">
+      🛒 Punto de venta
+    </button>
+
+    <button id="tabVentas"
+      onclick="vista('ventas');buscarVentas()">
+      🧾 Ventas
+    </button>
+
+    <button id="tabInventario"
+      onclick="vista('inventario')">
+      📦 Inventario
+    </button>
+
+    <button id="tabNuevo"
+      onclick="vista('nuevo')">
+      ➕ Producto
+    </button>
+
+    <button id="tabTraslados"
+      onclick="vista('traslados')">
+      🔁 Traslados
+    </button>
 
+    <button id="tabUsuarios"
+      onclick="vista('usuarios');cargarUsuarios()">
+      👥 Usuarios
+    </button>
+
+    <button id="tabConfig"
+      onclick="vista('config')">
+      ⚙ Configuración
+    </button>
+
+  </div>
+
+  <div id="vistaPos" class="vistaApp oculto">
+
+    <div class="card">
+
+      <div class="fila">
+
+        <div class="buscadorAuto">
+
+          <input
+            id="posCodigo"
+            autocomplete="off"
+            placeholder="Código, modelo, marca o color">
+
+          <div
+            id="sugerenciasPos"
+            class="listaSugerencias oculto">
+          </div>
 
-<div>
+        </div>
 
-<label>
-Modelo
-</label>
+        <button
+          class="btnNegro"
+          onclick="agregar()">
+          Agregar
+        </button>
+
+      </div>
 
-<input
-id="cModelo">
+      <button
+        id="btnCamPos"
+        class="btnAzul w100"
+        style="margin-top:9px"
+        onclick="toggleCam()">
+        📷 Abrir cámara continua
+      </button>
 
-</div>
-
-
-<div>
-
-<label>
-Color
-</label>
-
-<input
-id="cColor">
-
-</div>
-
-
-<div>
-
-<label>
-Escala
-</label>
-
-<select
-id="cEscala"
-onchange="dibujarCorrida()">
-
-<option value="A">
-A
-</option>
-
-<option value="B">
-B
-</option>
-
-<option value="C">
-C
-</option>
-
-<option value="D">
-D
-</option>
-
-</select>
-
-</div>
-
-
-<div>
-
-<label>
-Costo
-</label>
-
-<input
-id="cCosto"
-type="number"
-step="0.01">
-
-</div>
-
-
-<div>
-
-<label>
-Precio
-</label>
-
-<input
-id="cPrecio"
-type="number"
-step="0.01">
-
-</div>
-
-
-<div>
-
-<label>
-Stock mínimo
-</label>
-
-<input
-id="cStockMinimo"
-type="number"
-value="2">
-
-</div>
-
-
-<div>
-
-<label>
-Ubicación
-</label>
-
-<input
-id="cUbicacion">
-
-</div>
-
-</div>
-
-
-<div
-id="tablaCorrida"
-style="margin-top:15px">
-</div>
-
+      <div
+        id="scanPosBox"
+        class="oculto">
+
+        <div
+          id="readerPos"
+          class="scanner">
+        </div>
+
+      </div>
+
+      <div id="mensajePos"></div>
+
+      <div id="carritoLista"></div>
 
-<div
-id="totalCorrida"
-class="codigoAuto">
+      <div class="totales">
+
+        <div class="lineaTotal">
+          <span>Pares</span>
+          <strong id="posPares">0</strong>
+        </div>
+
+        <div class="lineaTotal">
+          <span>Subtotal</span>
+          <strong id="posSubtotal">
+            Q0.00
+          </strong>
+        </div>
+
+        <div class="lineaTotal">
+          <span>Descuento</span>
+          <strong id="posDescuentoVista">
+            Q0.00
+          </strong>
+        </div>
+
+        <div class="lineaTotal">
+          <span>Total</span>
+          <span
+            class="totalGrande"
+            id="posTotal">
+            Q0.00
+          </span>
+        </div>
+
+      </div>
+
+      <div class="grid2">
+
+        <div>
+          <label>Cliente</label>
+          <input
+            id="posCliente"
+            placeholder="Opcional">
+        </div>
+
+        <div>
+          <label>NIT</label>
+          <input
+            id="posNit"
+            placeholder="CF o NIT">
+        </div>
+
+        <div>
+          <label>Forma de pago</label>
+
+          <select
+            id="posMetodo"
+            onchange="actualizarPago()">
+
+            <option>EFECTIVO</option>
+            <option>TRANSFERENCIA</option>
+            <option>TARJETA</option>
+
+          </select>
+
+        </div>
+
+        <div>
+          <label>Descuento Q</label>
+
+          <input
+            id="posDescuento"
+            type="number"
+            min="0"
+            step="0.01"
+            value="0"
+            oninput="renderCarrito()">
+
+        </div>
+
+        <div id="efectivoBox">
+
+          <label>
+            Efectivo recibido Q
+          </label>
+
+          <input
+            id="posEfectivo"
+            type="number"
+            min="0"
+            step="0.01"
+            value="0"
+            oninput="actualizarCambio()">
+
+        </div>
 
-Total corrida: 0 pares
+        <div>
+          <label>Nota</label>
+          <input id="posNota">
+        </div>
 
-</div>
-
-
-<label>
-Nota
-</label>
-
-<textarea
-id="cNota">
-</textarea>
-
-
-<button
-class="btnMorado w100"
-style="margin-top:12px"
-onclick="guardarCorrida()">
+      </div>
+
+      <div
+        id="cambioBox"
+        class="cambio">
+
+        Cambio:
+        <b id="posCambio">
+          Q0.00
+        </b>
+
+      </div>
+
+      <button
+        class="btnVerde w100"
+        style="font-size:18px;margin-top:12px"
+        onclick="cobrar()">
+        COBRAR VENTA
+      </button>
+
+      <button
+        class="btnGris w100"
+        style="margin-top:8px"
+        onclick="vaciar()">
+        Vaciar carrito
+      </button>
 
-Guardar corrida
+    </div>
 
-</button>
+    <div
+      id="ticketCard"
+      class="card oculto">
 
+      <div
+        id="ticket"
+        class="ticket">
+      </div>
 
-<div id="mensajeCorrida">
-</div>
-
-</div>
-</h3>
+      <button
+        class="btnNegro noPrint w100"
+        style="margin-top:10px"
+        onclick="imprimirTicket('ticket')">
+        🖨 Imprimir comprobante
+      </button>
 
-<div class="sub">
+      <button
+        class="btnGris noPrint w100"
+        style="margin-top:8px"
+        onclick="$('ticketCard').classList.add('oculto')">
+        Nueva venta
+      </button>
 
-La existencia inicial se asignará a la
-sucursal seleccionada arriba.
+    </div>
 
-</div>
+  </div>
 
+  <div
+    id="vistaVentas"
+    class="vistaApp oculto">
 
-<div class="grid2">
-
-<div>
-<label>Marca</label>
-<input id="nMarca">
-</div>
+    <div class="card">
 
-<div>
-<label>Modelo</label>
-<input
-id="nModelo"
-oninput="codigoAuto()">
-</div>
+      <h3 style="margin-top:0">
+        Ventas realizadas
+      </h3>
 
-<div>
-<label>Categoría</label>
-<input id="nCategoria">
-</div>
+      <div class="fila">
 
-<div>
-<label>Color</label>
-<input
-id="nColor"
-oninput="codigoAuto()">
-</div>
+        <input
+          id="buscarVentaTexto"
+          placeholder="Número de venta, cliente, NIT o fecha"
+          onkeydown="if(event.key==='Enter')buscarVentas()">
 
-<div>
-<label>Talla</label>
-<input
-id="nTalla"
-oninput="codigoAuto()">
-</div>
+        <button
+          class="btnNegro"
+          onclick="buscarVentas()">
+          Buscar
+        </button>
 
-<div>
-<label>Ubicación</label>
-<input id="nUbicacion">
-</div>
+      </div>
 
-<div>
-<label>Costo</label>
-<input
-id="nCosto"
-type="number"
-step="0.01">
-</div>
+      <div
+        class="sub"
+        style="margin-top:8px">
+        Busca dentro de la sucursal seleccionada.
+      </div>
 
-<div>
-<label>Precio</label>
-<input
-id="nPrecio"
-type="number"
-step="0.01">
-</div>
+      <div id="mensajeVentas"></div>
 
-<div>
-<label>Existencia inicial</label>
-<input
-id="nExistencia"
-type="number"
-value="0">
-</div>
+      <div id="listaVentas"></div>
 
-<div>
-<label>Stock mínimo</label>
-<input
-id="nStockMinimo"
-type="number"
-value="2">
-</div>
+    </div>
 
-</div>
+    <div
+      id="ticketHistorialCard"
+      class="card oculto">
 
+      <div
+        id="ticketHistorial"
+        class="ticket">
+      </div>
 
-<div
-id="codigoAuto"
-class="codigoAuto">
+      <button
+        class="btnNegro noPrint w100"
+        style="margin-top:10px"
+        onclick="imprimirTicket('ticketHistorial')">
+        🖨 Reimprimir comprobante
+      </button>
+
+      <button
+        class="btnGris noPrint w100"
+        style="margin-top:8px"
+        onclick="$('ticketHistorialCard').classList.add('oculto')">
+        Cerrar
+      </button>
 
-Código automático: —
+    </div>
 
-</div>
+  </div>
 
+  <div
+    id="vistaInventario"
+    class="vistaApp oculto">
 
-<label>
-Nota
-</label>
+    <div class="card">
 
-<textarea id="nNota">
-</textarea>
+      <div class="fila">
 
+        <div class="buscadorAuto">
 
-<button
-class="btnMorado w100"
-style="margin-top:12px"
-onclick="guardarProducto()">
+          <input
+            id="codigo"
+            autocomplete="off"
+            placeholder="Código, modelo, marca o color">
 
-Guardar producto y generar QR
+          <div
+            id="sugerenciasInv"
+            class="listaSugerencias oculto">
+          </div>
 
-</button>
+        </div>
 
+        <button
+          class="btnNegro"
+          onclick="consultar()">
+          Buscar
+        </button>
 
-<div id="mensajeNuevo">
-</div>
+      </div>
 
+      <div id="mensaje"></div>
 
-<div
-id="qrResultado"
-class="qrBox oculto">
+    </div>
 
-<strong id="qrCodigo">
-</strong>
+    <div
+      id="productoCard"
+      class="card oculto">
 
-<br>
+      <div class="producto">
 
-<img id="qrImagen">
+        <div class="campo">
+          <span>Código</span>
+          <b id="pCodigo"></b>
+        </div>
 
-</div>
+        <div class="campo">
+          <span>Marca</span>
+          <b id="pMarca"></b>
+        </div>
 
-</div>
+        <div class="campo">
+          <span>Modelo</span>
+          <b id="pModelo"></b>
+        </div>
 
-</div>
+        <div class="campo">
+          <span>Color</span>
+          <b id="pColor"></b>
+        </div>
 
+        <div class="campo">
+          <span>Talla</span>
+          <b id="pTalla"></b>
+        </div>
 
-<div
-id="vistaTraslados"
-class="vistaApp oculto">
+        <div class="campo">
+          <span>Existencia sucursal</span>
+          <b id="pExistencia"></b>
+        </div>
 
-<div class="card">
+        <div class="campo">
+          <span>Existencia total</span>
+          <b id="pExistenciaTotal"></b>
+        </div>
 
-<h3 style="margin-top:0">
-Traslado entre sucursales
-</h3>
+        <div class="campo">
+          <span>Precio</span>
+          <b id="pPrecio"></b>
+        </div>
 
-<div class="sub">
-El origen es la sucursal seleccionada arriba.
-</div>
+        <div class="campo">
+          <span>Ubicación</span>
+          <b id="pUbicacion"></b>
+        </div>
 
-<label>
-Producto
-</label>
+        <div class="campo">
+          <span>Sucursal</span>
+          <b id="pSucursal"></b>
+        </div>
+
+      </div>
+
+      <div id="movimientoBox">
+
+        <label>Cantidad</label>
+
+        <input
+          id="cantidad"
+          type="number"
+          min="1"
+          value="1">
+
+        <label>Nota</label>
+
+        <textarea id="nota"></textarea>
+
+        <div
+          class="fila"
+          style="margin-top:12px">
+
+          <button
+            class="btnVerde"
+            style="flex:1"
+            onclick="mover('ENTRADA')">
+            + Entrada
+          </button>
+
+          <button
+            class="btnRojo"
+            style="flex:1"
+            onclick="mover('SALIDA')">
+            − Salida
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <div
+    id="vistaNuevo"
+    class="vistaApp oculto">
+
+    <div class="card">
+
+      <h3 style="margin-top:0">
+        Nuevo producto
+      </h3>
+
+      <div class="sub">
+        La existencia inicial se asignará a la sucursal seleccionada arriba.
+      </div>
+
+      <div class="grid2">
+
+        <div>
+          <label>Marca</label>
+          <input id="nMarca">
+        </div>
+
+        <div>
+          <label>Modelo</label>
+          <input
+            id="nModelo"
+            oninput="codigoAuto()">
+        </div>
 
-<div class="buscadorAuto">
+        <div>
+          <label>Categoría</label>
+          <input id="nCategoria">
+        </div>
 
-<input
-id="trasCodigo"
-autocomplete="off"
-placeholder="Código, modelo, marca o color">
+        <div>
+          <label>Color</label>
+          <input
+            id="nColor"
+            oninput="codigoAuto()">
+        </div>
 
-<div
-id="sugerenciasTras"
-class="listaSugerencias oculto">
-</div>
+        <div>
+          <label>Talla</label>
+          <input
+            id="nTalla"
+            oninput="codigoAuto()">
+        </div>
 
-</div>
+        <div>
+          <label>Ubicación</label>
+          <input id="nUbicacion">
+        </div>
 
+        <div>
+          <label>Costo</label>
+          <input
+            id="nCosto"
+            type="number"
+            step="0.01">
+        </div>
 
-<label>
-Sucursal destino
-</label>
+        <div>
+          <label>Precio</label>
+          <input
+            id="nPrecio"
+            type="number"
+            step="0.01">
+        </div>
 
-<select id="trasDestino">
-</select>
+        <div>
+          <label>Existencia inicial</label>
+          <input
+            id="nExistencia"
+            type="number"
+            value="0">
+        </div>
 
+        <div>
+          <label>Stock mínimo</label>
+          <input
+            id="nStockMinimo"
+            type="number"
+            value="2">
+        </div>
 
-<label>
-Cantidad
-</label>
+      </div>
 
-<input
-id="trasCantidad"
-type="number"
-min="1"
-value="1">
+      <div
+        id="codigoAuto"
+        class="codigoAuto">
+        Código automático: —
+      </div>
 
+      <label>Nota</label>
 
-<label>
-Nota
-</label>
+      <textarea id="nNota"></textarea>
 
-<textarea id="trasNota">
-</textarea>
+      <button
+        class="btnMorado w100"
+        style="margin-top:12px"
+        onclick="guardarProducto()">
+        Guardar producto y generar QR
+      </button>
 
+      <div id="mensajeNuevo"></div>
 
-<button
-class="btnAzul w100"
-style="margin-top:12px"
-onclick="hacerTraslado()">
+      <div
+        id="qrResultado"
+        class="qrBox oculto">
 
-Registrar traslado
+        <strong id="qrCodigo"></strong>
 
-</button>
+        <br>
 
+        <img id="qrImagen">
 
-<div id="mensajeTraslado">
-</div>
+      </div>
 
-</div>
+    </div>
 
-</div>
+  </div>
 
+  <div
+    id="vistaTraslados"
+    class="vistaApp oculto">
 
-<div
-id="vistaUsuarios"
-class="vistaApp oculto">
+    <div class="card">
 
-<div class="card">
+      <h3 style="margin-top:0">
+        Traslado entre sucursales
+      </h3>
 
-<h3 style="margin-top:0">
-Crear usuario
-</h3>
+      <div class="sub">
+        El origen es la sucursal seleccionada arriba.
+      </div>
 
+      <label>Producto</label>
 
-<div class="grid2">
+      <div class="buscadorAuto">
 
-<div>
-<label>Usuario</label>
-<input id="uUsuario">
-</div>
+        <input
+          id="trasCodigo"
+          autocomplete="off"
+          placeholder="Código, modelo, marca o color">
 
-<div>
-<label>Nombre</label>
-<input id="uNombre">
-</div>
+        <div
+          id="sugerenciasTras"
+          class="listaSugerencias oculto">
+        </div>
 
-<div>
-<label>Clave</label>
-<input
-id="uClave"
-type="password">
-</div>
+      </div>
 
-<div>
+      <label>Sucursal destino</label>
 
-<label>
-Rol
-</label>
+      <select id="trasDestino"></select>
 
-<select
-id="uRol"
-onchange="ajustarUsuarioSucursal()">
+      <label>Cantidad</label>
 
-<option value="CAJERO">
-CAJERO
-</option>
+      <input
+        id="trasCantidad"
+        type="number"
+        min="1"
+        value="1">
 
-<option value="BODEGA">
-BODEGA
-</option>
+      <label>Nota</label>
 
-<option value="ADMIN">
-ADMIN
-</option>
+      <textarea id="trasNota"></textarea>
 
-</select>
+      <button
+        class="btnAzul w100"
+        style="margin-top:12px"
+        onclick="hacerTraslado()">
+        Registrar traslado
+      </button>
 
-</div>
+      <div id="mensajeTraslado"></div>
 
+    </div>
 
-<div>
+  </div>
 
-<label>
-Sucursal
-</label>
+  <div
+    id="vistaUsuarios"
+    class="vistaApp oculto">
 
-<select id="uSucursal">
-</select>
+    <div class="card">
 
-</div>
+      <h3 style="margin-top:0">
+        Crear usuario
+      </h3>
 
-</div>
+      <div class="grid2">
 
+        <div>
+          <label>Usuario</label>
+          <input id="uUsuario">
+        </div>
 
-<button
-class="btnMorado w100"
-style="margin-top:12px"
-onclick="crearUsuario()">
+        <div>
+          <label>Nombre</label>
+          <input id="uNombre">
+        </div>
 
-Crear usuario
+        <div>
+          <label>Clave</label>
+          <input
+            id="uClave"
+            type="password">
+        </div>
 
-</button>
+        <div>
 
+          <label>Rol</label>
 
-<div id="mensajeUsuarios">
-</div>
+          <select
+            id="uRol"
+            onchange="ajustarUsuarioSucursal()">
 
-</div>
+            <option value="CAJERO">
+              CAJERO
+            </option>
 
+            <option value="BODEGA">
+              BODEGA
+            </option>
 
-<div class="card">
+            <option value="ADMIN">
+              ADMIN
+            </option>
 
-<h3 style="margin-top:0">
-Usuarios
-</h3>
+          </select>
 
-<div style="overflow:auto">
+        </div>
 
-<table class="tabla">
+        <div>
 
-<thead>
+          <label>Sucursal</label>
 
-<tr>
-<th>Usuario</th>
-<th>Nombre</th>
-<th>Rol</th>
-<th>Sucursal</th>
-<th>Estado</th>
-<th>Acción</th>
-</tr>
+          <select id="uSucursal"></select>
 
-</thead>
+        </div>
 
-<tbody id="listaUsuarios">
-</tbody>
+      </div>
 
-</table>
+      <button
+        class="btnMorado w100"
+        style="margin-top:12px"
+        onclick="crearUsuario()">
+        Crear usuario
+      </button>
 
-</div>
+      <div id="mensajeUsuarios"></div>
 
-</div>
+    </div>
 
-</div>
+    <div class="card">
 
+      <h3 style="margin-top:0">
+        Usuarios
+      </h3>
 
-<div
-id="vistaConfig"
-class="vistaApp oculto">
+      <div style="overflow:auto">
 
-<div class="card">
+        <table class="tabla">
 
-<h3>
-Configuración
-</h3>
+          <thead>
 
-<label>
-URL Apps Script
-</label>
+            <tr>
+              <th>Usuario</th>
+              <th>Nombre</th>
+              <th>Rol</th>
+              <th>Sucursal</th>
+              <th>Estado</th>
+              <th>Acción</th>
+            </tr>
 
-<input
-id="apiUrl"
-placeholder="https://script.google.com/macros/s/.../exec">
+          </thead>
 
+          <tbody id="listaUsuarios"></tbody>
 
-<button
-class="btnNegro w100"
-style="margin-top:12px"
-onclick="guardarConfig()">
+        </table>
 
-Guardar configuración
+      </div>
 
-</button>
+    </div>
 
+  </div>
 
-<button
-class="btnGris w100"
-style="margin-top:8px"
-onclick="probar()">
+  <div
+    id="vistaConfig"
+    class="vistaApp oculto">
 
-Probar conexión
+    <div class="card">
 
-</button>
+      <h3>
+        Configuración
+      </h3>
 
+      <label>
+        URL Apps Script
+      </label>
 
-<button
-id="btnVolverLogin"
-class="btnGris w100"
-style="margin-top:8px"
-onclick="volverLogin()">
+      <input
+        id="apiUrl"
+        placeholder="https://script.google.com/macros/s/.../exec">
 
-Volver
+      <button
+        class="btnNegro w100"
+        style="margin-top:12px"
+        onclick="guardarConfig()">
+        Guardar configuración
+      </button>
 
-</button>
+      <button
+        class="btnGris w100"
+        style="margin-top:8px"
+        onclick="probar()">
+        Probar conexión
+      </button>
 
+      <button
+        id="btnVolverLogin"
+        class="btnGris w100"
+        style="margin-top:8px"
+        onclick="volverLogin()">
+        Volver
+      </button>
 
-<div id="mensajeConfig">
-</div>
+      <div id="mensajeConfig"></div>
 
-</div>
+    </div>
 
-</div>
+  </div>
 
 </div>
-
 
 <script>
 
-let API_URL=
-  localStorage
-  .getItem(
-    'adelaida_api_url'
-  )||'';
+let API_URL =
+  localStorage.getItem('adelaida_api_url') || '';
 
+let TOKEN =
+  localStorage.getItem('adelaida_token') || '';
 
-let TOKEN=
-  localStorage
-  .getItem(
-    'adelaida_token'
-  )||'';
+let SESION = null;
 
-
-let SESION=null;
-
-
-let SUCURSAL=
-  localStorage
-  .getItem(
-    'adelaida_sucursal'
-  )||
+let SUCURSAL =
+  localStorage.getItem('adelaida_sucursal') ||
   'Adelaida La Paz';
 
+let SUCURSALES = [];
 
-let SUCURSALES=[];
+let carrito = [];
 
-let carrito=[];
+let productoActual = null;
 
-let productoActual=null;
+let scannerPos = null;
 
-let scannerPos=null;
+let ultimo = '';
 
-let ultimo='';
+let ultimoTs = 0;
 
-let ultimoTs=0;
+let t1 = null;
+let t2 = null;
+let t3 = null;
 
-let t1=null;
-
-let t2=null;
-
-let t3=null;
-
-
-const $=
-  id=>
-    document
-    .getElementById(id);
+const $ = id =>
+  document.getElementById(id);
 
 
 document.addEventListener(
-'DOMContentLoaded',
-()=>{
+  'DOMContentLoaded',
+  () => {
 
-  $('apiUrl').value=
-    API_URL;
+    $('apiUrl').value =
+      API_URL;
 
+    $('sucursalActual')
+      .addEventListener(
+        'change',
+        () => {
 
-  $('sucursalActual')
-  .addEventListener(
-  'change',
-  ()=>{
+          SUCURSAL =
+            $('sucursalActual')
+              .value;
 
-    SUCURSAL=
-      $('sucursalActual')
-      .value;
+          localStorage
+            .setItem(
+              'adelaida_sucursal',
+              SUCURSAL
+            );
 
+          carrito = [];
 
-    localStorage
-    .setItem(
-      'adelaida_sucursal',
-      SUCURSAL
+          renderCarrito();
+
+          cargarResumen();
+
+          rellenarDestinos();
+
+        }
+      );
+
+    auto(
+      'posCodigo',
+      'pos',
+      () => t1,
+      v => t1 = v
     );
 
+    auto(
+      'codigo',
+      'inv',
+      () => t2,
+      v => t2 = v
+    );
 
-    carrito=[];
+    auto(
+      'trasCodigo',
+      'tras',
+      () => t3,
+      v => t3 = v
+    );
+
+    $('posCodigo')
+      .addEventListener(
+        'keydown',
+        e => {
+
+          if(
+            e.key === 'Enter'
+          ){
+            agregar();
+          }
+
+        }
+      );
+
+    $('codigo')
+      .addEventListener(
+        'keydown',
+        e => {
+
+          if(
+            e.key === 'Enter'
+          ){
+            consultar();
+          }
+
+        }
+      );
+
+    $('loginClave')
+      .addEventListener(
+        'keydown',
+        e => {
+
+          if(
+            e.key === 'Enter'
+          ){
+            login();
+          }
+
+        }
+      );
 
     renderCarrito();
 
-    cargarResumen();
-
-    rellenarDestinos();
-
-  });
-
-
-  auto(
-    'posCodigo',
-    'pos',
-    ()=>t1,
-    v=>t1=v
-  );
-
-
-  auto(
-    'codigo',
-    'inv',
-    ()=>t2,
-    v=>t2=v
-  );
-
-
-  auto(
-    'trasCodigo',
-    'tras',
-    ()=>t3,
-    v=>t3=v
-  );
-
-
-  $('posCodigo')
-  .addEventListener(
-  'keydown',
-  e=>{
-
     if(
-      e.key==='Enter'
+      location.hash ===
+      '#vistaConfig'
     ){
 
-      agregar();
+      mostrarConfigDesdeLogin();
+
+      return;
 
     }
 
-  });
-
-
-  $('codigo')
-  .addEventListener(
-  'keydown',
-  e=>{
-
     if(
-      e.key==='Enter'
+      !API_URL
     ){
 
-      consultar();
+      mostrarConfigDesdeLogin();
+
+      return;
 
     }
 
-  });
+    probar(
+      () => {
 
-
-  renderCarrito();
-
-
-  if(!API_URL){
-
-    mostrarConfigDesdeLogin();
-
-    return;
-
-  }
-
-
-  probar(
-    ()=>{
-
-      if(TOKEN){
-
-        restaurarSesion();
+        if(
+          TOKEN
+        ){
+          restaurarSesion();
+        }
 
       }
+    );
 
-    }
-  );
-
-});
+  }
+);
 
 
 function mostrarConfigDesdeLogin(){
 
   ocultarVistas();
 
-  $('loginCard')
-  .classList
-  .add(
-    'oculto'
-  );
+  const login =
+    $('loginCard');
 
-  $('vistaConfig')
-  .classList
-  .remove(
-    'oculto'
-  );
+  const cfg =
+    $('vistaConfig');
 
-  $('btnVolverLogin')
-  .classList
-  .remove(
-    'oculto'
-  );
+  const volver =
+    $('btnVolverLogin');
+
+  const input =
+    $('apiUrl');
+
+  if(
+    login
+  ){
+    login
+      .classList
+      .add('oculto');
+  }
+
+  if(
+    cfg
+  ){
+    cfg
+      .classList
+      .remove('oculto');
+  }
+
+  if(
+    volver
+  ){
+    volver
+      .classList
+      .remove('oculto');
+  }
+
+  if(
+    input
+  ){
+    input.value =
+      API_URL || '';
+  }
+
+  if(
+    location.hash !==
+    '#vistaConfig'
+  ){
+
+    history.replaceState(
+      null,
+      '',
+      '#vistaConfig'
+    );
+
+  }
 
 }
 
 
 function volverLogin(){
 
-  $('vistaConfig')
-  .classList
-  .add(
-    'oculto'
-  );
+  const cfg =
+    $('vistaConfig');
 
-  $('loginCard')
-  .classList
-  .remove(
-    'oculto'
-  );
+  const login =
+    $('loginCard');
+
+  if(
+    cfg
+  ){
+    cfg
+      .classList
+      .add('oculto');
+  }
+
+  if(
+    login
+  ){
+    login
+      .classList
+      .remove('oculto');
+  }
+
+  if(
+    location.hash ===
+    '#vistaConfig'
+  ){
+
+    history.replaceState(
+      null,
+      '',
+      location.pathname +
+      location.search
+    );
+
+  }
 
 }
 
@@ -2022,15 +1406,14 @@ function volverLogin(){
 function ocultarVistas(){
 
   document
-  .querySelectorAll(
-    '.vistaApp'
-  )
-  .forEach(
-    x=>
-      x.classList.add(
-        'oculto'
-      )
-  );
+    .querySelectorAll(
+      '.vistaApp'
+    )
+    .forEach(
+      x =>
+        x.classList
+          .add('oculto')
+    );
 
 }
 
@@ -2039,27 +1422,20 @@ function vista(v){
 
   ocultarVistas();
 
-
-  const nombre=
-    'vista'+
-    v.charAt(0)
-    .toUpperCase()+
-    v.slice(1);
-
-
-  const el=
-    $(nombre);
-
-
-  if(el){
-
-    el.classList
-    .remove(
-      'oculto'
+  const el =
+    $(
+      'vista' +
+      v.charAt(0)
+        .toUpperCase() +
+      v.slice(1)
     );
 
+  if(
+    el
+  ){
+    el.classList
+      .remove('oculto');
   }
-
 
   [
     'pos',
@@ -2071,24 +1447,25 @@ function vista(v){
     'config'
   ]
   .forEach(
-    n=>{
+    n => {
 
-      const b=
+      const b =
         $(
-          'tab'+
+          'tab' +
           n.charAt(0)
-          .toUpperCase()+
+            .toUpperCase() +
           n.slice(1)
         );
 
-
-      if(b){
+      if(
+        b
+      ){
 
         b.classList
-        .toggle(
-          'activo',
-          n===v
-        );
+          .toggle(
+            'activo',
+            n === v
+          );
 
       }
 
@@ -2100,18 +1477,54 @@ function vista(v){
 
 function guardarConfig(){
 
-  API_URL=
-    $('apiUrl')
-    .value
+  const input =
+    $('apiUrl');
+
+  const nueva =
+    (
+      input
+      ? input.value
+      : ''
+    )
     .trim();
 
+  if(
+    !nueva
+  ){
+
+    return msg(
+      'mensajeConfig',
+      'Pegue la URL de Apps Script que termina en /exec.',
+      'error'
+    );
+
+  }
+
+  if(
+    !/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec(?:\?.*)?$/i
+      .test(nueva)
+  ){
+
+    return msg(
+      'mensajeConfig',
+      'La URL no parece válida. Debe ser la URL de implementación de Apps Script y terminar en /exec.',
+      'error'
+    );
+
+  }
+
+  API_URL =
+    nueva;
 
   localStorage
-  .setItem(
-    'adelaida_api_url',
-    API_URL
-  );
+    .setItem(
+      'adelaida_api_url',
+      API_URL
+    );
 
+  $('estadoApi')
+    .textContent =
+      'Comprobando Google Sheets…';
 
   probar();
 
@@ -2120,7 +1533,30 @@ function guardarConfig(){
 
 function probar(cb){
 
-  if(!API_URL){
+  const input =
+    $('apiUrl');
+
+  const escrita =
+    (
+      input
+      ? input.value
+      : ''
+    )
+    .trim();
+
+  if(
+    escrita &&
+    escrita !== API_URL
+  ){
+
+    API_URL =
+      escrita;
+
+  }
+
+  if(
+    !API_URL
+  ){
 
     msg(
       'mensajeConfig',
@@ -2132,36 +1568,57 @@ function probar(cb){
 
   }
 
+  msg(
+    'mensajeConfig',
+    'Probando conexión…',
+    'info'
+  );
 
   api(
     'ping',
     {},
-    r=>{
+    r => {
 
-      if(r.ok){
+      if(
+        r &&
+        r.ok
+      ){
+
+        localStorage
+          .setItem(
+            'adelaida_api_url',
+            API_URL
+          );
 
         $('estadoApi')
-        .textContent=
-          '✅ Conectado a Google Sheets';
-
+          .textContent =
+            '✅ Conectado a Google Sheets';
 
         msg(
           'mensajeConfig',
-          'Conexión correcta.',
+          'Conexión correcta. Ya puede volver e iniciar sesión.',
           'ok'
         );
 
-
-        if(cb){
+        if(
+          cb
+        ){
           cb();
         }
 
       }else{
 
+        $('estadoApi')
+          .textContent =
+            '⚠️ Sin conexión con Google Sheets';
+
         msg(
           'mensajeConfig',
-          r.error||
-          'Sin conexión.',
+          (
+            r &&
+            r.error
+          ) ||
+          'Sin conexión. Revise la URL /exec y los permisos de la implementación.',
           'error'
         );
 
@@ -2176,51 +1633,67 @@ function probar(cb){
 
 function login(){
 
-  if(!API_URL){
+  if(
+    !API_URL
+  ){
 
-    return(
-      mostrarConfigDesdeLogin()
+    mostrarConfigDesdeLogin();
+
+    return msg(
+      'mensajeConfig',
+      'Primero configure la conexión con Google Sheets.',
+      'info'
     );
 
   }
 
+  msg(
+    'mensajeLogin',
+    'Verificando usuario…',
+    'info'
+  );
 
   api(
     'login',
     {
-
       usuario:
         $('loginUsuario')
-        .value,
+          .value,
 
       clave:
         $('loginClave')
-        .value
-
+          .value
     },
-    r=>{
+    r => {
 
-      if(!r.ok){
+      if(
+        !r ||
+        !r.ok
+      ){
 
         return msg(
           'mensajeLogin',
-          r.error,
+          (
+            r &&
+            r.error
+          ) ||
+          'No fue posible iniciar sesión.',
           'error'
         );
 
       }
 
-
-      TOKEN=
+      TOKEN =
         r.token;
 
-
       localStorage
-      .setItem(
-        'adelaida_token',
-        TOKEN
-      );
+        .setItem(
+          'adelaida_token',
+          TOKEN
+        );
 
+      $('mensajeLogin')
+        .innerHTML = '';
 
       iniciarApp(
         r.usuario
@@ -2238,21 +1711,22 @@ function restaurarSesion(){
   api(
     'sesion',
     {},
-    r=>{
+    r => {
 
-      if(!r.ok){
+      if(
+        !r.ok
+      ){
 
-        TOKEN='';
+        TOKEN = '';
 
         localStorage
-        .removeItem(
-          'adelaida_token'
-        );
+          .removeItem(
+            'adelaida_token'
+          );
 
         return;
 
       }
-
 
       iniciarApp(
         r.usuario
@@ -2266,96 +1740,77 @@ function restaurarSesion(){
 
 function iniciarApp(u){
 
-  SESION=u;
-
+  SESION =
+    u;
 
   $('loginCard')
-  .classList
-  .add(
-    'oculto'
-  );
-
+    .classList
+    .add('oculto');
 
   $('tabs')
-  .classList
-  .remove(
-    'oculto'
-  );
-
+    .classList
+    .remove('oculto');
 
   $('sesionBar')
-  .classList
-  .remove(
-    'oculto'
-  );
-
+    .classList
+    .remove('oculto');
 
   $('resumen')
-  .classList
-  .remove(
-    'oculto'
-  );
-
+    .classList
+    .remove('oculto');
 
   $('usuarioActual')
-  .textContent=
-    u.nombre+
-    ' · '+
-    u.rol;
-
+    .textContent =
+      u.nombre +
+      ' · ' +
+      u.rol;
 
   $('btnVolverLogin')
-  .classList
-  .add(
-    'oculto'
-  );
-
+    .classList
+    .add('oculto');
 
   $('tabUsuarios')
-  .classList
-  .toggle(
-    'oculto',
-    u.rol!=='ADMIN'
-  );
-
+    .classList
+    .toggle(
+      'oculto',
+      u.rol !== 'ADMIN'
+    );
 
   $('tabNuevo')
-  .classList
-  .toggle(
-    'oculto',
-    u.rol==='CAJERO'
-  );
-
+    .classList
+    .toggle(
+      'oculto',
+      u.rol === 'CAJERO'
+    );
 
   $('tabTraslados')
-  .classList
-  .toggle(
-    'oculto',
-    u.rol==='CAJERO'
-  );
-
+    .classList
+    .toggle(
+      'oculto',
+      u.rol === 'CAJERO'
+    );
 
   $('movimientoBox')
-  .classList
-  .toggle(
-    'oculto',
-    u.rol==='CAJERO'
-  );
-
+    .classList
+    .toggle(
+      'oculto',
+      u.rol === 'CAJERO'
+    );
 
   api(
     'sucursales',
     {},
-    r=>{
+    r => {
 
-      if(!r.ok){
+      if(
+        !r.ok
+      ){
         return;
       }
 
-
-      SUCURSALES=
-        r.sucursales||[];
-
+      SUCURSALES =
+        r.sucursales ||
+        [];
 
       llenarSucursales();
 
@@ -2371,70 +1826,63 @@ function iniciarApp(u){
 
 function llenarSucursales(){
 
-  const sel=
+  const sel =
     $('sucursalActual');
 
+  sel.innerHTML =
+    '';
 
-  sel.innerHTML='';
-
-
-  let permitidas=
+  let permitidas =
     SUCURSALES.slice();
 
-
   if(
-    SESION.rol===
+    SESION.rol ===
     'CAJERO'
   ){
 
-    permitidas=[
-      SESION.sucursal
-    ];
+    permitidas =
+      [
+        SESION.sucursal
+      ];
 
   }
 
-
   if(
     !permitidas
-    .includes(
-      SUCURSAL
-    )
+      .includes(
+        SUCURSAL
+      )
   ){
 
-    SUCURSAL=
-      permitidas[0]||
+    SUCURSAL =
+      permitidas[0] ||
       'Adelaida La Paz';
 
   }
 
-
   permitidas
-  .forEach(
-    s=>
-      sel.add(
-        new Option(
-          s,
-          s
+    .forEach(
+      s =>
+        sel.add(
+          new Option(
+            s,
+            s
+          )
         )
-      )
-  );
+    );
 
-
-  sel.value=
+  sel.value =
     SUCURSAL;
 
-
-  sel.disabled=
-    SESION.rol===
+  sel.disabled =
+    SESION.rol ===
     'CAJERO';
 
-
   localStorage
-  .setItem(
-    'adelaida_sucursal',
-    SUCURSAL
-  );
-
+    .setItem(
+      'adelaida_sucursal',
+      SUCURSAL
+    );
 
   rellenarDestinos();
 
@@ -2445,51 +1893,49 @@ function llenarSucursales(){
 
 function rellenarDestinos(){
 
-  const s=
+  const s =
     $('trasDestino');
 
-
-  s.innerHTML='';
-
+  s.innerHTML =
+    '';
 
   SUCURSALES
-  .filter(
-    x=>
-      x!==SUCURSAL
-  )
-  .forEach(
-    x=>
-      s.add(
-        new Option(
-          x,
-          x
+    .filter(
+      x =>
+        x !==
+        SUCURSAL
+    )
+    .forEach(
+      x =>
+        s.add(
+          new Option(
+            x,
+            x
+          )
         )
-      )
-  );
+    );
 
 }
 
 
 function rellenarUsuarioSucursales(){
 
-  const s=
+  const s =
     $('uSucursal');
 
-
-  s.innerHTML='';
-
+  s.innerHTML =
+    '';
 
   SUCURSALES
-  .forEach(
-    x=>
-      s.add(
-        new Option(
-          x,
-          x
+    .forEach(
+      x =>
+        s.add(
+          new Option(
+            x,
+            x
+          )
         )
-      )
-  );
-
+    );
 
   ajustarUsuarioSucursal();
 
@@ -2499,104 +1945,94 @@ function rellenarUsuarioSucursales(){
 function ajustarUsuarioSucursal(){
 
   $('uSucursal')
-  .disabled=
-    $('uRol')
-    .value===
-    'ADMIN';
+    .disabled =
+      $('uRol')
+        .value ===
+      'ADMIN';
 
 }
 
 
 function cerrarSesion(){
 
-  TOKEN='';
+  TOKEN = '';
 
-  SESION=null;
-
+  SESION = null;
 
   localStorage
-  .removeItem(
-    'adelaida_token'
-  );
-
+    .removeItem(
+      'adelaida_token'
+    );
 
   $('tabs')
-  .classList
-  .add(
-    'oculto'
-  );
-
+    .classList
+    .add('oculto');
 
   $('sesionBar')
-  .classList
-  .add(
-    'oculto'
-  );
-
+    .classList
+    .add('oculto');
 
   $('resumen')
-  .classList
-  .add(
-    'oculto'
-  );
-
+    .classList
+    .add('oculto');
 
   ocultarVistas();
 
-
   $('loginCard')
-  .classList
-  .remove(
-    'oculto'
-  );
+    .classList
+    .remove('oculto');
 
 }
 
 
 function cargarResumen(){
 
-  if(!TOKEN){
+  if(
+    !TOKEN
+  ){
     return;
   }
-
 
   api(
     'resumen',
     {},
-    r=>{
+    r => {
 
-      if(r.ok){
+      if(
+        r.ok
+      ){
 
         $('rReferencias')
-        .textContent=
-          r.referencias;
-
+          .textContent =
+            r.referencias;
 
         $('rPares')
-        .textContent=
-          r.pares;
+          .textContent =
+            r.pares;
 
       }
 
     }
   );
 
-
   api(
     'resumendia',
     {},
-    r=>{
+    r => {
 
-      if(r.ok){
+      if(
+        r.ok
+      ){
 
         $('rVentasHoy')
-        .textContent=
-          r.ventas;
-
+          .textContent =
+            r.ventas;
 
         $('rTotalHoy')
-        .textContent=
-          Q(r.total);
+          .textContent =
+            Q(
+              r.total
+            );
 
       }
 
@@ -2614,32 +2050,31 @@ function auto(
 ){
 
   $(id)
-  .addEventListener(
-  'input',
-  function(){
+    .addEventListener(
+      'input',
+      function(){
 
-    clearTimeout(
-      getT()
+        clearTimeout(
+          getT()
+        );
+
+        const q =
+          this.value
+            .trim();
+
+        setT(
+          setTimeout(
+            () =>
+              sugerencias(
+                q,
+                modo
+              ),
+            180
+          )
+        );
+
+      }
     );
-
-
-    const q=
-      this.value
-      .trim();
-
-
-    setT(
-      setTimeout(
-        ()=>
-          sugerencias(
-            q,
-            modo
-          ),
-        180
-      )
-    );
-
-  });
 
 }
 
@@ -2649,129 +2084,129 @@ function sugerencias(
   modo
 ){
 
-  const c=
+  const c =
     $(
-      modo==='pos'
-        ? 'sugerenciasPos'
-        : modo==='inv'
-          ? 'sugerenciasInv'
-          : 'sugerenciasTras'
+      modo === 'pos'
+      ? 'sugerenciasPos'
+      : modo === 'inv'
+      ? 'sugerenciasInv'
+      : 'sugerenciasTras'
     );
 
-
-  if(!q){
+  if(
+    !q
+  ){
 
     c.classList
-    .add(
-      'oculto'
-    );
+      .add('oculto');
 
     return;
 
   }
 
-
   api(
     'sugerir',
     {
-      q:q
+      q
     },
-    r=>{
+    r => {
 
-      c.innerHTML='';
-
+      c.innerHTML =
+        '';
 
       (
-        r.sugerencias||
+        r.sugerencias ||
         []
       )
       .forEach(
-        p=>{
+        p => {
 
-          const d=
+          const d =
             document
-            .createElement(
-              'div'
-            );
+              .createElement(
+                'div'
+              );
 
-
-          d.className=
+          d.className =
             'itemSugerencia';
 
-
-          d.innerHTML=
-            '<div class="sugCodigo">'+
-            esc(p.codigo)+
-            '</div>'+
-            '<div class="sugDetalle">'+
-            esc(p.marca)+
-            ' · '+
-            esc(p.modelo)+
-            ' · '+
-            esc(p.color)+
-            ' · Talla '+
-            esc(p.talla)+
-            ' · '+
-            p.existencia+
-            ' pares · '+
-            Q(p.precio)+
+          d.innerHTML =
+            '<div class="sugCodigo">' +
+            esc(
+              p.codigo
+            ) +
+            '</div>' +
+            '<div class="sugDetalle">' +
+            esc(
+              p.marca
+            ) +
+            ' · ' +
+            esc(
+              p.modelo
+            ) +
+            ' · ' +
+            esc(
+              p.color
+            ) +
+            ' · Talla ' +
+            esc(
+              p.talla
+            ) +
+            ' · ' +
+            p.existencia +
+            ' pares · ' +
+            Q(
+              p.precio
+            ) +
             '</div>';
 
-
-          d.onclick=
-            ()=>{
+          d.onclick =
+            () => {
 
               if(
-                modo==='pos'
+                modo ===
+                'pos'
               ){
 
                 $('posCodigo')
-                .value=
-                  p.codigo;
+                  .value =
+                    p.codigo;
 
                 c.classList
-                .add(
-                  'oculto'
-                );
+                  .add('oculto');
 
                 agregar(
                   p.codigo
                 );
 
-              }
-              else if(
-                modo==='inv'
+              }else if(
+                modo ===
+                'inv'
               ){
 
                 $('codigo')
-                .value=
-                  p.codigo;
+                  .value =
+                    p.codigo;
 
                 c.classList
-                .add(
-                  'oculto'
-                );
+                  .add('oculto');
 
                 consultar(
                   p.codigo
                 );
 
-              }
-              else{
+              }else{
 
                 $('trasCodigo')
-                .value=
-                  p.codigo;
+                  .value =
+                    p.codigo;
 
                 c.classList
-                .add(
-                  'oculto'
-                );
+                  .add('oculto');
 
               }
 
             };
-
 
           c.appendChild(
             d
@@ -2780,15 +2215,14 @@ function sugerencias(
         }
       );
 
-
       c.classList
-      .toggle(
-        'oculto',
-        !(
-          r.sugerencias||
-          []
-        ).length
-      );
+        .toggle(
+          'oculto',
+          !(
+            r.sugerencias ||
+            []
+          ).length
+        );
 
     }
   );
@@ -2798,16 +2232,18 @@ function sugerencias(
 
 function agregar(cod){
 
-  const c=
+  const c =
     (
-      cod||
-      $('posCodigo').value||
+      cod ||
+      $('posCodigo')
+        .value ||
       ''
     )
     .trim();
 
-
-  if(!c){
+  if(
+    !c
+  ){
 
     return msg(
       'mensajePos',
@@ -2817,60 +2253,62 @@ function agregar(cod){
 
   }
 
-
   $('posCodigo')
-  .value='';
-
+    .value =
+      '';
 
   api(
     'buscar',
     {
-      codigo:c
+      codigo:
+        c
     },
-    p=>{
+    p => {
 
       if(
-        !p.ok||
+        !p.ok ||
         !p.encontrado
       ){
 
         return msg(
           'mensajePos',
-          p.error||
+          p.error ||
           'Producto no encontrado.',
           'error'
         );
 
       }
 
-
       if(
-        p.existencia<=0
+        p.existencia <=
+        0
       ){
 
         return msg(
           'mensajePos',
-          'Producto agotado en '+
-          SUCURSAL+
+          'Producto agotado en ' +
+          SUCURSAL +
           '.',
           'error'
         );
 
       }
 
+      const x =
+        carrito
+          .find(
+            z =>
+              z.codigo ===
+              p.codigo
+          );
 
-      const x=
-        carrito.find(
-          z=>
-            z.codigo===
-            p.codigo
-        );
-
-
-      if(x){
+      if(
+        x
+      ){
 
         if(
-          x.cantidad+1>
+          x.cantidad +
+          1 >
           p.existencia
         ){
 
@@ -2884,23 +2322,21 @@ function agregar(cod){
 
         x.cantidad++;
 
-      }
-      else{
+      }else{
 
         carrito.push({
           ...p,
-          cantidad:1
+          cantidad:
+            1
         });
 
       }
 
-
       renderCarrito();
-
 
       msg(
         'mensajePos',
-        'Agregado: '+
+        'Agregado: ' +
         p.codigo,
         'ok'
       );
@@ -2913,123 +2349,122 @@ function agregar(cod){
 
 function renderCarrito(){
 
-  const l=
+  const l =
     $('carritoLista');
 
+  l.innerHTML =
+    '';
 
-  l.innerHTML='';
+  let pares =
+    0;
 
-
-  let pares=0;
-  let sub=0;
-
+  let sub =
+    0;
 
   carrito
-  .forEach(
-    (x,i)=>{
+    .forEach(
+      (
+        x,
+        i
+      ) => {
 
-      pares+=
-        x.cantidad;
+        pares +=
+          x.cantidad;
 
-      sub+=
-        x.precio*
-        x.cantidad;
+        sub +=
+          x.precio *
+          x.cantidad;
 
+        const d =
+          document
+            .createElement(
+              'div'
+            );
 
-      const d=
-        document
-        .createElement(
-          'div'
+        d.className =
+          'cartItem';
+
+        d.innerHTML =
+          '<div class="cartTop">' +
+          '<div><b>' +
+          esc(x.marca) +
+          ' ' +
+          esc(x.modelo) +
+          '</b>' +
+          '<div class="cartMeta">' +
+          esc(x.color) +
+          ' · Talla ' +
+          esc(x.talla) +
+          ' · ' +
+          esc(x.codigo) +
+          '</div></div>' +
+          '<b>' +
+          Q(
+            x.precio *
+            x.cantidad
+          ) +
+          '</b>' +
+          '</div>' +
+          '<div class="cartControls">' +
+          '<button onclick="cant(' +
+          i +
+          ',-1)">−</button>' +
+          '<input readonly value="' +
+          x.cantidad +
+          '">' +
+          '<button onclick="cant(' +
+          i +
+          ',1)">+</button>' +
+          '<button class="btnRojo" onclick="quitar(' +
+          i +
+          ')">Quitar</button>' +
+          '</div>';
+
+        l.appendChild(
+          d
         );
 
+      }
+    );
 
-      d.className=
-        'cartItem';
-
-
-      d.innerHTML=
-        '<div class="cartTop">'+
-        '<div>'+
-        '<b>'+
-        esc(x.marca)+
-        ' '+
-        esc(x.modelo)+
-        '</b>'+
-        '<div class="cartMeta">'+
-        esc(x.color)+
-        ' · Talla '+
-        esc(x.talla)+
-        ' · '+
-        esc(x.codigo)+
-        '</div>'+
-        '</div>'+
-        '<b>'+
-        Q(
-          x.precio*
-          x.cantidad
-        )+
-        '</b>'+
-        '</div>'+
-        '<div class="cartControls">'+
-        '<button onclick="cant('+
-        i+
-        ',-1)">−</button>'+
-        '<input readonly value="'+
-        x.cantidad+
-        '">'+
-        '<button onclick="cant('+
-        i+
-        ',1)">+</button>'+
-        '<button class="btnRojo" onclick="quitar('+
-        i+
-        ')">Quitar</button>'+
-        '</div>';
-
-
-      l.appendChild(
-        d
-      );
-
-    }
-  );
-
-
-  const desc=
+  const desc =
     Math.min(
       Math.max(
         0,
         Number(
           $('posDescuento')
-          .value
-        )||0
+            .value
+        ) ||
+        0
       ),
       sub
     );
 
-
-  const tot=
-    sub-desc;
-
+  const tot =
+    sub -
+    desc;
 
   $('posPares')
-  .textContent=
-    pares;
-
+    .textContent =
+      pares;
 
   $('posSubtotal')
-  .textContent=
-    Q(sub);
-
+    .textContent =
+      Q(
+        sub
+      );
 
   $('posDescuentoVista')
-  .textContent=
-    Q(desc);
-
+    .textContent =
+      Q(
+        desc
+      );
 
   $('posTotal')
-  .textContent=
-    Q(tot);
-
+    .textContent =
+      Q(
+        tot
+      );
 
   actualizarCambio();
 
@@ -3041,41 +2476,41 @@ function cant(
   d
 ){
 
-  const x=
+  const x =
     carrito[i];
 
+  const n =
+    x.cantidad +
+    d;
 
-  const n=
-    x.cantidad+d;
-
-
-  if(n<=0){
+  if(
+    n <= 0
+  ){
 
     carrito.splice(
       i,
       1
     );
 
-  }
-  else if(
-    n<=x.existencia
+  }else if(
+    n <=
+    x.existencia
   ){
 
-    x.cantidad=n;
+    x.cantidad =
+      n;
 
-  }
-  else{
+  }else{
 
     msg(
       'mensajePos',
-      'Solo hay '+
-      x.existencia+
+      'Solo hay ' +
+      x.existencia +
       ' disponibles.',
       'error'
     );
 
   }
-
 
   renderCarrito();
 
@@ -3103,7 +2538,7 @@ function vaciar(){
     )
   ){
 
-    carrito=[];
+    carrito = [];
 
     renderCarrito();
 
@@ -3114,38 +2549,38 @@ function vaciar(){
 
 function total(){
 
-  const sub=
-    carrito.reduce(
-      (s,x)=>
-        s+
-        x.precio*
-        x.cantidad,
-      0
-    );
+  const sub =
+    carrito
+      .reduce(
+        (
+          s,
+          x
+        ) =>
+          s +
+          x.precio *
+          x.cantidad,
+        0
+      );
 
-
-  const desc=
+  const desc =
     Math.min(
       Math.max(
         0,
         Number(
           $('posDescuento')
-          .value
-        )||0
+            .value
+        ) ||
+        0
       ),
       sub
     );
 
-
-  return{
-
-    sub:sub,
-
-    desc:desc,
-
+  return {
+    sub,
+    desc,
     total:
-      sub-desc
-
+      sub -
+      desc
   };
 
 }
@@ -3153,27 +2588,24 @@ function total(){
 
 function actualizarPago(){
 
-  const e=
+  const e =
     $('posMetodo')
-    .value===
+      .value ===
     'EFECTIVO';
 
-
   $('efectivoBox')
-  .classList
-  .toggle(
-    'oculto',
-    !e
-  );
-
+    .classList
+    .toggle(
+      'oculto',
+      !e
+    );
 
   $('cambioBox')
-  .classList
-  .toggle(
-    'oculto',
-    !e
-  );
-
+    .classList
+    .toggle(
+      'oculto',
+      !e
+    );
 
   actualizarCambio();
 
@@ -3182,29 +2614,31 @@ function actualizarPago(){
 
 function actualizarCambio(){
 
-  const t=
+  const t =
     total();
 
-
-  const r=
+  const r =
     Number(
       $('posEfectivo')
-      .value
-    )||0;
-
+        .value
+    ) ||
+    0;
 
   $('posCambio')
-  .textContent=
-    Q(
-      $('posMetodo')
-      .value===
-      'EFECTIVO'
-        ? Math.max(
-            0,
-            r-t.total
-          )
-        : 0
-    );
+    .textContent =
+      Q(
+        $('posMetodo')
+          .value ===
+        'EFECTIVO'
+        ?
+        Math.max(
+          0,
+          r -
+          t.total
+        )
+        :
+        0
+      );
 
 }
 
@@ -3223,23 +2657,22 @@ function cobrar(){
 
   }
 
-
-  const t=
+  const t =
     total();
 
-
-  const ef=
+  const ef =
     Number(
       $('posEfectivo')
-      .value
-    )||0;
-
+        .value
+    ) ||
+    0;
 
   if(
     $('posMetodo')
-    .value===
-    'EFECTIVO' &&
-    ef<t.total
+      .value ===
+      'EFECTIVO' &&
+    ef <
+    t.total
   ){
 
     return msg(
@@ -3250,11 +2683,12 @@ function cobrar(){
 
   }
 
-
   if(
     !confirm(
-      '¿Cobrar '+
-      Q(t.total)+
+      '¿Cobrar ' +
+      Q(
+        t.total
+      ) +
       '?'
     )
   ){
@@ -3263,37 +2697,32 @@ function cobrar(){
 
   }
 
-
   api(
     'venta',
     {
-
       items:
         JSON.stringify(
           carrito.map(
-            x=>({
-
+            x => ({
               codigo:
                 x.codigo,
-
               cantidad:
                 x.cantidad
-
             })
           )
         ),
 
       cliente:
         $('posCliente')
-        .value,
+          .value,
 
       nit:
         $('posNit')
-        .value,
+          .value,
 
       metodo:
         $('posMetodo')
-        .value,
+          .value,
 
       efectivo:
         ef,
@@ -3303,12 +2732,13 @@ function cobrar(){
 
       nota:
         $('posNota')
-        .value
-
+          .value
     },
-    r=>{
+    r => {
 
-      if(!r.ok){
+      if(
+        !r.ok
+      ){
 
         return msg(
           'mensajePos',
@@ -3318,38 +2748,45 @@ function cobrar(){
 
       }
 
-
       ticketHTML(
         r,
         'ticket'
       );
 
-
-      carrito=[];
+      carrito =
+        [];
 
       renderCarrito();
 
+      $('posCliente')
+        .value =
+          '';
 
-      $('posCliente').value='';
-      $('posNit').value='';
-      $('posNota').value='';
-      $('posDescuento').value=0;
-      $('posEfectivo').value=0;
+      $('posNit')
+        .value =
+          '';
 
+      $('posNota')
+        .value =
+          '';
+
+      $('posDescuento')
+        .value =
+          0;
+
+      $('posEfectivo')
+        .value =
+          0;
 
       $('ticketCard')
-      .classList
-      .remove(
-        'oculto'
-      );
-
+        .classList
+        .remove('oculto');
 
       cargarResumen();
 
-
       msg(
         'mensajePos',
-        'Venta registrada: '+
+        'Venta registrada: ' +
         r.numeroVenta,
         'ok'
       );
@@ -3365,528 +2802,180 @@ function ticketHTML(
   id
 ){
 
-  const ESCALAS_TICKET={
-
-    A:[
-      '20','21','22','23','24','25','26'
-    ],
-
-    B:[
-      '27','28','29','30','31','32'
-    ],
-
-    C:[
-      '33','34','35','36'
-    ],
-
-    D:[
-      '37','38','39','40','41','42','43'
-    ]
-
-  };
-
-
-  function escalaDeTalla(talla){
-
-    const t=
-      Number(
-        talla
-      );
-
-    if(
-      t>=20 &&
-      t<=26
-    ){
-      return 'A';
-    }
-
-    if(
-      t>=27 &&
-      t<=32
-    ){
-      return 'B';
-    }
-
-    if(
-      t>=33 &&
-      t<=36
-    ){
-      return 'C';
-    }
-
-    if(
-      t>=37 &&
-      t<=43
-    ){
-      return 'D';
-    }
-
-    return '';
-
-  }
-
-
-  const grupos={};
-
+  let f =
+    '';
 
   (
-    v.items||
+    v.items ||
     []
   )
   .forEach(
-    x=>{
+    x => {
 
-      const escala=
-        escalaDeTalla(
-          x.talla
-        );
-
-
-      const descripcion=
-        [
-          x.marca,
-          x.modelo,
+      f +=
+        '<tr>' +
+        '<td>' +
+        esc(
+          x.modelo
+        ) +
+        '<br>' +
+        '<small>' +
+        esc(
           x.color
-        ]
-        .filter(Boolean)
-        .join(' ');
-
-
-      const clave=
-        descripcion+
-        '||'+
-        escala+
-        '||'+
-        x.precio;
-
-
-      if(
-        !grupos[clave]
-      ){
-
-        grupos[clave]={
-
-          descripcion:
-            descripcion,
-
-          escala:
-            escala,
-
-          precio:
-            Number(
-              x.precio||
-              0
-            ),
-
-          cantidades:{},
-
-          cantidadTotal:0,
-
-          total:0
-
-        };
-
-      }
-
-
-      grupos[clave]
-      .cantidades[
-        String(
+        ) +
+        ' T.' +
+        esc(
           x.talla
-        )
-      ]=
-        (
-          grupos[clave]
-          .cantidades[
-            String(
-              x.talla
-            )
-          ]||
-          0
-        )+
-        Number(
-          x.cantidad||
-          0
-        );
-
-
-      grupos[clave]
-      .cantidadTotal+=
-        Number(
-          x.cantidad||
-          0
-        );
-
-
-      grupos[clave]
-      .total+=
-        Number(
-          x.subtotal||
-          0
-        );
-
-    }
-  );
-
-
-  let encabezadoEscalas='';
-
-
-  Object.keys(
-    ESCALAS_TICKET
-  )
-  .forEach(
-    escala=>{
-
-      encabezadoEscalas+=
-
-        '<tr>'+
-
-          '<td style="border:1px solid #333;text-align:center;font-weight:bold">'+
-            escala+
-          '</td>'+
-
-          ESCALAS_TICKET[
-            escala
-          ]
-          .map(
-            talla=>
-
-              '<td style="border:1px solid #333;text-align:center">'+
-                talla+
-              '</td>'
-
-          )
-          .join('')+
-
+        ) +
+        '</small>' +
+        '</td>' +
+        '<td class="derecha">' +
+        x.cantidad +
+        '</td>' +
+        '<td class="derecha">' +
+        Q(
+          x.subtotal
+        ) +
+        '</td>' +
         '</tr>';
 
     }
   );
-
-
-  let filas='';
-
-
-  Object.values(
-    grupos
-  )
-  .forEach(
-    g=>{
-
-      const tallas=
-        ESCALAS_TICKET[
-          g.escala
-        ]||
-        [];
-
-
-      let cantidades='';
-
-
-      tallas.forEach(
-        talla=>{
-
-          const cant=
-            g.cantidades[
-              talla
-            ]||
-            '';
-
-
-          cantidades+=
-
-            '<td style="border:1px solid #333;text-align:center">'+
-              (
-                cant||
-                ''
-              )+
-            '</td>';
-
-        }
-      );
-
-
-      filas+=
-
-        '<tr>'+
-
-          '<td style="border:1px solid #333;text-align:center">'+
-            g.cantidadTotal+
-          '</td>'+
-
-          '<td style="border:1px solid #333;padding:4px">'+
-            esc(
-              g.descripcion
-            )+
-          '</td>'+
-
-          '<td style="border:1px solid #333;text-align:center;font-weight:bold">'+
-            esc(
-              g.escala
-            )+
-          '</td>'+
-
-          cantidades+
-
-          '<td style="border:1px solid #333;text-align:right">'+
-            Q(
-              g.precio
-            )+
-          '</td>'+
-
-          '<td style="border:1px solid #333;text-align:right">'+
-            Q(
-              g.total
-            )+
-          '</td>'+
-
-        '</tr>';
-
-    }
-  );
-
 
   $(id)
-  .innerHTML=
-
-    '<h2>COMERCIAL ADELAIDA</h2>'+
-
-    '<div class="centro">'+
+    .innerHTML =
+      '<h2>COMERCIAL ADELAIDA</h2>' +
+      '<div class="centro">' +
       esc(
-        v.sucursal||
+        v.sucursal ||
         SUCURSAL
-      )+
-    '</div>'+
-
-    '<div class="centro">'+
-      'Comprobante de venta'+
-    '</div>'+
-
-    '<hr>'+
-
-    '<div>Venta: '+
+      ) +
+      '</div>' +
+      '<div class="centro">Comprobante de venta</div>' +
+      '<hr>' +
+      '<div>Venta: ' +
       esc(
         v.numeroVenta
-      )+
-    '</div>'+
-
-    '<div>Fecha: '+
+      ) +
+      '</div>' +
+      '<div>Fecha: ' +
       esc(
         v.fecha
-      )+
-    '</div>'+
-
-    (
-      v.cliente
-      ?
-      '<div>Cliente: '+
+      ) +
+      '</div>' +
+      (
+        v.cliente
+        ?
+        '<div>Cliente: ' +
         esc(
           v.cliente
-        )+
-      '</div>'
-      :
-      ''
-    )+
-
-    (
-      v.nit
-      ?
-      '<div>NIT: '+
+        ) +
+        '</div>'
+        :
+        ''
+      ) +
+      (
+        v.nit
+        ?
+        '<div>NIT: ' +
         esc(
           v.nit
-        )+
-      '</div>'
-      :
-      ''
-    )+
-
-    '<hr>'+
-
-    '<div style="overflow-x:auto">'+
-
-      '<table style="width:100%;border-collapse:collapse;font-size:11px">'+
-
-        '<thead>'+
-
-          '<tr>'+
-
-            '<th rowspan="5" style="border:1px solid #333;padding:4px">'+
-              'CANT'+
-            '</th>'+
-
-            '<th rowspan="5" style="border:1px solid #333;padding:4px">'+
-              'DESCRIPCIÓN'+
-            '</th>'+
-
-            '<th colspan="8" style="border:1px solid #333;padding:4px">'+
-              'NUMERACIÓN'+
-            '</th>'+
-
-            '<th rowspan="5" style="border:1px solid #333;padding:4px">'+
-              'P/UNI'+
-            '</th>'+
-
-            '<th rowspan="5" style="border:1px solid #333;padding:4px">'+
-              'TOTAL'+
-            '</th>'+
-
-          '</tr>'+
-
-          encabezadoEscalas+
-
-        '</thead>'+
-
-        '<tbody>'+
-
-          filas+
-
-        '</tbody>'+
-
-      '</table>'+
-
-    '</div>'+
-
-    '<hr>'+
-
-    '<div class="lineaTotal">'+
-      '<span>Subtotal</span>'+
-      '<b>'+
-        Q(
-          v.subtotal
-        )+
-      '</b>'+
-    '</div>'+
-
-    '<div class="lineaTotal">'+
-      '<span>Descuento</span>'+
-      '<b>'+
-        Q(
-          v.descuento
-        )+
-      '</b>'+
-    '</div>'+
-
-    '<div class="lineaTotal">'+
-      '<span>TOTAL</span>'+
-      '<b>'+
-        Q(
-          v.total
-        )+
-      '</b>'+
-    '</div>'+
-
-    '<div>Pago: '+
+        ) +
+        '</div>'
+        :
+        ''
+      ) +
+      '<hr>' +
+      '<table>' +
+      f +
+      '</table>' +
+      '<hr>' +
+      '<div class="lineaTotal">' +
+      '<span>Subtotal</span>' +
+      '<b>' +
+      Q(
+        v.subtotal
+      ) +
+      '</b>' +
+      '</div>' +
+      '<div class="lineaTotal">' +
+      '<span>Descuento</span>' +
+      '<b>' +
+      Q(
+        v.descuento
+      ) +
+      '</b>' +
+      '</div>' +
+      '<div class="lineaTotal">' +
+      '<span>TOTAL</span>' +
+      '<b>' +
+      Q(
+        v.total
+      ) +
+      '</b>' +
+      '</div>' +
+      '<div>Pago: ' +
       esc(
         v.metodoPago
-      )+
-    '</div>'+
-
-    (
-      v.metodoPago===
-      'EFECTIVO'
-      ?
-      '<div>Recibido: '+
+      ) +
+      '</div>' +
+      (
+        v.metodoPago ===
+        'EFECTIVO'
+        ?
+        '<div>Recibido: ' +
         Q(
           v.efectivoRecibido
-        )+
-      '</div>'+
-      '<div>Cambio: '+
+        ) +
+        '</div>' +
+        '<div>Cambio: ' +
         Q(
           v.cambio
-        )+
-      '</div>'
-      :
-      ''
-    )+
-
-    (
-      v.usuario
-      ?
-      '<div>Usuario: '+
+        ) +
+        '</div>'
+        :
+        ''
+      ) +
+      (
+        v.usuario
+        ?
+        '<div>Usuario: ' +
         esc(
           v.usuario
-        )+
-      '</div>'
-      :
-      ''
-    )+
-
-    '<hr>'+
-
-    '<div class="centro">'+
-      '¡Gracias por su compra!'+
-    '</div>';
+        ) +
+        '</div>'
+        :
+        ''
+      ) +
+      '<hr>' +
+      '<div class="centro">¡Gracias por su compra!</div>';
 
 }
 
-function imprimirTicket(
-  id,
-  formato='MEDIA'
-){
+
+function imprimirTicket(id){
 
   document
-  .querySelectorAll(
-    '.ticket'
-  )
-  .forEach(
-    x=>{
-
-      x.classList.remove(
-        'imprimir',
-        'ticket-media-carta',
-        'ticket-carta-vertical'
-      );
-
-    }
-  );
-
-
-  const t=
-    document
-    .getElementById(id);
-
-
-  if(!t){
-    return;
-  }
-
-
-  t.classList.add(
-    'imprimir'
-  );
-
-
-  if(
-    formato==='CARTA'
-  ){
-
-    t.classList.add(
-      'ticket-carta-vertical'
+    .querySelectorAll(
+      '.ticket'
+    )
+    .forEach(
+      x =>
+        x.classList
+          .remove('imprimir')
     );
 
-  }else{
-
-    t.classList.add(
-      'ticket-media-carta'
-    );
-
-  }
-
+  $(id)
+    .classList
+    .add('imprimir');
 
   window.print();
 
-
   setTimeout(
-    ()=>{
-
-      t.classList.remove(
-        'imprimir',
-        'ticket-media-carta',
-        'ticket-carta-vertical'
-      );
-
-    },
+    () =>
+      $(id)
+        .classList
+        .remove('imprimir'),
     500
   );
 
@@ -3895,93 +2984,104 @@ function imprimirTicket(
 
 async function toggleCam(){
 
-  if(scannerPos){
+  if(
+    scannerPos
+  ){
 
     try{
 
       if(
         scannerPos
-        .isScanning
+          .isScanning
       ){
 
         await scannerPos
-        .stop();
+          .stop();
 
       }
 
-
       await scannerPos
-      .clear();
+        .clear();
 
     }catch(e){}
 
-
-    scannerPos=null;
-
+    scannerPos =
+      null;
 
     $('scanPosBox')
-    .classList
-    .add(
-      'oculto'
-    );
-
+      .classList
+      .add('oculto');
 
     $('btnCamPos')
-    .textContent=
-      '📷 Abrir cámara continua';
-
+      .textContent =
+        '📷 Abrir cámara continua';
 
     return;
 
   }
 
-
   $('scanPosBox')
-  .classList
-  .remove(
-    'oculto'
-  );
-
+    .classList
+    .remove('oculto');
 
   $('btnCamPos')
-  .textContent=
-    '⏹ Cerrar cámara';
+    .textContent =
+      '⏹ Cerrar cámara';
 
+  if(
+    typeof Html5Qrcode ===
+    'undefined'
+  ){
 
-  scannerPos=
+    $('scanPosBox')
+      .classList
+      .add('oculto');
+
+    $('btnCamPos')
+      .textContent =
+        '📷 Abrir cámara continua';
+
+    return msg(
+      'mensajePos',
+      'La librería de cámara todavía no ha cargado. Intente nuevamente.',
+      'error'
+    );
+
+  }
+
+  scannerPos =
     new Html5Qrcode(
       'readerPos'
     );
 
-
   try{
 
-    await scannerPos
-    .start(
-
+    await scannerPos.start(
       {
         facingMode:
           'environment'
       },
-
       {
-        fps:10,
+        fps:
+          10,
 
         qrbox:{
-          width:280,
-          height:170
+          width:
+            280,
+          height:
+            170
         }
       },
+      txt => {
 
-      txt=>{
-
-        const n=
+        const n =
           Date.now();
 
-
         if(
-          txt===ultimo &&
-          n-ultimoTs<
+          txt ===
+          ultimo &&
+          n -
+          ultimoTs <
           1500
         ){
 
@@ -3989,40 +3089,32 @@ async function toggleCam(){
 
         }
 
-
-        ultimo=
+        ultimo =
           txt;
 
-        ultimoTs=
+        ultimoTs =
           n;
-
 
         agregar(
           txt
         );
 
       },
-
-      ()=>{}
-
+      () => {}
     );
 
   }catch(e){
 
-    scannerPos=null;
-
+    scannerPos =
+      null;
 
     $('scanPosBox')
-    .classList
-    .add(
-      'oculto'
-    );
-
+      .classList
+      .add('oculto');
 
     $('btnCamPos')
-    .textContent=
-      '📷 Abrir cámara continua';
-
+      .textContent =
+        '📷 Abrir cámara continua';
 
     msg(
       'mensajePos',
@@ -4037,101 +3129,96 @@ async function toggleCam(){
 
 function consultar(cod){
 
-  const c=
+  const c =
     (
-      cod||
-      $('codigo').value||
+      cod ||
+      $('codigo')
+        .value ||
       ''
     )
     .trim();
 
-
-  if(!c){
+  if(
+    !c
+  ){
     return;
   }
-
 
   api(
     'buscar',
     {
-      codigo:c
+      codigo:
+        c
     },
-    p=>{
+    p => {
 
       if(
-        !p.ok||
+        !p.ok ||
         !p.encontrado
       ){
 
         $('productoCard')
-        .classList
-        .add(
-          'oculto'
-        );
-
+          .classList
+          .add('oculto');
 
         return msg(
           'mensaje',
-          p.error||
+          p.error ||
           'Producto no encontrado.',
           'error'
         );
 
       }
 
-
-      productoActual=
+      productoActual =
         p;
 
-
       $('pCodigo')
-      .textContent=
-        p.codigo;
+        .textContent =
+          p.codigo;
 
       $('pMarca')
-      .textContent=
-        p.marca;
+        .textContent =
+          p.marca;
 
       $('pModelo')
-      .textContent=
-        p.modelo;
+        .textContent =
+          p.modelo;
 
       $('pColor')
-      .textContent=
-        p.color;
+        .textContent =
+          p.color;
 
       $('pTalla')
-      .textContent=
-        p.talla;
+        .textContent =
+          p.talla;
 
       $('pExistencia')
-      .textContent=
-        p.existencia;
+        .textContent =
+          p.existencia;
 
       $('pExistenciaTotal')
-      .textContent=
-        p.existenciaTotal;
+        .textContent =
+          p.existenciaTotal;
 
       $('pPrecio')
-      .textContent=
-        Q(p.precio);
+        .textContent =
+          Q(
+            p.precio
+          );
 
       $('pUbicacion')
-      .textContent=
-        p.ubicacion||
-        '—';
+        .textContent =
+          p.ubicacion ||
+          '—';
 
       $('pSucursal')
-      .textContent=
-        p.sucursal;
-
+        .textContent =
+          p.sucursal;
 
       $('productoCard')
-      .classList
-      .remove(
-        'oculto'
-      );
-
+        .classList
+        .remove('oculto');
 
       msg(
         'mensaje',
@@ -4147,35 +3234,36 @@ function consultar(cod){
 
 function mover(tipo){
 
-  if(!productoActual){
+  if(
+    !productoActual
+  ){
     return;
   }
-
 
   api(
     'movimiento',
     {
-
       codigo:
-        productoActual.codigo,
+        productoActual
+          .codigo,
 
-      tipo:
-        tipo,
+      tipo,
 
       cantidad:
         Number(
           $('cantidad')
-          .value
+            .value
         ),
 
       nota:
         $('nota')
-        .value
-
+          .value
     },
-    r=>{
+    r => {
 
-      if(!r.ok){
+      if(
+        !r.ok
+      ){
 
         return msg(
           'mensaje',
@@ -4185,25 +3273,20 @@ function mover(tipo){
 
       }
 
-
-      productoActual=
+      productoActual =
         r.producto;
 
-
       $('pExistencia')
-      .textContent=
-        r.producto
-        .existencia;
-
+        .textContent =
+          r.producto
+            .existencia;
 
       $('pExistenciaTotal')
-      .textContent=
-        r.producto
-        .existenciaTotal;
-
+        .textContent =
+          r.producto
+            .existenciaTotal;
 
       cargarResumen();
-
 
       msg(
         'mensaje',
@@ -4219,40 +3302,38 @@ function mover(tipo){
 
 function codigoAuto(){
 
-  const m=
+  const m =
     L(
       $('nModelo')
-      .value
+        .value
     );
 
-
-  const c=
+  const c =
     L(
       $('nColor')
-      .value
+        .value
     );
 
-
-  const t=
+  const t =
     L(
       $('nTalla')
-      .value
+        .value
     );
 
-
   $('codigoAuto')
-  .textContent=
-
-    m&&c&&t
+    .textContent =
+      m &&
+      c &&
+      t
       ?
-      'Código automático: '+
-      m+
-      '-'+
+      'Código automático: ' +
+      m +
+      '-' +
       c.substring(
         0,
         2
-      )+
-      '-'+
+      ) +
+      '-' +
       t
       :
       'Código automático: —';
@@ -4265,55 +3346,55 @@ function guardarProducto(){
   api(
     'crear',
     {
-
       marca:
         $('nMarca')
-        .value,
+          .value,
 
       modelo:
         $('nModelo')
-        .value,
+          .value,
 
       categoria:
         $('nCategoria')
-        .value,
+          .value,
 
       color:
         $('nColor')
-        .value,
+          .value,
 
       talla:
         $('nTalla')
-        .value,
+          .value,
 
       costo:
         $('nCosto')
-        .value,
+          .value,
 
       precio:
         $('nPrecio')
-        .value,
+          .value,
 
       existencia:
         $('nExistencia')
-        .value,
+          .value,
 
       stockMinimo:
         $('nStockMinimo')
-        .value,
+          .value,
 
       ubicacion:
         $('nUbicacion')
-        .value,
+          .value,
 
       nota:
         $('nNota')
-        .value
-
+          .value
     },
-    r=>{
+    r => {
 
-      if(!r.ok){
+      if(
+        !r.ok
+      ){
 
         return msg(
           'mensajeNuevo',
@@ -4323,33 +3404,26 @@ function guardarProducto(){
 
       }
 
-
       $('qrCodigo')
-      .textContent=
-        r.codigo;
-
+        .textContent =
+          r.codigo;
 
       $('qrImagen')
-      .src=
-        r.qrUrl;
-
+        .src =
+          r.qrUrl;
 
       $('qrResultado')
-      .classList
-      .remove(
-        'oculto'
-      );
-
+        .classList
+        .remove('oculto');
 
       cargarResumen();
 
-
       msg(
         'mensajeNuevo',
-        r.mensaje+
-        ' '+
-        r.codigo+
-        ' · '+
+        r.mensaje +
+        ' ' +
+        r.codigo +
+        ' · ' +
         r.sucursal,
         'ok'
       );
@@ -4362,13 +3436,14 @@ function guardarProducto(){
 
 function hacerTraslado(){
 
-  const codigo=
+  const codigo =
     $('trasCodigo')
-    .value
-    .trim();
+      .value
+      .trim();
 
-
-  if(!codigo){
+  if(
+    !codigo
+  ){
 
     return msg(
       'mensajeTraslado',
@@ -4378,33 +3453,31 @@ function hacerTraslado(){
 
   }
 
-
   api(
     'traslado',
     {
-
       origen:
         SUCURSAL,
 
       destino:
         $('trasDestino')
-        .value,
+          .value,
 
-      codigo:
-        codigo,
+      codigo,
 
       cantidad:
         $('trasCantidad')
-        .value,
+          .value,
 
       nota:
         $('trasNota')
-        .value
-
+          .value
     },
-    r=>{
+    r => {
 
-      if(!r.ok){
+      if(
+        !r.ok
+      ){
 
         return msg(
           'mensajeTraslado',
@@ -4414,25 +3487,23 @@ function hacerTraslado(){
 
       }
 
-
       $('trasCodigo')
-      .value='';
-
+        .value =
+          '';
 
       $('trasCantidad')
-      .value=1;
-
+        .value =
+          1;
 
       $('trasNota')
-      .value='';
-
+        .value =
+          '';
 
       cargarResumen();
 
-
       msg(
         'mensajeTraslado',
-        'Traslado registrado: '+
+        'Traslado registrado: ' +
         r.numeroTraslado,
         'ok'
       );
@@ -4445,11 +3516,10 @@ function hacerTraslado(){
 
 function buscarVentas(){
 
-  const q=
+  const q =
     $('buscarVentaTexto')
-    .value
-    .trim();
-
+      .value
+      .trim();
 
   msg(
     'mensajeVentas',
@@ -4457,15 +3527,16 @@ function buscarVentas(){
     'info'
   );
 
-
   api(
     'buscarventas',
     {
-      q:q
+      q
     },
-    r=>{
+    r => {
 
-      if(!r.ok){
+      if(
+        !r.ok
+      ){
 
         return msg(
           'mensajeVentas',
@@ -4475,17 +3546,17 @@ function buscarVentas(){
 
       }
 
-
-      const ventas=
-        r.ventas||
+      const ventas =
+        r.ventas ||
         [];
 
-
       $('listaVentas')
-      .innerHTML='';
+        .innerHTML =
+          '';
 
-
-      if(!ventas.length){
+      if(
+        !ventas.length
+      ){
 
         return msg(
           'mensajeVentas',
@@ -4495,120 +3566,83 @@ function buscarVentas(){
 
       }
 
-
       $('mensajeVentas')
-      .innerHTML='';
-
+        .innerHTML =
+          '';
 
       ventas
-      .forEach(
-        v=>{
+        .forEach(
+          v => {
 
-          const d=
-            document
-            .createElement(
-              'div'
-            );
+            const d =
+              document
+                .createElement(
+                  'div'
+                );
 
+            d.className =
+              'cartItem';
 
-          d.className=
-            'cartItem';
+            d.innerHTML =
+              '<div class="cartTop">' +
+              '<div>' +
+              '<b>' +
+              esc(
+                v.numeroVenta
+              ) +
+              '</b>' +
+              '<div class="cartMeta">' +
+              esc(
+                v.fecha
+              ) +
+              ' · ' +
+              esc(
+                v.cliente ||
+                'CF'
+              ) +
+              ' · ' +
+              esc(
+                v.metodoPago
+              ) +
+              '</div>' +
+              '</div>' +
+              '<b>' +
+              Q(
+                v.total
+              ) +
+              '</b>' +
+              '</div>' +
+              '<div class="fila" style="margin-top:10px">' +
+              '<button class="btnGris" style="flex:1">👁 Ver</button>' +
+              '<button class="btnNegro" style="flex:1">🖨 Reimprimir</button>' +
+              '</div>';
 
-
-          d.innerHTML=
-
-            '<div class="cartTop">'+
-
-            '<div>'+
-
-            '<b>'+
-            esc(
-              v.numeroVenta
-            )+
-            '</b>'+
-
-            '<div class="cartMeta">'+
-
-            esc(v.fecha)+
-
-            ' · '+
-
-            esc(
-              v.cliente||
-              'CF'
-            )+
-
-            ' · '+
-
-            esc(
-              v.metodoPago
-            )+
-
-            '</div>'+
-
-            '</div>'+
-
-            '<b>'+
-            Q(v.total)+
-            '</b>'+
-
-            '</div>'+
-
-            '<div class="fila" style="margin-top:10px">'+
-
-            '<button class="btnGris" style="flex:1">'+
-            '👁 Ver'+
-            '</button>'+
-
-            <button
-class="btnNegro noPrint w100"
-style="margin-top:10px"
-onclick="imprimirTicket('ticket','MEDIA')">
-
-🖨 Media carta horizontal
-
-</button>
-
-<button
-class="btnGris noPrint w100"
-style="margin-top:8px"
-onclick="imprimirTicket('ticket','CARTA')">
-
-🖨 Carta vertical
-
-</button>
-            '</div>';
-
-
-          const b=
-            d.querySelectorAll(
-              'button'
-            );
-
-
-          b[0].onclick=
-            ()=>
-              abrirVenta(
-                v.numeroVenta,
-                false
+            const b =
+              d.querySelectorAll(
+                'button'
               );
 
+            b[0].onclick =
+              () =>
+                abrirVenta(
+                  v.numeroVenta,
+                  false
+                );
 
-          b[1].onclick=
-            ()=>
-              abrirVenta(
-                v.numeroVenta,
-                true
+            b[1].onclick =
+              () =>
+                abrirVenta(
+                  v.numeroVenta,
+                  true
+                );
+
+            $('listaVentas')
+              .appendChild(
+                d
               );
 
-
-          $('listaVentas')
-          .appendChild(
-            d
-          );
-
-        }
-      );
+          }
+        );
 
     }
   );
@@ -4624,12 +3658,13 @@ function abrirVenta(
   api(
     'detalleventa',
     {
-      numeroVenta:
-        numeroVenta
+      numeroVenta
     },
-    r=>{
+    r => {
 
-      if(!r.ok){
+      if(
+        !r.ok
+      ){
 
         return msg(
           'mensajeVentas',
@@ -4639,28 +3674,25 @@ function abrirVenta(
 
       }
 
-
       ticketHTML(
         r,
         'ticketHistorial'
       );
 
-
       $('ticketHistorialCard')
-      .classList
-      .remove(
-        'oculto'
-      );
-
+        .classList
+        .remove('oculto');
 
       $('mensajeVentas')
-      .innerHTML='';
+        .innerHTML =
+          '';
 
-
-      if(imprimir){
+      if(
+        imprimir
+      ){
 
         setTimeout(
-          ()=>
+          () =>
             imprimirTicket(
               'ticketHistorial'
             ),
@@ -4678,21 +3710,23 @@ function abrirVenta(
 function cargarUsuarios(){
 
   if(
-    !SESION||
-    SESION.rol!=='ADMIN'
+    !SESION ||
+    SESION.rol !==
+    'ADMIN'
   ){
 
     return;
 
   }
 
-
   api(
     'usuarios',
     {},
-    r=>{
+    r => {
 
-      if(!r.ok){
+      if(
+        !r.ok
+      ){
 
         return msg(
           'mensajeUsuarios',
@@ -4702,76 +3736,77 @@ function cargarUsuarios(){
 
       }
 
-
-      const tb=
+      const tb =
         $('listaUsuarios');
 
-
-      tb.innerHTML='';
-
+      tb.innerHTML =
+        '';
 
       (
-        r.usuarios||
+        r.usuarios ||
         []
       )
       .forEach(
-        u=>{
+        u => {
 
-          const tr=
+          const tr =
             document
-            .createElement(
-              'tr'
-            );
-
-
-          tr.innerHTML=
-
-            '<td>'+
-            esc(u.usuario)+
-            '</td>'+
-
-            '<td>'+
-            esc(u.nombre)+
-            '</td>'+
-
-            '<td>'+
-            esc(u.rol)+
-            '</td>'+
-
-            '<td>'+
-            esc(u.sucursal)+
-            '</td>'+
-
-            '<td>'+
-            '<span class="badge">'+
-            esc(u.activo)+
-            '</span>'+
-            '</td>'+
-
-            '<td>'+
-            '<button class="btnGris">'+
-            (
-              u.activo==='SI'
-                ?
-                'Desactivar'
-                :
-                'Activar'
-            )+
-            '</button>'+
-            '</td>';
-
-
-          tr
-          .querySelector(
-            'button'
-          )
-          .onclick=
-            ()=>
-              cambiarEstadoUsuario(
-                u.usuario,
-                u.activo!=='SI'
+              .createElement(
+                'tr'
               );
 
+          tr.innerHTML =
+            '<td>' +
+            esc(
+              u.usuario
+            ) +
+            '</td>' +
+            '<td>' +
+            esc(
+              u.nombre
+            ) +
+            '</td>' +
+            '<td>' +
+            esc(
+              u.rol
+            ) +
+            '</td>' +
+            '<td>' +
+            esc(
+              u.sucursal
+            ) +
+            '</td>' +
+            '<td>' +
+            '<span class="badge">' +
+            esc(
+              u.activo
+            ) +
+            '</span>' +
+            '</td>' +
+            '<td>' +
+            '<button class="btnGris">' +
+            (
+              u.activo ===
+              'SI'
+              ?
+              'Desactivar'
+              :
+              'Activar'
+            ) +
+            '</button>' +
+            '</td>';
+
+          tr
+            .querySelector(
+              'button'
+            )
+            .onclick =
+              () =>
+                cambiarEstadoUsuario(
+                  u.usuario,
+                  u.activo !==
+                  'SI'
+                );
 
           tb.appendChild(
             tr
@@ -4791,31 +3826,31 @@ function crearUsuario(){
   api(
     'crearusuario',
     {
-
       usuario:
         $('uUsuario')
-        .value,
+          .value,
 
       nombre:
         $('uNombre')
-        .value,
+          .value,
 
       claveNueva:
         $('uClave')
-        .value,
+          .value,
 
       rol:
         $('uRol')
-        .value,
+          .value,
 
       sucursalUsuario:
         $('uSucursal')
-        .value
-
+          .value
     },
-    r=>{
+    r => {
 
-      if(!r.ok){
+      if(
+        !r.ok
+      ){
 
         return msg(
           'mensajeUsuarios',
@@ -4825,23 +3860,23 @@ function crearUsuario(){
 
       }
 
-
       $('uUsuario')
-      .value='';
+        .value =
+          '';
 
       $('uNombre')
-      .value='';
+        .value =
+          '';
 
       $('uClave')
-      .value='';
-
+        .value =
+          '';
 
       msg(
         'mensajeUsuarios',
         r.mensaje,
         'ok'
       );
-
 
       cargarUsuarios();
 
@@ -4859,19 +3894,20 @@ function cambiarEstadoUsuario(
   api(
     'activarusuario',
     {
-
-      usuario:
-        usuario,
+      usuario,
 
       activo:
         activar
-          ? 'SI'
-          : 'NO'
-
+        ?
+        'SI'
+        :
+        'NO'
     },
-    r=>{
+    r => {
 
-      if(!r.ok){
+      if(
+        !r.ok
+      ){
 
         return msg(
           'mensajeUsuarios',
@@ -4880,7 +3916,6 @@ function cambiarEstadoUsuario(
         );
 
       }
-
 
       cargarUsuarios();
 
@@ -4894,91 +3929,103 @@ function api(
   a,
   p,
   cb,
-  sinToken=false
+  sinToken = false
 ){
 
-  if(!API_URL){
+  if(
+    !API_URL
+  ){
 
     mostrarConfigDesdeLogin();
+
+    if(
+      cb
+    ){
+
+      cb({
+        ok:false,
+        error:
+          'Falta configurar la URL de Apps Script.'
+      });
+
+    }
 
     return;
 
   }
 
-
-  p=
+  p =
     Object.assign(
       {},
-      p||{}
+      p ||
+      {}
     );
-
 
   if(
     !sinToken &&
     TOKEN
   ){
 
-    p.token=
+    p.token =
       TOKEN;
 
-    p.sucursal=
+    p.sucursal =
       SUCURSAL;
 
   }
 
-
-  const n=
-    '__cb_'+
-    Date.now()+
-    '_'+
+  const n =
+    '__cb_' +
+    Date.now() +
+    '_' +
     Math.floor(
-      Math.random()*
+      Math.random() *
       99999
     );
 
-
-  const s=
+  const s =
     document
-    .createElement(
-      'script'
-    );
+      .createElement(
+        'script'
+      );
 
-
-  p.accion=
+  p.accion =
     a;
 
-  p.callback=
+  p.callback =
     n;
 
-
-  const q=
-    Object
-    .keys(p)
+  const q =
+    Object.keys(
+      p
+    )
     .map(
-      k=>
-        encodeURIComponent(k)+
-        '='+
+      k =>
         encodeURIComponent(
-          p[k]??''
+          k
+        ) +
+        '=' +
+        encodeURIComponent(
+          p[k] ??
+          ''
         )
     )
-    .join(
-      '&'
-    );
+    .join('&');
 
-
-  const tm=
+  const tm =
     setTimeout(
-      ()=>{
+      () => {
 
         lim();
 
-
-        if(cb){
+        if(
+          cb
+        ){
 
           cb({
             ok:false,
-            error:'Tiempo agotado.'
+            error:
+              'Tiempo agotado.'
           });
 
         }
@@ -4987,100 +4034,97 @@ function api(
       15000
     );
 
-
-  window[n]=
-    r=>{
+  window[n] =
+    r => {
 
       clearTimeout(
         tm
       );
 
-
       lim();
-
 
       if(
         r &&
-        r.ok===false &&
+        r.ok === false &&
         /sesión|Inicie sesión/i
-        .test(
-          r.error||''
-        )
+          .test(
+            r.error ||
+            ''
+          )
       ){
 
-        TOKEN='';
-
+        TOKEN =
+          '';
 
         localStorage
-        .removeItem(
-          'adelaida_token'
-        );
+          .removeItem(
+            'adelaida_token'
+          );
 
       }
 
-
-      if(cb){
-        cb(r);
+      if(
+        cb
+      ){
+        cb(
+          r
+        );
       }
 
     };
 
-
-  s.onerror=
-    ()=>{
+  s.onerror =
+    () => {
 
       clearTimeout(
         tm
       );
 
-
       lim();
 
-
-      if(cb){
+      if(
+        cb
+      ){
 
         cb({
           ok:false,
-          error:'No se pudo conectar.'
+          error:
+            'No se pudo conectar.'
         });
 
       }
 
     };
 
-
   function lim(){
 
     try{
-
       delete window[n];
-
     }catch(e){}
 
-
     try{
-
       s.remove();
-
     }catch(e){}
 
   }
 
-
-  s.src=
-    API_URL+
+  s.src =
+    API_URL +
     (
-      API_URL.includes('?')
-        ? '&'
-        : '?'
-    )+
+      API_URL
+        .includes('?')
+      ?
+      '&'
+      :
+      '?'
+    ) +
     q;
 
-
-  document.body
-  .appendChild(
-    s
-  );
+  document
+    .body
+    .appendChild(
+      s
+    );
 
 }
 
@@ -5091,17 +4135,20 @@ function msg(
   tipo
 ){
 
-  const e=
+  const e =
     $(id);
 
+  if(
+    e
+  ){
 
-  if(e){
-
-    e.innerHTML=
-      '<div class="mensaje '+
-      tipo+
-      '">'+
-      esc(texto)+
+    e.innerHTML =
+      '<div class="mensaje ' +
+      tipo +
+      '">' +
+      esc(
+        texto
+      ) +
       '</div>';
 
   }
@@ -5111,16 +4158,21 @@ function msg(
 
 function Q(v){
 
-  const n=
-    Number(v);
+  const n =
+    Number(
+      v
+    );
 
-
-  return(
-    'Q'+
+  return (
+    'Q' +
     (
-      Number.isFinite(n)
-        ? n
-        : 0
+      Number.isFinite(
+        n
+      )
+      ?
+      n
+      :
+      0
     )
     .toFixed(2)
   );
@@ -5131,13 +4183,12 @@ function Q(v){
 function L(v){
 
   return String(
-    v||''
+    v ||
+    ''
   )
   .trim()
   .toUpperCase()
-  .normalize(
-    'NFD'
-  )
+  .normalize('NFD')
   .replace(
     /[\u0300-\u036f]/g,
     ''
@@ -5153,7 +4204,8 @@ function L(v){
 function esc(v){
 
   return String(
-    v??''
+    v ??
+    ''
   )
   .replaceAll(
     '&',
@@ -5177,43 +4229,8 @@ function esc(v){
   );
 
 }
-function escalaPorTalla_(talla){
 
-  const t=
-    Number(talla);
-
-  if(t>=20 && t<=26){
-    return 'A';
-  }
-
-  if(t>=27 && t<=32){
-    return 'B';
-  }
-
-  if(t>=33 && t<=36){
-    return 'C';
-  }
-
-  if(t>=37 && t<=43){
-    return 'D';
-  }
-
-  return '';
-
-}
-
-
-function codigo_(
-  m,
-  c,
-  t
-){
-
-  // continúa aquí su función actual
-
-}
 </script>
 
 </body>
-
 </html>
