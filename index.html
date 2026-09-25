@@ -3068,8 +3068,13 @@ function sugerencias(
 /* PUNTO DE VENTA                        */
 /* ===================================== */
 
-function agregar(cod){
+function agregar(
+  cod,
+  intento=0
+){
+
   $('mensajePos').innerHTML='';
+
 
   const c=
     (
@@ -3091,8 +3096,7 @@ function agregar(cod){
   }
 
 
-  $('posCodigo')
-  .value='';
+  $('posCodigo').value='';
 
 
   api(
@@ -3101,6 +3105,60 @@ function agregar(cod){
       codigo:c
     },
     p=>{
+
+      /*
+        Si hubo un fallo de conexión,
+        vuelve a intentar automáticamente.
+      */
+
+      if(
+        !p ||
+        (
+          p.ok===false &&
+          /conectar|tiempo agotado/i.test(
+            p.error||''
+          )
+        )
+      ){
+
+        if(
+          intento<2
+        ){
+
+          msg(
+            'mensajePos',
+            'Reintentando conexión…',
+            'info'
+          );
+
+
+          setTimeout(
+            ()=>{
+
+              agregar(
+                c,
+                intento+1
+              );
+
+            },
+            700
+          );
+
+
+          return;
+
+        }
+
+
+        return msg(
+          'mensajePos',
+          p?.error||
+          'No se pudo conectar.',
+          'error'
+        );
+
+      }
+
 
       if(
         !p.ok||
@@ -3118,7 +3176,7 @@ function agregar(cod){
 
 
       if(
-        p.existencia<=0
+        Number(p.existencia)<=0
       ){
 
         return msg(
@@ -3132,11 +3190,21 @@ function agregar(cod){
       }
 
 
+      /*
+        Cada código se maneja como producto
+        independiente, aunque pertenezca
+        al mismo modelo o escala.
+      */
+
       const x=
         carrito.find(
           z=>
-            z.codigo===
-            p.codigo
+            String(z.codigo)
+            .trim()
+            .toUpperCase()===
+            String(p.codigo)
+            .trim()
+            .toUpperCase()
         );
 
 
@@ -3144,12 +3212,14 @@ function agregar(cod){
 
         if(
           x.cantidad+1>
-          p.existencia
+          Number(p.existencia)
         ){
 
           return msg(
             'mensajePos',
-            'No hay más existencia.',
+            'Solo hay '+
+            p.existencia+
+            ' disponibles.',
             'error'
           );
 
@@ -3161,8 +3231,11 @@ function agregar(cod){
       }else{
 
         carrito.push({
+
           ...p,
+
           cantidad:1
+
         });
 
       }
@@ -3182,7 +3255,6 @@ function agregar(cod){
   );
 
 }
-
 
 function renderCarrito(){
 
