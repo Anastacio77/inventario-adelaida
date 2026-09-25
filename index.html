@@ -3757,10 +3757,11 @@ function ticketHTML(
   const grupos={};
 
 
-  (
-    v.items||
-    []
-  )
+  /* ===============================
+     AGRUPAR PRODUCTOS
+     =============================== */
+
+  (v.items||[])
   .forEach(
     x=>{
 
@@ -3772,28 +3773,19 @@ function ticketHTML(
 
       const precio=
         Number(
-          x.precioUnitario??
-          x.precio??
+          x.precioUnitario ??
+          x.precio ??
           0
         );
 
 
       const descripcion=
-        descripcionTicket(
-          x
-        )||
+        descripcionTicket(x) ||
         (
-          (
-            x.modelo||
-            ''
-          )+
+          (x.modelo||'')+
           ' '+
-          (
-            x.color||
-            ''
-          )
-        )
-        .trim();
+          (x.color||'')
+        ).trim();
 
 
       const clave=
@@ -3804,17 +3796,18 @@ function ticketHTML(
         precio;
 
 
-      if(
-        !grupos[clave]
-      ){
+      if(!grupos[clave]){
 
         grupos[clave]={
 
-          descripcion,
+          descripcion:
+            descripcion,
 
-          escala,
+          escala:
+            escala,
 
-          precio,
+          precio:
+            precio,
 
           cantidades:{},
 
@@ -3833,19 +3826,17 @@ function ticketHTML(
         )||0;
 
 
-      grupos[clave]
-      .cantidades[
+      const talla=
         String(
           x.talla
-        )
-      ]=
+        );
+
+
+      grupos[clave]
+      .cantidades[talla]=
         (
           grupos[clave]
-          .cantidades[
-            String(
-              x.talla
-            )
-          ]||
+          .cantidades[talla]||
           0
         )+
         cantidad;
@@ -3867,6 +3858,10 @@ function ticketHTML(
     }
   );
 
+
+  /* ===============================
+     ESCALAS DEL TICKET
+     =============================== */
 
   const escalasTicket={
 
@@ -3891,58 +3886,90 @@ function ticketHTML(
     ]
 
   };
-const escalasUsadas =
-  [...new Set(
-    Object
-    .values(grupos)
-    .map(g => g.escala)
-    .filter(Boolean)
-  )]
-  .sort(
-    (a,b)=>
-      ['A','B','C','D'].indexOf(a)-
-      ['A','B','C','D'].indexOf(b)
-  );
 
 
-let encabezado='';
+  /* ===============================
+     DETECTAR ESCALAS USADAS
+     =============================== */
+
+  const ordenEscalas=[
+    'A',
+    'B',
+    'C',
+    'D'
+  ];
 
 
-escalasUsadas
-.forEach(
-  escala=>{
-
-    encabezado+=
-      '<tr>'+
-      '<th>'+
-        escala+
-      '</th>';
-
-
-    escalasTicket[
-      escala
-    ]
-    .forEach(
-      talla=>{
-
-        encabezado+=
-          '<th>'+
-          (
-            talla||
-            '&nbsp;'
-          )+
-          '</th>';
-
-      }
+  const escalasUsadas=
+    ordenEscalas.filter(
+      escala=>
+        Object
+        .values(grupos)
+        .some(
+          g=>
+            g.escala===
+            escala
+        )
     );
 
 
-    encabezado+=
-      '</tr>';
+  /* ===============================
+     ENCABEZADO DINÁMICO
+     =============================== */
 
-  }
-);
+  let encabezado='';
 
+
+  escalasUsadas
+  .forEach(
+    escala=>{
+
+      encabezado+=
+        '<tr>'+
+
+          '<th>'+
+            escala+
+          '</th>';
+
+
+      escalasTicket[
+        escala
+      ]
+      .forEach(
+        talla=>{
+
+          encabezado+=
+
+            '<th>'+
+              (
+                talla||
+                '&nbsp;'
+              )+
+            '</th>';
+
+        }
+      );
+
+
+      encabezado+=
+        '</tr>';
+
+    }
+  );
+
+
+  /*
+    1 fila = NUMERACIÓN
+    + las escalas realmente usadas
+  */
+
+  const filasEncabezado=
+    escalasUsadas.length+1;
+
+
+  /* ===============================
+     FILAS DE PRODUCTOS
+     =============================== */
 
   let filas='';
 
@@ -3958,19 +3985,21 @@ escalasUsadas
         g.escala;
 
 
-      let tallas=
-        escala
-        ?
+      const tallas=
         ESCALAS[
           escala
         ]||
-        []
-        :
         [];
 
 
-      const celdas=[];
+      let celdas='';
 
+
+      /*
+        Siempre dejamos 7 posiciones
+        para que las columnas queden
+        perfectamente alineadas.
+      */
 
       for(
         let i=0;
@@ -3982,65 +4011,84 @@ escalasUsadas
           tallas[i];
 
 
-        const cantidad=
+        let cantidad='';
+
+
+        if(
           talla!==undefined
-          ?
-          g.cantidades[
-            String(talla)
-          ]||
-          ''
-          :
-          '';
+        ){
+
+          cantidad=
+            g.cantidades[
+              String(talla)
+            ]||
+            '';
+
+        }
 
 
-        celdas.push(
+        celdas+=
+
           '<td>'+
-          (
-            cantidad||
-            ''
-          )+
-          '</td>'
-        );
+            cantidad+
+          '</td>';
 
       }
 
 
       filas+=
+
         '<tr>'+
-          '<td><b>'+
-            g.cantidad+
-          '</b></td>'+
+
+          '<td>'+
+            '<b>'+
+              g.cantidad+
+            '</b>'+
+          '</td>'+
+
           '<td class="descripcion">'+
             esc(
               g.descripcion
             )+
           '</td>'+
-          '<td><b>'+
-            esc(
-              escala||
-              ''
-            )+
-          '</b></td>'+
-          celdas.join('')+
+
+          '<td>'+
+            '<b>'+
+              esc(
+                escala||
+                ''
+              )+
+            '</b>'+
+          '</td>'+
+
+          celdas+
+
           '<td class="derecha">'+
             Q(
               g.precio
             )+
           '</td>'+
-          '<td class="derecha"><b>'+
-            Q(
-              g.total
-            )+
-          '</b></td>'+
+
+          '<td class="derecha">'+
+            '<b>'+
+              Q(
+                g.total
+              )+
+            '</b>'+
+          '</td>'+
+
         '</tr>';
 
     }
   );
 
 
-  const filasEncabezado =
-  escalasUsadas.length + 1;
+  /* ===============================
+     TICKET COMPLETO
+     =============================== */
+
   const html=
+
     '<h2>'+
       'COMERCIAL ADELAIDA'+
     '</h2>'+
@@ -4119,80 +4167,117 @@ escalasUsadas
 
     '<hr>'+
 
+
     '<table class="ticketTabla">'+
 
       '<thead>'+
 
         '<tr>'+
 
-          '<th rowspan="'+filasEncabezado+'" style="width:5%">'+
-  'CANT'+
-'</th>'+
+          '<th rowspan="'+
+            filasEncabezado+
+            '" style="width:5%">'+
+            'CANT'+
+          '</th>'+
 
-'<th rowspan="'+filasEncabezado+'" style="width:27%">'+
-  'DESCRIPCIÓN'+
-'</th>'+
+          '<th rowspan="'+
+            filasEncabezado+
+            '" style="width:27%">'+
+            'DESCRIPCIÓN'+
+          '</th>'+
 
-'<th colspan="8">'+
-  'NUMERACIÓN'+
-'</th>'+
+          '<th colspan="8">'+
+            'NUMERACIÓN'+
+          '</th>'+
 
-'<th rowspan="'+filasEncabezado+'" style="width:9%">'+
-  'P/UNI'+
-'</th>'+
+          '<th rowspan="'+
+            filasEncabezado+
+            '" style="width:9%">'+
+            'P/UNI'+
+          '</th>'+
 
-'<th rowspan="'+filasEncabezado+'" style="width:10%">'+
-  'TOTAL'+
-'</th>'+
-    
+          '<th rowspan="'+
+            filasEncabezado+
+            '" style="width:10%">'+
+            'TOTAL'+
+          '</th>'+
+
         '</tr>'+
 
         encabezado+
 
       '</thead>'+
 
+
       '<tbody>'+
+
         filas+
+
       '</tbody>'+
+
 
     '</table>'+
 
+
     '<hr>'+
 
+
     '<div class="lineaTotal">'+
-      '<span>Subtotal</span>'+
+
+      '<span>'+
+        'Subtotal'+
+      '</span>'+
+
       '<b>'+
         Q(
           v.subtotal
         )+
       '</b>'+
+
     '</div>'+
 
+
     '<div class="lineaTotal">'+
-      '<span>Descuento</span>'+
+
+      '<span>'+
+        'Descuento'+
+      '</span>'+
+
       '<b>'+
         Q(
           v.descuento
         )+
       '</b>'+
+
     '</div>'+
 
+
     '<div class="lineaTotal" style="font-size:16px">'+
-      '<span><b>TOTAL</b></span>'+
+
+      '<span>'+
+        '<b>TOTAL</b>'+
+      '</span>'+
+
       '<b>'+
         Q(
           v.total
         )+
       '</b>'+
+
     '</div>'+
 
+
     '<div style="margin-top:4px">'+
+
       '<b>Pago:</b> '+
+
       esc(
         v.metodoPago||
         ''
       )+
+
     '</div>'+
+
 
     (
       v.metodoPago===
@@ -4204,6 +4289,7 @@ escalasUsadas
           v.efectivoRecibido
         )+
       '</div>'+
+
       '<div>'+
         '<b>Cambio:</b> '+
         Q(
@@ -4214,7 +4300,9 @@ escalasUsadas
       ''
     )+
 
+
     '<hr>'+
+
 
     '<div class="centro">'+
       '¡Gracias por su compra!'+
@@ -4226,12 +4314,6 @@ escalasUsadas
     html;
 
 }
-
-
-/* ===================================== */
-/* IMPRESIÓN                             */
-/* ===================================== */
-
 function imprimirTicket(
   id,
   formato='MEDIA'
