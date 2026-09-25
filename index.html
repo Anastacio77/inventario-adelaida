@@ -3891,50 +3891,57 @@ function ticketHTML(
     ]
 
   };
-
-
-  let encabezado='';
-
-
-  [
-    'A',
-    'B',
-    'C',
-    'D'
-  ]
-  .forEach(
-    escala=>{
-
-      encabezado+=
-        '<tr>'+
-        '<th>'+
-          escala+
-        '</th>';
-
-
-      escalasTicket[
-        escala
-      ]
-      .forEach(
-        talla=>{
-
-          encabezado+=
-            '<th>'+
-            (
-              talla||
-              '&nbsp;'
-            )+
-            '</th>';
-
-        }
-      );
-
-
-      encabezado+=
-        '</tr>';
-
-    }
+const escalasUsadas =
+  [...new Set(
+    Object
+    .values(grupos)
+    .map(g => g.escala)
+    .filter(Boolean)
+  )]
+  .sort(
+    (a,b)=>
+      ['A','B','C','D'].indexOf(a)-
+      ['A','B','C','D'].indexOf(b)
   );
+
+
+let encabezado='';
+
+
+escalasUsadas
+.forEach(
+  escala=>{
+
+    encabezado+=
+      '<tr>'+
+      '<th>'+
+        escala+
+      '</th>';
+
+
+    escalasTicket[
+      escala
+    ]
+    .forEach(
+      talla=>{
+
+        encabezado+=
+          '<th>'+
+          (
+            talla||
+            '&nbsp;'
+          )+
+          '</th>';
+
+      }
+    );
+
+
+    encabezado+=
+      '</tr>';
+
+  }
+);
 
 
   let filas='';
@@ -4031,6 +4038,8 @@ function ticketHTML(
   );
 
 
+  const filasEncabezado =
+  escalasUsadas.length + 1;
   const html=
     '<h2>'+
       'COMERCIAL ADELAIDA'+
@@ -4116,26 +4125,26 @@ function ticketHTML(
 
         '<tr>'+
 
-          '<th rowspan="5" style="width:5%">'+
-            'CANT'+
-          '</th>'+
+          '<th rowspan="'+filasEncabezado+'" style="width:5%">'+
+  'CANT'+
+'</th>'+
 
-          '<th rowspan="5" style="width:27%">'+
-            'DESCRIPCIÓN'+
-          '</th>'+
+'<th rowspan="'+filasEncabezado+'" style="width:27%">'+
+  'DESCRIPCIÓN'+
+'</th>'+
 
-          '<th colspan="8">'+
-            'NUMERACIÓN'+
-          '</th>'+
+'<th colspan="8">'+
+  'NUMERACIÓN'+
+'</th>'+
 
-          '<th rowspan="5" style="width:9%">'+
-            'P/UNI'+
-          '</th>'+
+'<th rowspan="'+filasEncabezado+'" style="width:9%">'+
+  'P/UNI'+
+'</th>'+
 
-          '<th rowspan="5" style="width:10%">'+
-            'TOTAL'+
-          '</th>'+
-
+'<th rowspan="'+filasEncabezado+'" style="width:10%">'+
+  'TOTAL'+
+'</th>'+
+    
         '</tr>'+
 
         encabezado+
