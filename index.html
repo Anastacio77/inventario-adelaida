@@ -201,7 +201,7 @@ label{
   font-family:monospace;
   background:#fff;
   padding:16px;
-  max-width:360px;
+  max-width:800px;
   margin:auto
 }
 .ticket h2{text-align:center;margin:0}
@@ -257,15 +257,59 @@ label{
 }
 
 @media print{
-  body *{visibility:hidden}
-  .ticket.imprimir,.ticket.imprimir *{visibility:visible}
-  .ticket.imprimir{
-    position:absolute;
-    left:0;
-    top:0;
-    width:100%
+
+  body{
+    margin:0!important;
+    padding:0!important;
+    background:#fff!important;
   }
-  .noPrint{display:none!important}
+
+  body *{
+    visibility:hidden!important;
+  }
+
+  .ticket.imprimir,
+  .ticket.imprimir *{
+    visibility:visible!important;
+  }
+
+  .ticket.imprimir{
+    position:absolute!important;
+    left:0!important;
+    top:0!important;
+    margin:0!important;
+    padding:8mm!important;
+    max-width:none!important;
+    width:100%!important;
+    box-sizing:border-box!important;
+    background:#fff!important;
+    font-family:Arial,sans-serif!important;
+    font-size:11pt!important;
+    line-height:1.25!important;
+  }
+
+  .ticket.imprimir h2{
+    font-size:17pt!important;
+    margin:0 0 4px 0!important;
+  }
+
+  .ticket.imprimir table{
+    width:100%!important;
+    border-collapse:collapse!important;
+  }
+
+  .ticket.imprimir td{
+    padding:2px 3px!important;
+  }
+
+  .ticket.imprimir hr{
+    margin:5px 0!important;
+  }
+
+  .noPrint{
+    display:none!important;
+  }
+
 }
 </style>
 </head>
@@ -2797,190 +2841,419 @@ function cobrar(){
 }
 
 
-function ticketHTML(
-  v,
-  id
-){
+function ticketHTML(v,id){
 
-  let f =
-    '';
+  let filas = '';
 
-  (
-    v.items ||
-    []
-  )
-  .forEach(
-    x => {
+  (v.items || []).forEach(x => {
 
-      f +=
-        '<tr>' +
-        '<td>' +
-        esc(
-          x.modelo
-        ) +
-        '<br>' +
-        '<small>' +
-        esc(
-          x.color
-        ) +
-        ' T.' +
-        esc(
-          x.talla
-        ) +
-        '</small>' +
-        '</td>' +
-        '<td class="derecha">' +
-        x.cantidad +
-        '</td>' +
-        '<td class="derecha">' +
-        Q(
-          x.subtotal
-        ) +
-        '</td>' +
-        '</tr>';
+    filas += `
+      <tr>
+        <td style="padding:4px 2px">
+          <b>${esc(x.modelo)}</b><br>
+          <small>
+            ${esc(x.color)} · Talla ${esc(x.talla)}
+          </small>
+        </td>
 
+        <td
+          class="derecha"
+          style="padding:4px 2px">
+          ${x.cantidad}
+        </td>
+
+        <td
+          class="derecha"
+          style="padding:4px 2px">
+          ${Q(x.subtotal)}
+        </td>
+      </tr>
+    `;
+
+  });
+
+  const sucursal =
+    esc(v.sucursal || SUCURSAL);
+
+  const cliente =
+    esc(v.cliente || 'Consumidor final');
+
+  const nit =
+    esc(v.nit || 'CF');
+
+  const usuario =
+    esc(v.usuario || '');
+
+  const fecha =
+    esc(v.fecha || '');
+
+  const numeroVenta =
+    esc(v.numeroVenta || '');
+
+  const metodo =
+    esc(v.metodoPago || '');
+
+  const recibido =
+    Number(v.efectivoRecibido || 0);
+
+  const cambio =
+    Number(v.cambio || 0);
+
+  $(id).innerHTML = `
+
+    <div
+      style="
+        text-align:center;
+        margin-bottom:8px;
+      ">
+
+      <div
+        style="
+          font-size:22px;
+          font-weight:900;
+          letter-spacing:.4px;
+        ">
+        COMERCIAL ADELAIDA
+      </div>
+
+      <div
+        style="
+          font-size:13px;
+          margin-top:2px;
+        ">
+        Zapatería
+      </div>
+
+      <div
+        style="
+          font-size:13px;
+          font-weight:700;
+          margin-top:2px;
+        ">
+        ${sucursal}
+      </div>
+
+    </div>
+
+    <hr>
+
+    <table
+      style="
+        width:100%;
+        font-size:12px;
+      ">
+
+      <tr>
+        <td><b>Venta:</b></td>
+        <td class="derecha">${numeroVenta}</td>
+      </tr>
+
+      <tr>
+        <td><b>Fecha:</b></td>
+        <td class="derecha">${fecha}</td>
+      </tr>
+
+      <tr>
+        <td><b>Cliente:</b></td>
+        <td class="derecha">${cliente}</td>
+      </tr>
+
+      <tr>
+        <td><b>NIT:</b></td>
+        <td class="derecha">${nit}</td>
+      </tr>
+
+      ${
+        usuario
+        ? `
+          <tr>
+            <td><b>Atendió:</b></td>
+            <td class="derecha">${usuario}</td>
+          </tr>
+        `
+        : ''
+      }
+
+    </table>
+
+    <hr>
+
+    <table
+      style="
+        width:100%;
+        font-size:12px;
+        border-collapse:collapse;
+      ">
+
+      <thead>
+
+        <tr
+          style="
+            border-bottom:1px solid #333;
+          ">
+
+          <th
+            style="
+              text-align:left;
+              padding:3px 2px;
+            ">
+            Producto
+          </th>
+
+          <th
+            style="
+              text-align:right;
+              padding:3px 2px;
+            ">
+            Cant.
+          </th>
+
+          <th
+            style="
+              text-align:right;
+              padding:3px 2px;
+            ">
+            Total
+          </th>
+
+        </tr>
+
+      </thead>
+
+      <tbody>
+        ${filas}
+      </tbody>
+
+    </table>
+
+    <hr>
+
+    <table
+      style="
+        width:100%;
+        font-size:13px;
+      ">
+
+      <tr>
+        <td>Subtotal</td>
+        <td class="derecha">
+          ${Q(v.subtotal)}
+        </td>
+      </tr>
+
+      ${
+        Number(v.descuento || 0) > 0
+        ? `
+          <tr>
+            <td>Descuento</td>
+            <td class="derecha">
+              -${Q(v.descuento)}
+            </td>
+          </tr>
+        `
+        : ''
+      }
+
+      <tr>
+        <td
+          style="
+            font-size:16px;
+            font-weight:900;
+            padding-top:6px;
+          ">
+          TOTAL
+        </td>
+
+        <td
+          class="derecha"
+          style="
+            font-size:18px;
+            font-weight:900;
+            padding-top:6px;
+          ">
+          ${Q(v.total)}
+        </td>
+      </tr>
+
+    </table>
+
+    <hr>
+
+    <table
+      style="
+        width:100%;
+        font-size:12px;
+      ">
+
+      <tr>
+        <td><b>Forma de pago:</b></td>
+        <td class="derecha">
+          ${metodo}
+        </td>
+      </tr>
+
+      ${
+        metodo === 'EFECTIVO'
+        ? `
+          <tr>
+            <td>Recibido:</td>
+            <td class="derecha">
+              ${Q(recibido)}
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <b>Cambio:</b>
+            </td>
+
+            <td
+              class="derecha"
+              style="
+                font-size:14px;
+                font-weight:800;
+              ">
+              ${Q(cambio)}
+            </td>
+          </tr>
+        `
+        : ''
+      }
+
+    </table>
+
+    ${
+      v.nota
+      ? `
+        <hr>
+
+        <div
+          style="
+            font-size:11px;
+          ">
+          <b>Nota:</b>
+          ${esc(v.nota)}
+        </div>
+      `
+      : ''
     }
-  );
 
-  $(id)
-    .innerHTML =
-      '<h2>COMERCIAL ADELAIDA</h2>' +
-      '<div class="centro">' +
-      esc(
-        v.sucursal ||
-        SUCURSAL
-      ) +
-      '</div>' +
-      '<div class="centro">Comprobante de venta</div>' +
-      '<hr>' +
-      '<div>Venta: ' +
-      esc(
-        v.numeroVenta
-      ) +
-      '</div>' +
-      '<div>Fecha: ' +
-      esc(
-        v.fecha
-      ) +
-      '</div>' +
-      (
-        v.cliente
-        ?
-        '<div>Cliente: ' +
-        esc(
-          v.cliente
-        ) +
-        '</div>'
-        :
-        ''
-      ) +
-      (
-        v.nit
-        ?
-        '<div>NIT: ' +
-        esc(
-          v.nit
-        ) +
-        '</div>'
-        :
-        ''
-      ) +
-      '<hr>' +
-      '<table>' +
-      f +
-      '</table>' +
-      '<hr>' +
-      '<div class="lineaTotal">' +
-      '<span>Subtotal</span>' +
-      '<b>' +
-      Q(
-        v.subtotal
-      ) +
-      '</b>' +
-      '</div>' +
-      '<div class="lineaTotal">' +
-      '<span>Descuento</span>' +
-      '<b>' +
-      Q(
-        v.descuento
-      ) +
-      '</b>' +
-      '</div>' +
-      '<div class="lineaTotal">' +
-      '<span>TOTAL</span>' +
-      '<b>' +
-      Q(
-        v.total
-      ) +
-      '</b>' +
-      '</div>' +
-      '<div>Pago: ' +
-      esc(
-        v.metodoPago
-      ) +
-      '</div>' +
-      (
-        v.metodoPago ===
-        'EFECTIVO'
-        ?
-        '<div>Recibido: ' +
-        Q(
-          v.efectivoRecibido
-        ) +
-        '</div>' +
-        '<div>Cambio: ' +
-        Q(
-          v.cambio
-        ) +
-        '</div>'
-        :
-        ''
-      ) +
-      (
-        v.usuario
-        ?
-        '<div>Usuario: ' +
-        esc(
-          v.usuario
-        ) +
-        '</div>'
-        :
-        ''
-      ) +
-      '<hr>' +
-      '<div class="centro">¡Gracias por su compra!</div>';
+    <hr>
+
+    <div
+      style="
+        text-align:center;
+        margin-top:8px;
+      ">
+
+      <div
+        style="
+          font-size:15px;
+          font-weight:800;
+        ">
+        ¡Gracias por su compra!
+      </div>
+
+      <div
+        style="
+          font-size:11px;
+          margin-top:4px;
+        ">
+        Comercial Adelaida
+      </div>
+
+    </div>
+  `;
 
 }
-
 
 function imprimirTicket(id){
 
+  const ticket = $(id);
+
+  if(!ticket){
+    alert('No se encontró el ticket.');
+    return;
+  }
+
   document
-    .querySelectorAll(
-      '.ticket'
-    )
-    .forEach(
-      x =>
-        x.classList
-          .remove('imprimir')
-    );
+    .querySelectorAll('.ticket')
+    .forEach(x => x.classList.remove('imprimir'));
 
-  $(id)
-    .classList
-    .add('imprimir');
+  ticket.classList.add('imprimir');
 
-  window.print();
+  // Quitar configuración de impresión anterior
+  const anterior = document.getElementById('estiloPaginaTicket');
 
-  setTimeout(
-    () =>
-      $(id)
-        .classList
-        .remove('imprimir'),
-    500
-  );
+  if(anterior){
+    anterior.remove();
+  }
+
+  /*
+    Medimos aproximadamente el largo del ticket.
+
+    Hasta 620 px:
+    MEDIA CARTA HORIZONTAL
+
+    Más de 620 px:
+    CARTA VERTICAL
+  */
+
+  const alto = ticket.scrollHeight;
+
+  const estilo = document.createElement('style');
+
+  estilo.id = 'estiloPaginaTicket';
+
+  if(alto <= 620){
+
+    estilo.innerHTML = `
+      @page{
+        size: 8.5in 5.5in;
+        margin: 0.25in;
+      }
+
+      @media print{
+        .ticket.imprimir{
+          width:8in!important;
+          min-height:auto!important;
+        }
+      }
+    `;
+
+  }else{
+
+    estilo.innerHTML = `
+      @page{
+        size: Letter portrait;
+        margin: 0.35in;
+      }
+
+      @media print{
+        .ticket.imprimir{
+          width:7.8in!important;
+          min-height:auto!important;
+        }
+      }
+    `;
+
+  }
+
+  document.head.appendChild(estilo);
+
+  setTimeout(() => {
+
+    window.print();
+
+  }, 200);
+
+  setTimeout(() => {
+
+    ticket.classList.remove('imprimir');
+
+  }, 1000);
 
 }
-
 
 async function toggleCam(){
 
