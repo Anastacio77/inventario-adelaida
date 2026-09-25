@@ -4272,18 +4272,26 @@ function imprimirTicket(
   iframe.style.position=
     'fixed';
 
-  iframe.style.right=
-    '0';
 
-  iframe.style.bottom=
-    '0';
+  iframe.style.left=
+  '-10000px';
 
-  iframe.style.width=
-    '0';
+iframe.style.top=
+  '0';
 
-  iframe.style.height=
-    '0';
+iframe.style.width=
+  media
+  ?
+  '816px'
+  :
+  '816px';
 
+iframe.style.height=
+  media
+  ?
+  '528px'
+  :
+  '1056px';
   iframe.style.border=
     '0';
 
@@ -4318,20 +4326,15 @@ Comercial Adelaida
 <style>
 
 @page{
-  size:${pagina};
-  margin:${margen};
+  size:${media ? '8.5in 5.5in' : '8.5in 11in'};
+  margin:${media ? '0.12in' : '0.25in'};
 }
-
 html,
 body{
-  margin:0;
-  padding:0;
-  background:#fff;
-  color:#000;
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
+  width:${media ? '8.26in' : '8in'};
+  min-height:0;
+  max-height:none;
+  overflow:visible;
 }
 
 .ticket{
