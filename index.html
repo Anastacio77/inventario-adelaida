@@ -4228,174 +4228,241 @@ function imprimirTicket(
   formato='MEDIA'
 ){
 
-  document
-  .querySelectorAll(
-    '.ticket'
-  )
-  .forEach(
-    x=>{
-
-      x.classList.remove(
-        'imprimir',
-        'ticket-media-carta',
-        'ticket-carta-vertical'
-      );
-
-    }
-  );
-
-
   const ticket=
-    document.getElementById(
-      id
-    );
-
+    document.getElementById(id);
 
   if(!ticket){
     return;
   }
 
-
-  ticket.classList.add(
-    'imprimir'
-  );
+  const media=
+    formato!=='CARTA';
 
 
-  let estilo=
-    document.getElementById(
-      'estiloImpresionTicket'
+  const pagina=
+    media
+    ?
+    '215.9mm 139.7mm'
+    :
+    '215.9mm 279.4mm';
+
+
+  const margen=
+    media
+    ?
+    '4mm'
+    :
+    '7mm';
+
+
+  const fuente=
+    media
+    ?
+    '8px'
+    :
+    '10px';
+
+
+  const iframe=
+    document.createElement(
+      'iframe'
     );
 
 
-  if(estilo){
+  iframe.style.position=
+    'fixed';
 
-    estilo.remove();
+  iframe.style.right=
+    '0';
 
+  iframe.style.bottom=
+    '0';
+
+  iframe.style.width=
+    '0';
+
+  iframe.style.height=
+    '0';
+
+  iframe.style.border=
+    '0';
+
+
+  document.body
+  .appendChild(
+    iframe
+  );
+
+
+  const doc=
+    iframe.contentWindow
+    .document;
+
+
+  doc.open();
+
+
+  doc.write(`
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="UTF-8">
+
+<title>
+Comercial Adelaida
+</title>
+
+<style>
+
+@page{
+  size:${pagina};
+  margin:${margen};
+}
+
+html,
+body{
+  margin:0;
+  padding:0;
+  background:#fff;
+  color:#000;
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
+}
+
+.ticket{
+  width:100%;
+  max-width:none;
+  margin:0;
+  padding:0;
+  font-size:${fuente};
+  line-height:1.05;
+}
+
+.ticket h2{
+  text-align:center;
+  margin:0 0 2px 0;
+  font-size:17px;
+}
+
+.centro{
+  text-align:center;
+}
+
+.derecha{
+  text-align:right;
+}
+
+.ticket hr{
+  border:0;
+  border-top:1px dashed #222;
+  margin:3px 0;
+}
+
+.ticket table{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+}
+
+.ticket th,
+.ticket td{
+  border:1px solid #222;
+  padding:1.5px 2px;
+  vertical-align:middle;
+  line-height:1;
+}
+
+.ticket th{
+  text-align:center;
+  font-weight:700;
+}
+
+.ticketTabla .descripcion{
+  text-align:left;
+}
+
+.lineaTotal{
+  display:flex;
+  justify-content:space-between;
+  margin-top:2px;
+}
+
+@media print{
+
+  html,
+  body{
+    width:100%;
+    margin:0!important;
+    padding:0!important;
   }
 
+  .ticket{
+    page-break-after:avoid!important;
+    page-break-before:avoid!important;
+  }
 
-  estilo=
-    document.createElement(
-      'style'
-    );
-
-
-  estilo.id=
-    'estiloImpresionTicket';
-
-
-  if(
-  formato==='CARTA'
-){
-
-  ticket.classList.add(
-    'ticket-carta-vertical'
-  );
-
-
-  estilo.innerHTML=`
-
-    @page{
-      size: 215.9mm 279.4mm;
-      margin: 7mm;
-    }
-
-    @media print{
-
-      .ticket.imprimir{
-        width:201mm!important;
-        max-width:201mm!important;
-        min-height:auto!important;
-      }
-
-    }
-
-  `;
-
-}else{
-
-  ticket.classList.add(
-    'ticket-media-carta'
-  );
-
-
-  estilo.innerHTML=`
-
-    @page{
-      size: 215.9mm 139.7mm;
-      margin: 4mm;
-    }
-
-    @media print{
-
-      html,
-      body{
-        width:215.9mm!important;
-        height:139.7mm!important;
-      }
-
-      .ticket.imprimir{
-        width:207.9mm!important;
-        max-width:207.9mm!important;
-        min-height:auto!important;
-      }
-
-    }
-
-  `;
+  table,
+  tr,
+  td,
+  th{
+    page-break-inside:avoid!important;
+  }
 
 }
 
+</style>
 
-  document.head
-  .appendChild(
-    estilo
+</head>
+
+<body>
+
+<div class="ticket">
+
+${ticket.innerHTML}
+
+</div>
+
+</body>
+
+</html>
+`);
+
+
+  doc.close();
+
+
+  setTimeout(
+    ()=>{
+
+      iframe
+      .contentWindow
+      .focus();
+
+
+      iframe
+      .contentWindow
+      .print();
+
+    },
+    500
   );
 
 
   setTimeout(
     ()=>{
 
-      window.print();
+      iframe.remove();
 
     },
-    200
-  );
-
-
-  setTimeout(
-    ()=>{
-
-      ticket.classList.remove(
-        'imprimir',
-        'ticket-media-carta',
-        'ticket-carta-vertical'
-      );
-
-
-      const e=
-        document.getElementById(
-          'estiloImpresionTicket'
-        );
-
-
-      if(e){
-
-        e.remove();
-
-      }
-
-    },
-    1000
+    3000
   );
 
 }
-
-
-/* ===================================== */
-/* CÁMARA                                */
-/* ===================================== */
-
 async function toggleCam(){
 
   if(scannerPos){
