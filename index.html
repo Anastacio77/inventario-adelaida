@@ -1090,7 +1090,13 @@ function sugerencias(q,modo){
             esc(p.talla)+
             ' · '+
             p.existencia+
-            ' pares · '+
+' '+
+(
+  String(p.tipoIngreso||'INDIVIDUAL').toUpperCase()==='INDIVIDUAL'
+    ? (Number(p.existencia)===1 ? 'unidad' : 'unidades')
+    : 'pares'
+)+
+            ' · '+
             Q(p.precio)+
             '</div>';
 
