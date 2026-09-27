@@ -6,7 +6,7 @@
 <title>Comercial Adelaida - POS</title>
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript" defer></script>
 <style>
-*{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f4f4f6;color:#202124}.app{max-width:960px;margin:auto;padding:14px}.card,.header{background:#fff;border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 3px 14px rgba(0,0,0,.06)}h1{margin:0;font-size:24px}.sub{color:#666;margin-top:4px}.tabs{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin-bottom:14px}.tabs button{background:#e9e9ee}.tabs button.activo{background:#222;color:#fff}button{border:0;border-radius:12px;padding:12px;font:inherit;font-weight:700;cursor:pointer}input,select,textarea{width:100%;border:1px solid #d5d5db;border-radius:12px;padding:12px;font-size:16px;background:#fff}textarea{min-height:65px}label{display:block;font-size:13px;font-weight:700;margin-top:10px;margin-bottom:5px}.fila{display:flex;gap:8px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.btnNegro{background:#222;color:#fff}.btnAzul{background:#0d6efd;color:#fff}.btnVerde{background:#198754;color:#fff}.btnRojo{background:#c0392b;color:#fff}.btnGris{background:#e9e9ee}.btnMorado{background:#5a3ec8;color:#fff}.oculto{display:none!important}.resumen{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}.dato{background:#f4f4f6;border-radius:12px;padding:10px}.dato b{font-size:21px;display:block}.dato span{font-size:12px;color:#666}.mensaje{padding:11px;border-radius:12px;margin-top:10px}.ok{background:#dcf4e5;color:#135d31}.error{background:#ffe3e3;color:#8e2525}.info{background:#e8f1ff;color:#244d7c}.buscadorAuto{position:relative;flex:1}.listaSugerencias{position:absolute;top:calc(100% + 5px);left:0;right:0;background:#fff;border:1px solid #ddd;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);max-height:320px;overflow:auto;z-index:9999}.itemSugerencia{padding:12px;border-bottom:1px solid #eee}.sugCodigo{font-weight:800}.sugDetalle{font-size:13px;color:#666;margin-top:3px}.scanner{width:100%;overflow:hidden;border-radius:14px;margin-top:10px}.cartItem{border:1px solid #e3e3e8;border-radius:14px;padding:12px;margin-top:10px}.cartTop{display:flex;justify-content:space-between;gap:8px}.cartMeta{font-size:12px;color:#666}.cartControls{display:grid;grid-template-columns:45px 58px 45px 1fr;gap:6px;margin-top:9px}.cartControls input{text-align:center;padding:8px}.totales{background:#f4f4f6;border-radius:14px;padding:14px;margin-top:14px}.lineaTotal{display:flex;justify-content:space-between;margin-top:5px}.totalGrande{font-size:30px;font-weight:900}.cambio{background:#dcf4e5;border-radius:12px;padding:12px;margin-top:10px;text-align:center}.cambio b{font-size:25px}.producto{display:grid;grid-template-columns:1fr 1fr;gap:9px}.campo{background:#f4f4f6;border-radius:11px;padding:10px}.campo span{font-size:11px;color:#777;display:block}.codigoAuto{text-align:center;font-weight:800;padding:12px;background:#eef1ff;border-radius:12px;margin-top:10px}.qrBox{text-align:center;padding:12px;background:#f4f4f6;border-radius:14px;margin-top:12px}.qrBox img{max-width:220px;width:100%}.ticket{font-family:monospace;background:#fff;padding:16px;max-width:900px;margin:auto}.ticketTabla{width:100%;border-collapse:collapse}.ticketTabla th,.ticketTabla td{border:1px solid #222;padding:3px;text-align:center;font-size:11px}.ticketTabla .descripcion{text-align:left}.ticketTabla .derecha{text-align:right}.precioEdit{width:105px;padding:7px;font-size:14px}.loteAviso{margin-top:7px;padding:7px;border-radius:8px;background:#fff3cd;font-size:12px}.corridaTabla{width:100%;border-collapse:collapse}.corridaTabla th,.corridaTabla td{padding:7px;border-bottom:1px solid #eee;text-align:center}.mini{font-size:12px;color:#666}.timeline{border-left:3px solid #ddd;margin-left:8px;padding-left:14px}.evento{margin:10px 0;padding:10px;background:#f7f7f8;border-radius:10px}.ticket h2{text-align:center;margin:0}.ticket hr{border:0;border-top:1px dashed #333}.ticket table{width:100%}.derecha{text-align:right}.centro{text-align:center}.sesionBar{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;margin-top:12px}.usuarioTag{font-size:13px;color:#555}.tabla{width:100%;border-collapse:collapse}.tabla th,.tabla td{padding:9px;border-bottom:1px solid #eee;text-align:left;font-size:14px}.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#eee;font-size:12px}.w100{width:100%}.botonEnlace{display:block;text-align:center;text-decoration:none;color:inherit}
+*{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f4f4f6;color:#202124}.app{max-width:960px;margin:auto;padding:14px}.card,.header{background:#fff;border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 3px 14px rgba(0,0,0,.06)}h1{margin:0;font-size:24px}.sub{color:#666;margin-top:4px}.tabs{display:grid;grid-template-columns:repeat(10,1fr);gap:8px;margin-bottom:14px}.tabs button{background:#e9e9ee}.tabs button.activo{background:#222;color:#fff}button{border:0;border-radius:12px;padding:12px;font:inherit;font-weight:700;cursor:pointer}input,select,textarea{width:100%;border:1px solid #d5d5db;border-radius:12px;padding:12px;font-size:16px;background:#fff}textarea{min-height:65px}label{display:block;font-size:13px;font-weight:700;margin-top:10px;margin-bottom:5px}.fila{display:flex;gap:8px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.btnNegro{background:#222;color:#fff}.btnAzul{background:#0d6efd;color:#fff}.btnVerde{background:#198754;color:#fff}.btnRojo{background:#c0392b;color:#fff}.btnGris{background:#e9e9ee}.btnMorado{background:#5a3ec8;color:#fff}.oculto{display:none!important}.resumen{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}.dato{background:#f4f4f6;border-radius:12px;padding:10px}.dato b{font-size:21px;display:block}.dato span{font-size:12px;color:#666}.mensaje{padding:11px;border-radius:12px;margin-top:10px}.ok{background:#dcf4e5;color:#135d31}.error{background:#ffe3e3;color:#8e2525}.info{background:#e8f1ff;color:#244d7c}.buscadorAuto{position:relative;flex:1}.listaSugerencias{position:absolute;top:calc(100% + 5px);left:0;right:0;background:#fff;border:1px solid #ddd;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);max-height:320px;overflow:auto;z-index:9999}.itemSugerencia{padding:12px;border-bottom:1px solid #eee}.sugCodigo{font-weight:800}.sugDetalle{font-size:13px;color:#666;margin-top:3px}.scanner{width:100%;overflow:hidden;border-radius:14px;margin-top:10px}.cartItem{border:1px solid #e3e3e8;border-radius:14px;padding:12px;margin-top:10px}.cartTop{display:flex;justify-content:space-between;gap:8px}.cartMeta{font-size:12px;color:#666}.cartControls{display:grid;grid-template-columns:45px 58px 45px 1fr;gap:6px;margin-top:9px}.cartControls input{text-align:center;padding:8px}.totales{background:#f4f4f6;border-radius:14px;padding:14px;margin-top:14px}.lineaTotal{display:flex;justify-content:space-between;margin-top:5px}.totalGrande{font-size:30px;font-weight:900}.cambio{background:#dcf4e5;border-radius:12px;padding:12px;margin-top:10px;text-align:center}.cambio b{font-size:25px}.producto{display:grid;grid-template-columns:1fr 1fr;gap:9px}.campo{background:#f4f4f6;border-radius:11px;padding:10px}.campo span{font-size:11px;color:#777;display:block}.codigoAuto{text-align:center;font-weight:800;padding:12px;background:#eef1ff;border-radius:12px;margin-top:10px}.qrBox{text-align:center;padding:12px;background:#f4f4f6;border-radius:14px;margin-top:12px}.qrBox img{max-width:220px;width:100%}.ticket{font-family:monospace;background:#fff;padding:16px;max-width:900px;margin:auto}.ticketTabla{width:100%;border-collapse:collapse}.ticketTabla th,.ticketTabla td{border:1px solid #222;padding:3px;text-align:center;font-size:11px}.ticketTabla .descripcion{text-align:left}.ticketTabla .derecha{text-align:right}.precioEdit{width:105px;padding:7px;font-size:14px}.loteAviso{margin-top:7px;padding:7px;border-radius:8px;background:#fff3cd;font-size:12px}.corridaTabla{width:100%;border-collapse:collapse}.corridaTabla th,.corridaTabla td{padding:7px;border-bottom:1px solid #eee;text-align:center}.mini{font-size:12px;color:#666}.timeline{border-left:3px solid #ddd;margin-left:8px;padding-left:14px}.evento{margin:10px 0;padding:10px;background:#f7f7f8;border-radius:10px}.ticket h2{text-align:center;margin:0}.ticket hr{border:0;border-top:1px dashed #333}.ticket table{width:100%}.derecha{text-align:right}.centro{text-align:center}.sesionBar{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;margin-top:12px}.usuarioTag{font-size:13px;color:#555}.tabla{width:100%;border-collapse:collapse}.tabla th,.tabla td{padding:9px;border-bottom:1px solid #eee;text-align:left;font-size:14px}.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#eee;font-size:12px}.badgePendiente{background:#fff3cd}.badgeCompleto{background:#dcf4e5}.badgeCancelado{background:#ffe3e3}.pedidoCard{border:1px solid #e3e3e8;border-radius:14px;padding:12px;margin-top:10px}.w100{width:100%}.botonEnlace{display:block;text-align:center;text-decoration:none;color:inherit}
 @media(max-width:780px){.tabs{grid-template-columns:1fr 1fr}.resumen,.grid2,.producto,.sesionBar{grid-template-columns:1fr}.fila{flex-direction:column}.cartControls{grid-template-columns:42px 52px 42px 1fr}}
 @media print{body *{visibility:hidden}.ticket.imprimir,.ticket.imprimir *{visibility:visible}.ticket.imprimir{position:absolute;left:0;top:0;width:100%}.noPrint{display:none!important}}
 </style>
@@ -41,12 +41,14 @@
 
   <div id="tabs" class="tabs oculto">
     <button id="tabPos" class="activo" onclick="vista('pos')">🛒 Punto de venta</button>
+    <button id="tabPedidos" onclick="vista('pedidos');cargarPedidos()">📋 Pedidos</button>
     <button id="tabVentas" onclick="vista('ventas');buscarVentas()">🧾 Ventas</button>
     <button id="tabInventario" onclick="vista('inventario')">📦 Inventario</button>
     <button id="tabNuevo" onclick="vista('nuevo')">➕ Producto</button>
     <button id="tabTraslados" onclick="vista('traslados')">🔁 Traslados</button>
     <button id="tabUsuarios" onclick="vista('usuarios');cargarUsuarios()">👥 Usuarios</button>
     <button id="tabTrazabilidad" onclick="vista('trazabilidad')">🔎 Trazabilidad</button>
+    <button id="tabComisiones" onclick="vista('comisiones');cargarComisiones()">💰 Comisiones</button>
     <button id="tabConfig" onclick="vista('config')">⚙ Configuración</button>
   </div>
 
@@ -57,12 +59,19 @@
       <div id="scanPosBox" class="oculto"><div id="readerPos" class="scanner"></div></div>
       <div id="mensajePos"></div><div id="carritoLista"></div>
       <div class="totales"><div class="lineaTotal"><span>Pares</span><strong id="posPares">0</strong></div><div class="lineaTotal"><span>Subtotal</span><strong id="posSubtotal">Q0.00</strong></div><div class="lineaTotal"><span>Descuento</span><strong id="posDescuentoVista">Q0.00</strong></div><div class="lineaTotal"><span>Total</span><span class="totalGrande" id="posTotal">Q0.00</span></div></div>
-      <div class="grid2"><div><label>Cliente</label><input id="posCliente" placeholder="Opcional"></div><div><label>NIT</label><input id="posNit" placeholder="CF o NIT"></div><div><label>Forma de pago</label><select id="posMetodo" onchange="actualizarPago()"><option>EFECTIVO</option><option>TRANSFERENCIA</option><option>TARJETA</option></select></div><div><label>Descuento Q</label><input id="posDescuento" type="number" min="0" step="0.01" value="0" oninput="renderCarrito()"></div><div id="efectivoBox"><label>Efectivo recibido Q</label><input id="posEfectivo" type="number" min="0" step="0.01" value="0" oninput="actualizarCambio()"></div><div><label>Nota</label><input id="posNota"></div></div>
+      <div class="grid2"><div><label>Cliente</label><input id="posCliente" placeholder="Opcional"></div><div><label>NIT</label><input id="posNit" placeholder="CF o NIT"></div><div><label>Vendedor</label><select id="posVendedor"></select></div><div><label>Forma de pago</label><select id="posMetodo" onchange="actualizarPago()"><option>EFECTIVO</option><option>TRANSFERENCIA</option><option>TARJETA</option></select></div><div><label>Divisa de pago</label><select id="posMoneda" onchange="actualizarPago()"></select></div><div><label>Descuento Q</label><input id="posDescuento" type="number" min="0" step="0.01" value="0" oninput="renderCarrito()"></div><div id="efectivoBox"><label id="efectivoEtiqueta">Efectivo recibido</label><input id="posEfectivo" type="number" min="0" step="0.01" value="0" oninput="actualizarCambio()"></div><div id="cambioMonedaBox"><label>Dar cambio en</label><select id="posCambioMoneda" onchange="actualizarCambio()"><option value="GTQ">GTQ - Quetzal</option></select></div><div><label>Nota</label><input id="posNota"></div></div>
+      <div id="divisaInfo" class="info mensaje">Total en divisa: —</div>
       <div id="cambioBox" class="cambio">Cambio: <b id="posCambio">Q0.00</b></div>
-      <button class="btnVerde w100" style="font-size:18px;margin-top:12px" onclick="cobrar()">COBRAR VENTA</button>
+      <div class="fila" style="margin-top:12px"><button id="btnGuardarPedido" class="btnAzul" style="flex:1" onclick="guardarPedido()">GUARDAR PEDIDO</button><button id="btnCobrarVenta" class="btnVerde" style="flex:1;font-size:18px" onclick="cobrar()">COBRAR VENTA</button></div>
       <button class="btnGris w100" style="margin-top:8px" onclick="vaciar()">Vaciar carrito</button>
     </div>
     <div id="ticketCard" class="card oculto"><div id="ticket" class="ticket"></div><div class="fila noPrint" style="margin-top:10px"><button class="btnNegro" style="flex:1" onclick="imprimirTicket('ticket','MEDIA')">🖨 Media carta horizontal</button><button class="btnGris" style="flex:1" onclick="imprimirTicket('ticket','CARTA')">🖨 Carta vertical</button></div><button class="btnGris noPrint w100" style="margin-top:8px" onclick="$('ticketCard').classList.add('oculto')">Nueva venta</button></div>
+  </div>
+
+  <div id="vistaPedidos" class="vistaApp oculto">
+    <div class="card"><h3 style="margin-top:0">Pedidos</h3><div class="fila"><select id="filtroEstadoPedido" onchange="cargarPedidos()"><option value="PENDIENTE">Pendientes</option><option value="">Todos</option><option value="COMPLETADO">Completados</option><option value="CANCELADO">Cancelados</option></select><button class="btnNegro" onclick="cargarPedidos()">Actualizar</button></div><div id="mensajePedidos"></div><div id="listaPedidos"></div></div>
+    <div id="pedidoDetalleCard" class="card oculto"><div id="pedidoDetalle"></div><div id="pedidoCobroBox"><div class="grid2"><div><label>Forma de pago</label><select id="pedMetodo" onchange="actualizarCobroPedido()"><option>EFECTIVO</option><option>TRANSFERENCIA</option><option>TARJETA</option></select></div><div><label>Divisa</label><select id="pedMoneda" onchange="actualizarCobroPedido()"></select></div><div id="pedEfectivoBox"><label>Efectivo recibido</label><input id="pedEfectivo" type="number" min="0" step="0.01" value="0" oninput="actualizarCobroPedido()"></div><div><label>Dar cambio en</label><select id="pedCambioMoneda" onchange="actualizarCobroPedido()"><option value="GTQ">GTQ - Quetzal</option></select></div></div><div id="pedCambio" class="cambio">Cambio: <b>Q0.00</b></div><div class="fila" style="margin-top:12px"><button class="btnVerde" style="flex:1" onclick="completarPedidoUI()">✅ COMPLETAR PEDIDO</button><button class="btnRojo" style="flex:1" onclick="cancelarPedidoUI()">Cancelar pedido</button></div></div></div>
+    <div id="ticketPedidoCard" class="card oculto"><div id="ticketPedido" class="ticket"></div><div class="fila noPrint" style="margin-top:10px"><button class="btnNegro" style="flex:1" onclick="imprimirTicket('ticketPedido','MEDIA')">🖨 Media carta horizontal</button><button class="btnGris" style="flex:1" onclick="imprimirTicket('ticketPedido','CARTA')">🖨 Carta vertical</button></div></div>
   </div>
 
   <div id="vistaVentas" class="vistaApp oculto">
@@ -353,6 +362,7 @@
           <select id="uRol" onchange="ajustarUsuarioSucursal()">
             <option value="CAJERO">CAJERO</option>
             <option value="BODEGA">BODEGA</option>
+            <option value="VENDEDOR">VENDEDOR</option>
             <option value="ADMIN">ADMIN</option>
           </select>
         </div>
@@ -361,6 +371,8 @@
           <label>Sucursal</label>
           <select id="uSucursal"></select>
         </div>
+        <div><label>Tipo de comisión</label><select id="uTipoComision"><option value="NINGUNA">NINGUNA</option><option value="PORCENTAJE">PORCENTAJE</option><option value="FIJO">MONTO FIJO</option></select></div>
+        <div><label>Comisión</label><input id="uComision" type="number" min="0" step="0.01" value="0"></div>
 
       </div>
 
@@ -381,6 +393,7 @@
               <th>Rol</th>
               <th>Sucursal</th>
               <th>Estado</th>
+              <th>Comisión</th>
               <th>Acción</th>
             </tr>
           </thead>
@@ -425,6 +438,10 @@
     </div>
   </div>
 
+  <div id="vistaComisiones" class="vistaApp oculto">
+    <div class="card"><h3 style="margin-top:0">Comisiones de vendedores</h3><div class="grid2"><div class="dato"><span>Total vendido</span><b id="comTotalVentas">Q0.00</b></div><div class="dato"><span>Comisión acumulada</span><b id="comTotal">Q0.00</b></div></div><div id="listaComisiones" style="overflow:auto;margin-top:12px"></div></div>
+  </div>
+
   <div id="vistaConfig" class="vistaApp oculto">
     <div class="card">
       <h3>Configuración</h3>
@@ -440,6 +457,7 @@
 
       <div id="mensajeConfig"></div>
     </div>
+    <div id="divisasAdmin" class="card"><h3 style="margin-top:0">Divisas</h3><div class="grid2"><div><label>Código</label><input id="dCodigo" placeholder="USD"></div><div><label>Nombre</label><input id="dNombre" placeholder="Dólar"></div><div><label>Símbolo</label><input id="dSimbolo" placeholder="$"></div><div><label>Tipo de cambio a GTQ</label><input id="dCambio" type="number" min="0.0001" step="0.0001" value="1"></div></div><button class="btnAzul w100" style="margin-top:12px" onclick="guardarDivisa()">Guardar divisa</button><div id="listaDivisas" style="margin-top:12px"></div></div>
   </div>
 
 </div>
@@ -453,6 +471,9 @@ let SUCURSAL=localStorage.getItem('adelaida_sucursal')||'Adelaida La Paz';
 let SUCURSALES=[];
 let ESCALAS=[];
 let ESCALAS_MAP={};
+let DIVISAS=[];
+let VENDEDORES=[];
+let PEDIDO_ACTUAL=null;
 let carrito=[];
 let productoActual=null;
 let corridaBorrador=[];
@@ -476,6 +497,8 @@ document.addEventListener('DOMContentLoaded',()=>{
     renderCarrito();
     cargarResumen();
     rellenarDestinos();
+    cargarVendedores();
+    if(DIVISAS.length) llenarSelectsDivisas();
   });
 
   auto(
@@ -598,39 +621,11 @@ function volverLogin(){
 
 function vista(v){
   ocultarVistas();
-
-  const el=$(
-    'vista'+
-    v.charAt(0).toUpperCase()+
-    v.slice(1)
-  );
-
-  if(el){
-    el.classList.remove('oculto');
-  }
-
-  [
-    'pos',
-    'ventas',
-    'inventario',
-    'nuevo',
-    'traslados',
-    'usuarios',
-    'trazabilidad',
-    'config'
-  ].forEach(n=>{
-    const b=$(
-      'tab'+
-      n.charAt(0).toUpperCase()+
-      n.slice(1)
-    );
-
-    if(b){
-      b.classList.toggle(
-        'activo',
-        n===v
-      );
-    }
+  const el=$('vista'+v.charAt(0).toUpperCase()+v.slice(1));
+  if(el) el.classList.remove('oculto');
+  ['pos','pedidos','ventas','inventario','nuevo','traslados','usuarios','trazabilidad','comisiones','config'].forEach(n=>{
+    const b=$('tab'+n.charAt(0).toUpperCase()+n.slice(1));
+    if(b) b.classList.toggle('activo',n===v);
   });
 }
 
@@ -807,124 +802,49 @@ function restaurarSesion(){
 
 function iniciarApp(u){
   SESION=u;
-  
-  if(location.hash==='#vistaConfig'){
-  history.replaceState(
-    null,
-    '',
-    location.pathname+location.search
-  );
-}
+  if(location.hash==='#vistaConfig') history.replaceState(null,'',location.pathname+location.search);
+  $('estadoApi').textContent='✅ Conectado a Google Sheets';
+  $('mensajeConfig').innerHTML='';
+  $('loginCard').classList.add('oculto');
+  $('tabs').classList.remove('oculto');
+  $('sesionBar').classList.remove('oculto');
+  $('resumen').classList.remove('oculto');
+  $('usuarioActual').textContent=u.nombre+' · '+u.rol;
+  $('btnVolverLogin').classList.add('oculto');
 
-$('estadoApi').textContent='✅ Conectado a Google Sheets';
-$('mensajeConfig').innerHTML='';
+  $('tabUsuarios').classList.toggle('oculto',u.rol!=='ADMIN');
+  $('tabNuevo').classList.toggle('oculto',['CAJERO','VENDEDOR'].includes(u.rol));
+  $('tabTraslados').classList.toggle('oculto',['CAJERO','VENDEDOR'].includes(u.rol));
+  $('tabConfig').classList.toggle('oculto',u.rol!=='ADMIN');
+  $('tabComisiones').classList.toggle('oculto',!['ADMIN','VENDEDOR'].includes(u.rol));
+  $('tabPedidos').classList.toggle('oculto',!['ADMIN','CAJERO','VENDEDOR'].includes(u.rol));
+  $('movimientoBox').classList.toggle('oculto',['CAJERO','VENDEDOR'].includes(u.rol));
+  $('btnGuardarPedido').classList.toggle('oculto',!['ADMIN','CAJERO','VENDEDOR'].includes(u.rol));
+  $('btnCobrarVenta').classList.toggle('oculto',!['ADMIN','CAJERO','VENDEDOR'].includes(u.rol));
+  if($('divisasAdmin')) $('divisasAdmin').classList.toggle('oculto',u.rol!=='ADMIN');
 
-  $('loginCard')
-    .classList.add('oculto');
-
-  $('tabs')
-    .classList.remove('oculto');
-
-  $('sesionBar')
-    .classList.remove('oculto');
-
-  $('resumen')
-    .classList.remove('oculto');
-
-  $('usuarioActual').textContent=
-    u.nombre+
-    ' · '+
-    u.rol;
-
-  $('btnVolverLogin')
-    .classList.add('oculto');
-
-  $('tabUsuarios')
-    .classList.toggle(
-      'oculto',
-      u.rol!=='ADMIN'
-    );
-
-  $('tabNuevo')
-    .classList.toggle(
-      'oculto',
-      u.rol==='CAJERO'
-    );
-
-  $('tabTraslados')
-    .classList.toggle(
-      'oculto',
-      u.rol==='CAJERO'
-    );
-
-  $('movimientoBox')
-    .classList.toggle(
-      'oculto',
-      u.rol==='CAJERO'
-    );
-
-  api(
-    'sucursales',
-    {},
-    r=>{
-      if(!r.ok){
-        return;
-      }
-
-      SUCURSALES=
-        r.sucursales||
-        [];
-
-      llenarSucursales();
-      cargarEscalas();
-      vista('pos');
-      cargarResumen();
-    }
-  );
+  api('sucursales',{},r=>{
+    if(!r.ok) return;
+    SUCURSALES=r.sucursales||[];
+    llenarSucursales();
+    cargarEscalas();
+    cargarDivisas();
+    cargarVendedores();
+    vista('pos');
+    cargarResumen();
+  });
 }
 
 function llenarSucursales(){
   const sel=$('sucursalActual');
-
   sel.innerHTML='';
-
-  let permitidas=
-    SUCURSALES.slice();
-
-  if(
-    SESION.rol==='CAJERO'
-  ){
-    permitidas=[
-      SESION.sucursal
-    ];
-  }
-
-  if(
-    !permitidas.includes(
-      SUCURSAL
-    )
-  ){
-    SUCURSAL=
-      permitidas[0]||
-      'Adelaida La Paz';
-  }
-
-  permitidas.forEach(
-    s=>sel.add(
-      new Option(s,s)
-    )
-  );
-
+  let permitidas=SUCURSALES.slice();
+  if(['CAJERO','VENDEDOR'].includes(SESION.rol)) permitidas=[SESION.sucursal];
+  if(!permitidas.includes(SUCURSAL)) SUCURSAL=permitidas[0]||'Adelaida La Paz';
+  permitidas.forEach(s=>sel.add(new Option(s,s)));
   sel.value=SUCURSAL;
-
-  sel.disabled=
-    SESION.rol==='CAJERO';
-
-  localStorage.setItem(
-    'adelaida_sucursal',
-    SUCURSAL
-  );
-
+  sel.disabled=['CAJERO','VENDEDOR'].includes(SESION.rol);
+  localStorage.setItem('adelaida_sucursal',SUCURSAL);
   rellenarDestinos();
   rellenarUsuarioSucursales();
 }
@@ -1539,135 +1459,55 @@ function total(){
   };
 }
 
+function divisaActual(codigo){
+  return DIVISAS.find(d=>d.codigo===String(codigo||'GTQ').toUpperCase())||{codigo:'GTQ',nombre:'Quetzal',simbolo:'Q',tipoCambio:1};
+}
+
 function actualizarPago(){
-  const e=
-    $('posMetodo').value===
-    'EFECTIVO';
-
-  $('efectivoBox')
-    .classList.toggle(
-      'oculto',
-      !e
-    );
-
-  $('cambioBox')
-    .classList.toggle(
-      'oculto',
-      !e
-    );
-
+  const e=$('posMetodo').value==='EFECTIVO';
+  $('efectivoBox').classList.toggle('oculto',!e);
+  $('cambioMonedaBox').classList.toggle('oculto',!e);
+  $('cambioBox').classList.toggle('oculto',!e);
+  const d=divisaActual($('posMoneda').value);
+  $('efectivoEtiqueta').textContent='Efectivo recibido '+d.codigo+' ('+d.simbolo+')';
+  const t=total();
+  $('divisaInfo').textContent='1 '+d.codigo+' = Q'+Number(d.tipoCambio).toFixed(4)+' · Total: '+d.simbolo+(t.total/d.tipoCambio).toFixed(2);
+  llenarCambioMoneda('posCambioMoneda',$('posMoneda').value);
   actualizarCambio();
 }
 
 function actualizarCambio(){
   const t=total();
+  const d=divisaActual($('posMoneda').value);
+  const recibido=Number($('posEfectivo').value)||0;
+  const cambioGTQ=Math.max(0,recibido*d.tipoCambio-t.total);
+  const cm=$('posCambioMoneda').value||'GTQ';
+  const valor=cm==='GTQ'?cambioGTQ:cambioGTQ/d.tipoCambio;
+  const dc=cm==='GTQ'?divisaActual('GTQ'):d;
+  $('posCambio').textContent=dc.simbolo+valor.toFixed(2)+' '+cm;
+}
 
-  const r=
-    Number(
-      $('posEfectivo').value
-    )||0;
-
-  $('posCambio').textContent=
-    Q(
-      $('posMetodo').value==='EFECTIVO'
-      ?
-      Math.max(
-        0,
-        r-t.total
-      )
-      :
-      0
-    );
-}function cobrar(){
-  if(!carrito.length){
-    return msg(
-      'mensajePos',
-      'Carrito vacío.',
-      'error'
-    );
-  }
-
+function cobrar(){
+  if(!carrito.length) return msg('mensajePos','Carrito vacío.','error');
   const t=total();
-  const ef=Number(
-    $('posEfectivo').value
-  )||0;
+  const d=divisaActual($('posMoneda').value);
+  const ef=Number($('posEfectivo').value)||0;
+  if($('posMetodo').value==='EFECTIVO' && ef*d.tipoCambio<t.total) return msg('mensajePos','Efectivo insuficiente.','error');
+  if(!confirm('¿Cobrar '+Q(t.total)+'?')) return;
 
-  if(
-    $('posMetodo').value==='EFECTIVO' &&
-    ef<t.total
-  ){
-    return msg(
-      'mensajePos',
-      'Efectivo insuficiente.',
-      'error'
-    );
-  }
-
-  if(
-    !confirm(
-      '¿Cobrar '+Q(t.total)+'?'
-    )
-  ){
-    return;
-  }
-
-  api(
-    'venta',
-    {
-      items:JSON.stringify(
-        carrito.map(x=>({
-          codigo:x.codigo,
-          cantidad:x.cantidad,
-          precioVenta:
-            Number(
-              x.precioVenta??
-              x.precio
-            )||0
-        }))
-      ),
-      cliente:$('posCliente').value,
-      nit:$('posNit').value,
-      metodo:$('posMetodo').value,
-      efectivo:ef,
-      descuento:t.desc,
-      nota:$('posNota').value
-    },
-    r=>{
-      if(!r.ok){
-        return msg(
-          'mensajePos',
-          r.error,
-          'error'
-        );
-      }
-
-      ticketHTML(
-        r,
-        'ticket'
-      );
-
-      carrito=[];
-      renderCarrito();
-
-      $('posCliente').value='';
-      $('posNit').value='';
-      $('posNota').value='';
-      $('posDescuento').value=0;
-      $('posEfectivo').value=0;
-
-      $('ticketCard')
-        .classList.remove('oculto');
-
-      cargarResumen();
-
-      msg(
-        'mensajePos',
-        'Venta registrada: '+
-        r.numeroVenta,
-        'ok'
-      );
-    }
-  );
+  api('venta',{
+    items:JSON.stringify(carrito.map(x=>({codigo:x.codigo,cantidad:x.cantidad,precioVenta:Number(x.precioVenta??x.precio)||0}))),
+    cliente:$('posCliente').value,nit:$('posNit').value,metodo:$('posMetodo').value,
+    moneda:$('posMoneda').value,efectivoDivisa:ef,cambioMoneda:$('posCambioMoneda').value,
+    descuento:t.desc,nota:$('posNota').value,vendedor:$('posVendedor').value
+  },r=>{
+    if(!r.ok) return msg('mensajePos',r.error,'error');
+    ticketHTML(r,'ticket');
+    limpiarPosDespues();
+    $('ticketCard').classList.remove('oculto');
+    cargarResumen();
+    msg('mensajePos','Venta registrada: '+r.numeroVenta,'ok');
+  });
 }
 
 function descripcionTicket(x){
@@ -1944,15 +1784,9 @@ function ticketHTML(v,id){
         ''
     )+
 
-    (
-      v.usuario
-        ?
-        '<div><b>Atendió:</b> '+
-        esc(v.usuario)+
-        '</div>'
-        :
-        ''
-    )+
+    (v.vendedor ? '<div><b>Vendedor:</b> '+esc(v.vendedor)+'</div>' : '')+
+    (v.numeroPedido ? '<div><b>Pedido:</b> '+esc(v.numeroPedido)+'</div>' : '')+
+    (v.usuario ? '<div><b>Cajero:</b> '+esc(v.usuario)+'</div>' : '')+
 
     '<hr>'+
 
@@ -2021,18 +1855,8 @@ function ticketHTML(v,id){
     esc(v.metodoPago||'')+
     '</div>'+
 
-    (
-      v.metodoPago==='EFECTIVO'
-        ?
-        '<div><b>Recibido:</b> '+
-        Q(v.efectivoRecibido)+
-        '</div>'+
-        '<div><b>Cambio:</b> '+
-        Q(v.cambio)+
-        '</div>'
-        :
-        ''
-    )+
+    (v.monedaPago && v.monedaPago!=='GTQ' ? '<div><b>Divisa:</b> '+esc(v.monedaPago)+' · 1 '+esc(v.monedaPago)+' = Q'+Number(v.tipoCambio||1).toFixed(4)+'</div><div><b>Total divisa:</b> '+esc(v.simboloMoneda||v.monedaPago)+Number(v.totalDivisa||0).toFixed(2)+'</div>' : '')+
+    (v.metodoPago==='EFECTIVO' ? '<div><b>Recibido:</b> '+(v.monedaPago&&v.monedaPago!=='GTQ' ? esc(v.simboloMoneda||v.monedaPago)+Number(v.efectivoDivisa||0).toFixed(2)+' '+esc(v.monedaPago) : Q(v.efectivoRecibido))+'</div><div><b>Cambio:</b> '+(v.cambioMoneda&&v.cambioMoneda!=='GTQ' ? esc(v.simboloMoneda||v.cambioMoneda)+Number(v.cambioDivisa||0).toFixed(2)+' '+esc(v.cambioMoneda) : Q(v.cambio))+'</div>' : '')+
 
     '<hr>'+
 
@@ -3489,115 +3313,31 @@ function buscarTrazabilidad(){
 }
 
 function cargarUsuarios(){
-  if(
-    !SESION||
-    SESION.rol!=='ADMIN'
-  ){
-    return;
-  }
-
-  api(
-    'usuarios',
-    {},
-    r=>{
-      if(!r.ok){
-        return msg(
-          'mensajeUsuarios',
-          r.error,
-          'error'
-        );
-      }
-
-      const tb=
-        $('listaUsuarios');
-
-      tb.innerHTML='';
-
-      (r.usuarios||[])
-        .forEach(u=>{
-          const tr=
-            document.createElement(
-              'tr'
-            );
-
-          tr.innerHTML=
-            '<td>'+
-            esc(u.usuario)+
-            '</td>'+
-            '<td>'+
-            esc(u.nombre)+
-            '</td>'+
-            '<td>'+
-            esc(u.rol)+
-            '</td>'+
-            '<td>'+
-            esc(u.sucursal)+
-            '</td>'+
-            '<td>'+
-            '<span class="badge">'+
-            esc(u.activo)+
-            '</span>'+
-            '</td>'+
-            '<td>'+
-            '<button class="btnGris">'+
-            (
-              u.activo==='SI'
-              ?
-              'Desactivar'
-              :
-              'Activar'
-            )+
-            '</button>'+
-            '</td>';
-
-          tr
-            .querySelector(
-              'button'
-            )
-            .onclick=
-              ()=>cambiarEstadoUsuario(
-                u.usuario,
-                u.activo!=='SI'
-              );
-
-          tb.appendChild(tr);
-        });
-    }
-  );
+  if(!SESION||SESION.rol!=='ADMIN') return;
+  api('usuarios',{},r=>{
+    if(!r.ok) return msg('mensajeUsuarios',r.error,'error');
+    const tb=$('listaUsuarios'); tb.innerHTML='';
+    (r.usuarios||[]).forEach(u=>{
+      const tr=document.createElement('tr');
+      const com=u.tipoComision==='PORCENTAJE'?u.comision+'%':(u.tipoComision==='FIJO'?Q(u.comision):'—');
+      tr.innerHTML='<td>'+esc(u.usuario)+'</td><td>'+esc(u.nombre)+'</td><td>'+esc(u.rol)+'</td><td>'+esc(u.sucursal)+'</td><td><span class="badge">'+esc(u.activo)+'</span></td><td>'+esc(com)+'</td><td><button class="btnGris btnEstado">'+(u.activo==='SI'?'Desactivar':'Activar')+'</button> '+(u.rol==='VENDEDOR'?'<button class="btnAzul btnCom">Comisión</button>':'')+'</td>';
+      tr.querySelector('.btnEstado').onclick=()=>cambiarEstadoUsuario(u.usuario,u.activo!=='SI');
+      const bc=tr.querySelector('.btnCom'); if(bc) bc.onclick=()=>editarComisionUsuario(u);
+      tb.appendChild(tr);
+    });
+  });
 }
 
 function crearUsuario(){
-  api(
-    'crearusuario',
-    {
-      usuario:$('uUsuario').value,
-      nombre:$('uNombre').value,
-      claveNueva:$('uClave').value,
-      rol:$('uRol').value,
-      sucursalUsuario:$('uSucursal').value
-    },
-    r=>{
-      if(!r.ok){
-        return msg(
-          'mensajeUsuarios',
-          r.error,
-          'error'
-        );
-      }
-
-      $('uUsuario').value='';
-      $('uNombre').value='';
-      $('uClave').value='';
-
-      msg(
-        'mensajeUsuarios',
-        r.mensaje,
-        'ok'
-      );
-
-      cargarUsuarios();
-    }
-  );
+  api('crearusuario',{
+    usuario:$('uUsuario').value,nombre:$('uNombre').value,claveNueva:$('uClave').value,
+    rol:$('uRol').value,sucursalUsuario:$('uSucursal').value,
+    tipoComision:$('uTipoComision').value,comision:$('uComision').value
+  },r=>{
+    if(!r.ok) return msg('mensajeUsuarios',r.error,'error');
+    $('uUsuario').value=''; $('uNombre').value=''; $('uClave').value=''; $('uComision').value=0;
+    msg('mensajeUsuarios',r.mensaje,'ok'); cargarUsuarios(); cargarVendedores();
+  });
 }
 
 function cambiarEstadoUsuario(usuario,activar){
@@ -3624,6 +3364,168 @@ function cambiarEstadoUsuario(usuario,activar){
       cargarUsuarios();
     }
   );
+}
+
+
+function cargarVendedores(){
+  if(!TOKEN) return;
+  api('vendedores',{},r=>{
+    if(!r.ok) return;
+    VENDEDORES=r.vendedores||[];
+    const s=$('posVendedor'); if(!s) return;
+    s.innerHTML='';
+    if(SESION.rol!=='VENDEDOR') s.add(new Option('Sin vendedor',''));
+    VENDEDORES.forEach(v=>s.add(new Option(v.nombre+' ('+v.usuario+')',v.usuario)));
+    if(SESION.rol==='VENDEDOR'){
+      s.value=SESION.usuario; s.disabled=true;
+    }else s.disabled=false;
+  });
+}
+
+function cargarDivisas(){
+  if(!TOKEN) return;
+  api('divisas',{},r=>{
+    if(!r.ok) return;
+    DIVISAS=r.divisas||[];
+    llenarSelectsDivisas();
+    if(SESION&&SESION.rol==='ADMIN') renderDivisas();
+    actualizarPago();
+  });
+}
+
+function llenarSelectsDivisas(){
+  ['posMoneda','pedMoneda'].forEach(id=>{
+    const s=$(id); if(!s) return;
+    const prev=s.value||'GTQ'; s.innerHTML='';
+    DIVISAS.forEach(d=>s.add(new Option(d.codigo+' - '+d.nombre,d.codigo)));
+    s.value=DIVISAS.some(d=>d.codigo===prev)?prev:'GTQ';
+  });
+  llenarCambioMoneda('posCambioMoneda',$('posMoneda')?$('posMoneda').value:'GTQ');
+  llenarCambioMoneda('pedCambioMoneda',$('pedMoneda')?$('pedMoneda').value:'GTQ');
+}
+
+function llenarCambioMoneda(id,codigo){
+  const s=$(id); if(!s) return;
+  const prev=s.value||'GTQ'; s.innerHTML='';
+  s.add(new Option('GTQ - Quetzal','GTQ'));
+  if(codigo&&codigo!=='GTQ'){
+    const d=divisaActual(codigo); s.add(new Option(d.codigo+' - '+d.nombre,d.codigo));
+  }
+  s.value=[...s.options].some(o=>o.value===prev)?prev:'GTQ';
+}
+
+function renderDivisas(){
+  const box=$('listaDivisas'); if(!box) return;
+  box.innerHTML='<table class="tabla"><thead><tr><th>Código</th><th>Nombre</th><th>Cambio</th></tr></thead><tbody>'+DIVISAS.map(d=>'<tr><td>'+esc(d.codigo)+'</td><td>'+esc(d.nombre)+'</td><td>1 '+esc(d.codigo)+' = Q'+Number(d.tipoCambio).toFixed(4)+'</td></tr>').join('')+'</tbody></table>';
+}
+
+function guardarDivisa(){
+  api('guardardivisa',{codigo:$('dCodigo').value,nombre:$('dNombre').value,simbolo:$('dSimbolo').value,tipoCambio:$('dCambio').value,activa:'SI'},r=>{
+    if(!r.ok) return msg('mensajeConfig',r.error,'error');
+    msg('mensajeConfig',r.mensaje,'ok'); cargarDivisas();
+  });
+}
+
+function limpiarPosDespues(){
+  carrito=[]; renderCarrito();
+  $('posCliente').value=''; $('posNit').value=''; $('posNota').value=''; $('posDescuento').value=0; $('posEfectivo').value=0;
+}
+
+function guardarPedido(){
+  if(!carrito.length) return msg('mensajePos','Carrito vacío.','error');
+  const t=total();
+  api('guardarpedido',{
+    items:JSON.stringify(carrito.map(x=>({codigo:x.codigo,cantidad:x.cantidad,precioVenta:Number(x.precioVenta??x.precio)||0}))),
+    cliente:$('posCliente').value,nit:$('posNit').value,descuento:t.desc,nota:$('posNota').value,vendedor:$('posVendedor').value
+  },r=>{
+    if(!r.ok) return msg('mensajePos',r.error,'error');
+    limpiarPosDespues();
+    msg('mensajePos','Pedido guardado: '+r.numeroPedido,'ok');
+  });
+}
+
+function cargarPedidos(){
+  if(!SESION||!['ADMIN','CAJERO','VENDEDOR'].includes(SESION.rol)) return;
+  api('pedidos',{estado:$('filtroEstadoPedido').value},r=>{
+    if(!r.ok) return msg('mensajePedidos',r.error,'error');
+    const box=$('listaPedidos'); box.innerHTML='';
+    (r.pedidos||[]).forEach(p=>{
+      const d=document.createElement('div'); d.className='pedidoCard';
+      const cls=p.estado==='COMPLETADO'?'badgeCompleto':(p.estado==='CANCELADO'?'badgeCancelado':'badgePendiente');
+      d.innerHTML='<div class="cartTop"><div><b>'+esc(p.numeroPedido)+'</b><div class="mini">'+esc(p.fecha)+' · '+esc(p.cliente||'Sin cliente')+' · Vendedor: '+esc(p.vendedor||'—')+'</div></div><div><span class="badge '+cls+'">'+esc(p.estado)+'</span><br><b>'+Q(p.total)+'</b></div></div><button class="btnGris w100" style="margin-top:8px">Ver pedido</button>';
+      d.querySelector('button').onclick=()=>verPedido(p.numeroPedido); box.appendChild(d);
+    });
+    if(!(r.pedidos||[]).length) box.innerHTML='<div class="sub">No hay pedidos para este filtro.</div>';
+  });
+}
+
+function verPedido(numero){
+  api('detallepedido',{numeroPedido:numero},r=>{
+    if(!r.ok) return msg('mensajePedidos',r.error,'error');
+    PEDIDO_ACTUAL=r;
+    const filas=(r.items||[]).map(x=>'<tr><td>'+x.cantidad+'</td><td>'+esc((x.marca+' '+x.modelo+' '+x.color+' '+x.talla).trim())+'</td><td>'+Q(x.precio)+'</td><td>'+Q(x.subtotal)+'</td></tr>').join('');
+    $('pedidoDetalle').innerHTML='<h3 style="margin-top:0">Pedido '+esc(r.numeroPedido)+'</h3><div class="mini">'+esc(r.fecha)+' · '+esc(r.sucursal)+' · Vendedor: '+esc(r.vendedor||'—')+'</div><table class="tabla"><thead><tr><th>Cant.</th><th>Producto</th><th>P/Uni</th><th>Total</th></tr></thead><tbody>'+filas+'</tbody></table><div class="lineaTotal"><span>Subtotal</span><b>'+Q(r.subtotal)+'</b></div><div class="lineaTotal"><span>Descuento</span><b>'+Q(r.descuento)+'</b></div><div class="lineaTotal totalGrande"><span>Total</span><b>'+Q(r.total)+'</b></div>';
+    $('pedidoDetalleCard').classList.remove('oculto');
+    $('pedidoCobroBox').classList.toggle('oculto',r.estado!=='PENDIENTE');
+    actualizarCobroPedido();
+  });
+}
+
+function actualizarCobroPedido(){
+  if(!PEDIDO_ACTUAL) return;
+  const d=divisaActual($('pedMoneda').value);
+  llenarCambioMoneda('pedCambioMoneda',$('pedMoneda').value);
+  const ef=Number($('pedEfectivo').value)||0;
+  const total=Number(PEDIDO_ACTUAL.total)||0;
+  const cambioGTQ=Math.max(0,ef*d.tipoCambio-total);
+  const cm=$('pedCambioMoneda').value||'GTQ';
+  const val=cm==='GTQ'?cambioGTQ:cambioGTQ/d.tipoCambio;
+  const sym=cm==='GTQ'?'Q':d.simbolo;
+  $('pedCambio').innerHTML='Total: <b>'+d.simbolo+(total/d.tipoCambio).toFixed(2)+' '+d.codigo+'</b> · Cambio: <b>'+sym+val.toFixed(2)+' '+cm+'</b>';
+  $('pedEfectivoBox').classList.toggle('oculto',$('pedMetodo').value!=='EFECTIVO');
+}
+
+function completarPedidoUI(){
+  if(!PEDIDO_ACTUAL) return;
+  const d=divisaActual($('pedMoneda').value);
+  const ef=Number($('pedEfectivo').value)||0;
+  if($('pedMetodo').value==='EFECTIVO'&&ef*d.tipoCambio<PEDIDO_ACTUAL.total) return msg('mensajePedidos','Efectivo insuficiente.','error');
+  if(!confirm('¿Completar '+PEDIDO_ACTUAL.numeroPedido+' por '+Q(PEDIDO_ACTUAL.total)+'?')) return;
+  api('completarpedido',{numeroPedido:PEDIDO_ACTUAL.numeroPedido,metodo:$('pedMetodo').value,moneda:$('pedMoneda').value,efectivoDivisa:ef,cambioMoneda:$('pedCambioMoneda').value},r=>{
+    if(!r.ok) return msg('mensajePedidos',r.error,'error');
+    ticketHTML(r,'ticketPedido'); $('ticketPedidoCard').classList.remove('oculto'); $('pedidoCobroBox').classList.add('oculto');
+    msg('mensajePedidos','Pedido completado. Venta: '+r.numeroVenta,'ok'); cargarPedidos(); cargarResumen();
+  });
+}
+
+function cancelarPedidoUI(){
+  if(!PEDIDO_ACTUAL) return;
+  const motivo=prompt('Motivo de cancelación (opcional):','')||'';
+  if(!confirm('¿Cancelar '+PEDIDO_ACTUAL.numeroPedido+'?')) return;
+  api('cancelarpedido',{numeroPedido:PEDIDO_ACTUAL.numeroPedido,motivo},r=>{
+    if(!r.ok) return msg('mensajePedidos',r.error,'error');
+    $('pedidoCobroBox').classList.add('oculto'); msg('mensajePedidos',r.mensaje,'ok'); cargarPedidos();
+  });
+}
+
+function cargarComisiones(){
+  if(!SESION||!['ADMIN','VENDEDOR'].includes(SESION.rol)) return;
+  api('comisiones',{},r=>{
+    if(!r.ok) return;
+    $('comTotalVentas').textContent=Q(r.totalVentas); $('comTotal').textContent=Q(r.totalComision);
+    $('listaComisiones').innerHTML='<table class="tabla"><thead><tr><th>Fecha</th><th>Venta</th><th>Vendedor</th><th>Total</th><th>Comisión</th></tr></thead><tbody>'+(r.registros||[]).map(x=>'<tr><td>'+esc(x.fecha)+'</td><td>'+esc(x.numeroVenta)+'</td><td>'+esc(x.vendedor)+'</td><td>'+Q(x.totalVenta)+'</td><td><b>'+Q(x.comision)+'</b></td></tr>').join('')+'</tbody></table>';
+  });
+}
+
+function editarComisionUsuario(u){
+  const tipo=prompt('Tipo de comisión: NINGUNA, PORCENTAJE o FIJO',u.tipoComision||'NINGUNA');
+  if(tipo===null) return;
+  const valor=prompt('Valor de comisión',String(u.comision||0));
+  if(valor===null) return;
+  api('configurarcomision',{usuario:u.usuario,tipoComision:tipo,comision:valor},r=>{
+    if(!r.ok) return msg('mensajeUsuarios',r.error,'error');
+    msg('mensajeUsuarios',r.mensaje,'ok'); cargarUsuarios(); cargarVendedores();
+  });
 }
 
 function api(a,p,cb,sinToken=false){
