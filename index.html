@@ -1102,7 +1102,59 @@ function auto(
       );
     }
   );
-}
+}document.addEventListener('click',e=>{
+
+  const cajas=[
+    {
+      input:$('posCodigo'),
+      lista:$('sugerenciasPos')
+    },
+    {
+      input:$('codigo'),
+      lista:$('sugerenciasInv')
+    },
+    {
+      input:$('trasCodigo'),
+      lista:$('sugerenciasTras')
+    }
+  ];
+
+  cajas.forEach(x=>{
+
+    if(
+      x.input &&
+      x.lista &&
+      !x.input.contains(e.target) &&
+      !x.lista.contains(e.target)
+    ){
+      x.lista.classList.add('oculto');
+    }
+
+  });
+
+});
+
+document.addEventListener('keydown',e=>{
+
+  if(e.key==='Escape'){
+
+    [
+      'sugerenciasPos',
+      'sugerenciasInv',
+      'sugerenciasTras'
+    ].forEach(id=>{
+
+      const x=$(id);
+
+      if(x){
+        x.classList.add('oculto');
+      }
+
+    });
+
+  }
+
+});
 
 function sugerencias(q,modo){
   const c=$(
@@ -1215,6 +1267,7 @@ function agregar(cod,intento=0){
   }
 
   $('posCodigo').value='';
+  $('sugerenciasPos').classList.add('oculto');
 
   api(
     'buscar',
