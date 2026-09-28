@@ -3920,17 +3920,69 @@ function renderCompraItems(){
 }
 
 function crearCompraUI(){
-  if(!COMPRA_ITEMS.length) return msg('mensajeCompras','Agregue productos.','error');
-  api('crearcompra',{
-    proveedorId:$('compProveedor').value,otrosCostos:$('compOtros').value,nota:$('compNota').value,
-    items:JSON.stringify(COMPRA_ITEMS)
-  },r=>{
-    if(!r.ok) return msg('mensajeCompras',r.error,'error');
-    msg('mensajeCompras','Compra '+r.numeroCompra+' creada por '+Q(r.total)+'.','ok');
-    COMPRA_ITEMS=[]; renderCompraItems(); cargarCompras();
-  });
-}
 
+  if(!COMPRA_ITEMS.length){
+    return msg(
+      'mensajeCompras',
+      'Agregue productos.',
+      'error'
+    );
+  }
+
+  const claveSolicitud=
+    'COMPRA-'+
+    Date.now()+
+    '-'+
+    Math.floor(Math.random()*999999);
+
+  const datos={
+    proveedorId:$('compProveedor').value,
+    otrosCostos:$('compOtros').value,
+    nota:$('compNota').value,
+    items:JSON.stringify(COMPRA_ITEMS),
+    claveSolicitud
+  };
+
+  msg(
+    'mensajeCompras',
+    'Registrando compra…',
+    'info'
+  );
+
+  api(
+    'crearcompra',
+    datos,
+    r=>{
+
+      if(!r){
+        return msg(
+          'mensajeCompras',
+          'No se recibió respuesta.',
+          'error'
+        );
+      }
+
+      if(!r.ok){
+        return msg(
+          'mensajeCompras',
+          r.error,
+          'error'
+        );
+      }
+
+      msg(
+        'mensajeCompras',
+        'Compra '+r.numeroCompra+
+        ' creada por '+Q(r.total)+'.',
+        'ok'
+      );
+
+      COMPRA_ITEMS=[];
+      renderCompraItems();
+      cargarCompras();
+    }
+  );
+}
 function cargarCompras(){
   if(!SESION||!['ADMIN','BODEGA'].includes(SESION.rol)) return;
   api('compras',{estado:''},r=>{
