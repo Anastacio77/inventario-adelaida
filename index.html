@@ -1157,13 +1157,23 @@ document.addEventListener('keydown',e=>{
 });
 
 function sugerencias(q,modo){
-  const c=$(
+
+  const idLista=
     modo==='pos'
       ? 'sugerenciasPos'
       : modo==='inv'
         ? 'sugerenciasInv'
-        : 'sugerenciasTras'
-  );
+        : 'sugerenciasTras';
+
+  const idInput=
+    modo==='pos'
+      ? 'posCodigo'
+      : modo==='inv'
+        ? 'codigo'
+        : 'trasCodigo';
+
+  const c=$(idLista);
+  const input=$(idInput);
 
   if(!q){
     c.classList.add('oculto');
@@ -1174,71 +1184,90 @@ function sugerencias(q,modo){
     'sugerir',
     {q,sucursal:SUCURSAL},
     r=>{
+
+      /*
+       * IMPORTANTE:
+       * Si mientras esperaba Google Sheets el usuario
+       * salió del buscador o escribió otra cosa,
+       * NO volver a abrir las sugerencias.
+       */
+      if(
+        !input ||
+        input.value.trim()!==q ||
+        document.activeElement!==input
+      ){
+        c.classList.add('oculto');
+        return;
+      }
+
       c.innerHTML='';
 
-      (r.sugerencias||[])
-        .forEach(p=>{
-          const d=
-            document.createElement('div');
+      (r.sugerencias||[]).forEach(p=>{
 
-          d.className=
-            'itemSugerencia';
+        const d=
+          document.createElement('div');
 
-          d.innerHTML=
-            '<div class="sugCodigo">'+
-            esc(p.codigo)+
-            '</div>'+
-            '<div class="sugDetalle">'+
-            esc(p.marca)+
-            ' · '+
-            esc(p.modelo)+
-            ' · '+
-            esc(p.color)+
-            ' · Talla '+
-            esc(p.talla)+
-            ' · '+
-            p.existencia+
-' '+
-(
-  String(p.tipoIngreso||'INDIVIDUAL').toUpperCase()==='INDIVIDUAL'
-    ? (Number(p.existencia)===1 ? 'unidad' : 'unidades')
-    : 'pares'
-)+
-' · '+
-Q(p.precio)+
-'</div>';
+        d.className='itemSugerencia';
 
-          d.onclick=()=>{
-            if(modo==='pos'){
-              $('posCodigo').value=
-                p.codigo;
+        d.innerHTML=
+          '<div class="sugCodigo">'+
+          esc(p.codigo)+
+          '</div>'+
+          '<div class="sugDetalle">'+
+          esc(p.marca)+
+          ' · '+
+          esc(p.modelo)+
+          ' · '+
+          esc(p.color)+
+          ' · Talla '+
+          esc(p.talla)+
+          ' · '+
+          p.existencia+
+          ' '+
+          (
+            String(
+              p.tipoIngreso||'INDIVIDUAL'
+            ).toUpperCase()==='INDIVIDUAL'
+              ? (
+                  Number(p.existencia)===1
+                    ? 'unidad'
+                    : 'unidades'
+                )
+              : 'pares'
+          )+
+          ' · '+
+          Q(p.precio)+
+          '</div>';
 
-              c.classList.add('oculto');
+        /*
+         * mousedown evita que el campo pierda el foco
+         * antes de seleccionar el producto.
+         */
+        d.onmousedown=e=>{
 
-              agregar(
-                p.codigo
-              );
+          e.preventDefault();
 
-            }else if(modo==='inv'){
-              $('codigo').value=
-                p.codigo;
+          c.classList.add('oculto');
 
-              c.classList.add('oculto');
+          if(modo==='pos'){
 
-              consultar(
-                p.codigo
-              );
+            $('posCodigo').value=p.codigo;
+            agregar(p.codigo);
 
-            }else{
-              $('trasCodigo').value=
-                p.codigo;
+          }else if(modo==='inv'){
 
-              c.classList.add('oculto');
-            }
-          };
+            $('codigo').value=p.codigo;
+            consultar(p.codigo);
 
-          c.appendChild(d);
-        });
+          }else{
+
+            $('trasCodigo').value=p.codigo;
+
+          }
+        };
+
+        c.appendChild(d);
+      });
 
       c.classList.toggle(
         'oculto',
@@ -1247,8 +1276,7 @@ Q(p.precio)+
     }
   );
 }
-
-function agregar(cod,intento=0){
+  function agregar(cod,intento=0){
   $('mensajePos').innerHTML='';
 
   const c=
