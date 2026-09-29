@@ -4164,6 +4164,7 @@ function msg(id,texto,tipo){
   const e=$(id);
 
   if(e){
+    texto=corregirTextoAPI(String(texto??''));
     e.innerHTML=
       '<div class="mensaje '+
       tipo+
