@@ -638,6 +638,7 @@ let ultimoTs=0;
 let t1=null;
 let t2=null;
 let t3=null;
+let CAMBIO_SUCURSAL_ID=0;
 
 const $=id=>document.getElementById(id);
 
@@ -645,16 +646,52 @@ document.addEventListener('DOMContentLoaded',()=>{
   $('apiUrl').value=API_URL;
 
   $('sucursalActual').addEventListener('change',()=>{
-    SUCURSAL=$('sucursalActual').value;
-    localStorage.setItem('adelaida_sucursal',SUCURSAL);
 
-    carrito=[];
-    renderCarrito();
-    cargarResumen();
-    rellenarDestinos();
+  const nuevaSucursal=$('sucursalActual').value;
+
+  SUCURSAL=nuevaSucursal;
+
+  localStorage.setItem(
+    'adelaida_sucursal',
+    SUCURSAL
+  );
+
+  CAMBIO_SUCURSAL_ID++;
+
+  const cambioId=CAMBIO_SUCURSAL_ID;
+
+  carrito=[];
+  renderCarrito();
+
+  $('rReferencias').textContent='—';
+  $('rPares').textContent='—';
+  $('rVentasHoy').textContent='—';
+  $('rTotalHoy').textContent='—';
+
+  rellenarDestinos();
+
+  setTimeout(()=>{
+
+    if(
+      cambioId!==CAMBIO_SUCURSAL_ID
+    ){
+      return;
+    }
+
+    cargarResumenSeguro(
+      cambioId,
+      nuevaSucursal
+    );
+
     cargarVendedores();
-    if(DIVISAS.length) llenarSelectsDivisas();
-  });
+
+    if(DIVISAS.length){
+      llenarSelectsDivisas();
+    }
+
+  },150);
+
+});
 
   auto(
     'posCodigo',
@@ -1068,7 +1105,7 @@ function cerrarSesion(){
     .classList.remove('oculto');
 }
 
-function cargarResumen(){
+  function cargarResumen(){
   if(!TOKEN){
     return;
   }
@@ -1102,7 +1139,64 @@ function cargarResumen(){
   );
 }
 
-function auto(
+function cargarResumenSeguro(
+  cambioId,
+  sucursalEsperada
+){
+
+  api(
+    'resumen',
+    {
+      sucursal:sucursalEsperada
+    },
+    r=>{
+
+      if(
+        cambioId!==CAMBIO_SUCURSAL_ID ||
+        SUCURSAL!==sucursalEsperada
+      ){
+        return;
+      }
+
+      if(r&&r.ok){
+
+        $('rReferencias').textContent=
+          r.referencias;
+
+        $('rPares').textContent=
+          r.pares;
+      }
+
+    }
+  );
+
+  api(
+    'resumendia',
+    {
+      sucursal:sucursalEsperada
+    },
+    r=>{
+
+      if(
+        cambioId!==CAMBIO_SUCURSAL_ID ||
+        SUCURSAL!==sucursalEsperada
+      ){
+        return;
+      }
+
+      if(r&&r.ok){
+
+        $('rVentasHoy').textContent=
+          r.ventas;
+
+        $('rTotalHoy').textContent=
+          Q(r.total);
+      }
+
+    }
+  );
+}
+  function auto(
   id,
   modo,
   getT,
