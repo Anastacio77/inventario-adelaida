@@ -4064,7 +4064,7 @@ function api(a,p,cb,sinToken=false){
 
   const timeoutId=setTimeout(function(){
     finalizar({ok:false,error:'Tiempo agotado al conectar con Google Sheets.'});
-  },20000);
+  },60000);
 
   document.head.appendChild(script);
 }
