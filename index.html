@@ -503,7 +503,7 @@
           </div>
           <div>
             <label>Cantidad a entregar</label>
-            <input id="devNuevoCantidad" value="1" disabled>
+            <input id="devNuevoCantidad" type="number" min="1" value="1" oninput="actualizarResumenCambio()">
           </div>
         </div>
         <button class="btnGris w100" style="margin-top:10px" onclick="consultarProductoCambio()">Usar producto escrito</button>
@@ -4543,16 +4543,24 @@ function consultarProductoCambio(){
 }
 
 function actualizarResumenCambio(){
-  const cant=Math.max(1,Number($('devCantidad').value)||1);
-  if($('devNuevoCantidad')) $('devNuevoCantidad').value=cant;
+  const cantDev=Math.max(1,Number($('devCantidad').value)||1);
+  const cantNuevo=Math.max(1,Number($('devNuevoCantidad').value)||1);
 
   let item=null;
   if(DEV_VENTA_ACTUAL&&Array.isArray(DEV_VENTA_ACTUAL.items)){
-    item=DEV_VENTA_ACTUAL.items.find(x=>String(x.codigo)===String($('devCodigo').value));
+    item=DEV_VENTA_ACTUAL.items.find(
+      x=>String(x.codigo)===String($('devCodigo').value)
+    );
   }
 
-  const valorDevuelto=item ? (Number(item.precio)||0)*cant : 0;
-  const valorNuevo=DEV_NUEVO_PRODUCTO ? (Number(DEV_NUEVO_PRODUCTO.precio)||0)*cant : 0;
+  const valorDevuelto=item
+    ? (Number(item.precio)||0)*cantDev
+    : 0;
+
+  const valorNuevo=DEV_NUEVO_PRODUCTO
+    ? (Number(DEV_NUEVO_PRODUCTO.precio)||0)*cantNuevo
+    : 0;
+
   const diferencia=valorNuevo-valorDevuelto;
 
   if($('devValorDevuelto')) $('devValorDevuelto').textContent=Q(valorDevuelto);
@@ -4571,19 +4579,25 @@ function registrarDevolucionUI(){
   }
 
   const tipo=$('devTipo').value;
-  const cantidad=Math.max(1,Number($('devCantidad').value)||1);
+  const cantidadDevuelta=Math.max(1,Number($('devCantidad').value)||1);
+  const cantidadNueva=Math.max(1,Number($('devNuevoCantidad').value)||1);
 
   if(tipo==='CAMBIO'){
     if(!DEV_NUEVO_PRODUCTO||!DEV_NUEVO_PRODUCTO.codigo){
       return msg('mensajeDevoluciones','Seleccione el producto que se entregará en el cambio.','error');
     }
-    if(Number(DEV_NUEVO_PRODUCTO.existencia)<cantidad){
-      return msg('mensajeDevoluciones','No hay suficiente existencia del producto nuevo. Disponible: '+DEV_NUEVO_PRODUCTO.existencia,'error');
+
+    if(Number(DEV_NUEVO_PRODUCTO.existencia)<cantidadNueva){
+      return msg(
+        'mensajeDevoluciones',
+        'No hay suficiente existencia del producto nuevo. Disponible: '+DEV_NUEVO_PRODUCTO.existencia,
+        'error'
+      );
     }
   }
 
   const texto=tipo==='CAMBIO'
-    ? '¿Registrar el cambio y actualizar ambos productos del inventario?'
+    ? '¿Registrar el cambio? Regresan '+cantidadDevuelta+' y se entregan '+cantidadNueva+'.'
     : '¿Registrar esta devolución?';
 
   if(!confirm(texto)) return;
@@ -4591,17 +4605,19 @@ function registrarDevolucionUI(){
   api('registrardevolucion',{
     numeroVenta:$('devVenta').value,
     codigo:$('devCodigo').value,
-    cantidad:cantidad,
+    cantidad:cantidadDevuelta,
     tipo:tipo,
     motivo:$('devMotivo').value,
-    nuevoCodigo:tipo==='CAMBIO' ? DEV_NUEVO_PRODUCTO.codigo : ''
+    nuevoCodigo:tipo==='CAMBIO' ? DEV_NUEVO_PRODUCTO.codigo : '',
+    cantidadNueva:tipo==='CAMBIO' ? cantidadNueva : 0
   },r=>{
     if(!r.ok) return msg('mensajeDevoluciones',r.error,'error');
 
     let textoOk=r.mensaje+' · '+r.numeroDevolucion;
 
     if(tipo==='CAMBIO'){
-      textoOk+=' · Regresa '+Q(r.monto)+' · Nuevo '+Q(r.montoNuevo);
+      textoOk+=' · Regresa '+r.cantidadDevuelta+' ('+Q(r.monto)+')';
+      textoOk+=' · Entrega '+r.cantidadNueva+' ('+Q(r.montoNuevo)+')';
       if(Number(r.diferenciaCobrar)>0) textoOk+=' · COBRAR '+Q(r.diferenciaCobrar);
       if(Number(r.saldoFavor)>0) textoOk+=' · SALDO A FAVOR '+Q(r.saldoFavor);
     }else{
@@ -4611,6 +4627,7 @@ function registrarDevolucionUI(){
     msg('mensajeDevoluciones',textoOk,'ok');
 
     $('devCantidad').value=1;
+    $('devNuevoCantidad').value=1;
     $('devMotivo').value='';
     $('devVentaPreview').innerHTML='';
     $('devVentaPreviewCard').classList.add('oculto');
