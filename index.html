@@ -614,7 +614,11 @@
 </div>
 
 <script>
-let API_URL=localStorage.getItem('adelaida_api_url')||'';
+const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
+let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
+if(!localStorage.getItem('adelaida_api_url')){
+  localStorage.setItem('adelaida_api_url',API_URL);
+}
 let TOKEN=localStorage.getItem('adelaida_token')||'';
 let SESION=null;
 let SUCURSAL=localStorage.getItem('adelaida_sucursal')||'Adelaida La Paz';
