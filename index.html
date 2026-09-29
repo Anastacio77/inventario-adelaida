@@ -4673,37 +4673,88 @@ function cargarDevoluciones(){
     }
 
     const lista=r.devoluciones||[];
-
-    const rows=lista.map(x=>
-      '<tr>'+
-        '<td>'+esc(x.fecha)+'</td>'+
-        '<td>'+esc(x.numeroVenta)+'</td>'+
-        '<td>'+esc(x.tipo)+'</td>'+
-        '<td>'+esc(x.cliente)+'</td>'+
-        '<td>'+Q(x.monto)+'</td>'+
-        '<td><button class="btnGris" onclick="abrirDetalleDevolucion('+JSON.stringify(x.numeroDevolucion)+',false)">👁 Ver</button></td>'+
-        '<td><button class="btnNegro" onclick="abrirDetalleDevolucion('+JSON.stringify(x.numeroDevolucion)+',true)">🖨 Reimprimir</button></td>'+
-      '</tr>'
-    ).join('');
-
-    $('listaDevoluciones').innerHTML=
-      '<table class="tabla">'+
-        '<thead><tr>'+
-          '<th>Fecha</th>'+
-          '<th>Venta</th>'+
-          '<th>Tipo</th>'+
-          '<th>Cliente</th>'+
-          '<th>Monto</th>'+
-          '<th>Detalle</th>'+
-          '<th>Imprimir</th>'+
-        '</tr></thead>'+
-        '<tbody>'+rows+'</tbody>'+
-      '</table>';
+    const cont=$('listaDevoluciones');
+    cont.innerHTML='';
 
     if(!lista.length){
-      $('listaDevoluciones').innerHTML=
+      cont.innerHTML=
         '<div class="sub">No hay devoluciones o cambios registrados.</div>';
+      return;
     }
+
+    const tabla=document.createElement('table');
+    tabla.className='tabla';
+
+    tabla.innerHTML=
+      '<thead><tr>'+
+        '<th>Fecha</th>'+
+        '<th>Venta</th>'+
+        '<th>Tipo</th>'+
+        '<th>Cliente</th>'+
+        '<th>Monto</th>'+
+        '<th>Detalle</th>'+
+        '<th>Imprimir</th>'+
+      '</tr></thead>';
+
+    const tbody=document.createElement('tbody');
+
+    lista.forEach(x=>{
+      const tr=document.createElement('tr');
+
+      const tdFecha=document.createElement('td');
+      tdFecha.textContent=x.fecha||'';
+
+      const tdVenta=document.createElement('td');
+      tdVenta.textContent=x.numeroVenta||'';
+
+      const tdTipo=document.createElement('td');
+      tdTipo.textContent=x.tipo||'';
+
+      const tdCliente=document.createElement('td');
+      tdCliente.textContent=x.cliente||'';
+
+      const tdMonto=document.createElement('td');
+      tdMonto.textContent=Q(x.monto);
+
+      const tdVer=document.createElement('td');
+      const btnVer=document.createElement('button');
+      btnVer.className='btnGris';
+      btnVer.textContent='👁 Ver';
+      btnVer.type='button';
+      btnVer.onclick=()=>{
+        abrirDetalleDevolucion(
+          x.numeroDevolucion,
+          false
+        );
+      };
+      tdVer.appendChild(btnVer);
+
+      const tdImprimir=document.createElement('td');
+      const btnImprimir=document.createElement('button');
+      btnImprimir.className='btnNegro';
+      btnImprimir.textContent='🖨 Reimprimir';
+      btnImprimir.type='button';
+      btnImprimir.onclick=()=>{
+        abrirDetalleDevolucion(
+          x.numeroDevolucion,
+          true
+        );
+      };
+      tdImprimir.appendChild(btnImprimir);
+
+      tr.appendChild(tdFecha);
+      tr.appendChild(tdVenta);
+      tr.appendChild(tdTipo);
+      tr.appendChild(tdCliente);
+      tr.appendChild(tdMonto);
+      tr.appendChild(tdVer);
+      tr.appendChild(tdImprimir);
+
+      tbody.appendChild(tr);
+    });
+
+    tabla.appendChild(tbody);
+    cont.appendChild(tabla);
   });
 }
 
