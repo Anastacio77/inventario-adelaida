@@ -483,12 +483,37 @@
         </div>
         <div>
           <label>Producto de la venta</label>
-          <select id="devCodigo">
+          <select id="devCodigo" onchange="actualizarResumenCambio()">
             <option value="">Primero seleccione una venta</option>
           </select>
         </div>
-        <div><label>Cantidad</label><input id="devCantidad" type="number" min="1" value="1"></div>
-        <div><label>Tipo</label><select id="devTipo"><option>DEVOLUCION</option><option>CAMBIO</option><option>SALDO_FAVOR</option></select></div>
+        <div><label>Cantidad</label><input id="devCantidad" type="number" min="1" value="1" oninput="actualizarResumenCambio()"></div>
+        <div><label>Tipo</label><select id="devTipo" onchange="ajustarTipoDevolucion()"><option>DEVOLUCION</option><option>CAMBIO</option><option>SALDO_FAVOR</option></select></div>
+      </div>
+
+      <div id="devCambioBox" class="card oculto" style="margin-top:12px">
+        <h3 style="margin-top:0">Producto a entregar en el cambio</h3>
+        <div class="grid2">
+          <div style="position:relative">
+            <label>Buscar, escanear o escribir código</label>
+            <input id="devNuevoCodigo" autocomplete="off" placeholder="Código, marca o modelo"
+              oninput="sugerirProductoCambio()"
+              onkeydown="if(event.key==='Enter'){event.preventDefault();consultarProductoCambio();}">
+            <div id="devNuevoSugerencias" class="sugerencias oculto"></div>
+          </div>
+          <div>
+            <label>Cantidad a entregar</label>
+            <input id="devNuevoCantidad" value="1" disabled>
+          </div>
+        </div>
+        <button class="btnGris w100" style="margin-top:10px" onclick="consultarProductoCambio()">Usar producto escrito</button>
+        <div id="devNuevoInfo" style="margin-top:10px"></div>
+        <div class="grid2" style="margin-top:10px">
+          <div class="dato"><span>Valor que regresa</span><b id="devValorDevuelto">Q0.00</b></div>
+          <div class="dato"><span>Valor producto nuevo</span><b id="devValorNuevo">Q0.00</b></div>
+          <div class="dato"><span>Diferencia a cobrar</span><b id="devDiferenciaCobrar">Q0.00</b></div>
+          <div class="dato"><span>Saldo a favor</span><b id="devSaldoFavor">Q0.00</b></div>
+        </div>
       </div>
 
       <div id="devVentaPreviewCard" class="card oculto" style="margin-top:12px">
@@ -614,11 +639,7 @@
 </div>
 
 <script>
-const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
-let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
-if(!localStorage.getItem('adelaida_api_url')){
-  localStorage.setItem('adelaida_api_url',API_URL);
-}
+let API_URL=localStorage.getItem('adelaida_api_url')||'';
 let TOKEN=localStorage.getItem('adelaida_token')||'';
 let SESION=null;
 let SUCURSAL=localStorage.getItem('adelaida_sucursal')||'Adelaida La Paz';
@@ -639,6 +660,8 @@ let t1=null;
 let t2=null;
 let t3=null;
 let CAMBIO_SUCURSAL_ID=0;
+let DEV_NUEVO_PRODUCTO=null;
+let DEV_CAMBIO_TIMER=null;
 
 const $=id=>document.getElementById(id);
 
@@ -647,51 +670,40 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   $('sucursalActual').addEventListener('change',()=>{
 
-  const nuevaSucursal=$('sucursalActual').value;
+    const nuevaSucursal=$('sucursalActual').value;
 
-  SUCURSAL=nuevaSucursal;
+    SUCURSAL=nuevaSucursal;
+    localStorage.setItem('adelaida_sucursal',SUCURSAL);
 
-  localStorage.setItem(
-    'adelaida_sucursal',
-    SUCURSAL
-  );
+    CAMBIO_SUCURSAL_ID++;
+    const cambioId=CAMBIO_SUCURSAL_ID;
 
-  CAMBIO_SUCURSAL_ID++;
+    carrito=[];
+    renderCarrito();
 
-  const cambioId=CAMBIO_SUCURSAL_ID;
+    $('rReferencias').textContent='—';
+    $('rPares').textContent='—';
+    $('rVentasHoy').textContent='—';
+    $('rTotalHoy').textContent='—';
 
-  carrito=[];
-  renderCarrito();
+    rellenarDestinos();
 
-  $('rReferencias').textContent='—';
-  $('rPares').textContent='—';
-  $('rVentasHoy').textContent='—';
-  $('rTotalHoy').textContent='—';
+    setTimeout(()=>{
+      if(cambioId!==CAMBIO_SUCURSAL_ID) return;
 
-  rellenarDestinos();
+      cargarResumenSeguro(cambioId,nuevaSucursal);
+      cargarVendedores();
 
-  setTimeout(()=>{
+      if(DIVISAS.length) llenarSelectsDivisas();
 
-    if(
-      cambioId!==CAMBIO_SUCURSAL_ID
-    ){
-      return;
-    }
-
-    cargarResumenSeguro(
-      cambioId,
-      nuevaSucursal
-    );
-
-    cargarVendedores();
-
-    if(DIVISAS.length){
-      llenarSelectsDivisas();
-    }
-
-  },150);
-
-});
+      // Si estaba preparando un cambio, limpiarlo al cambiar de sucursal.
+      DEV_NUEVO_PRODUCTO=null;
+      if($('devNuevoCodigo')) $('devNuevoCodigo').value='';
+      if($('devNuevoSugerencias')) $('devNuevoSugerencias').classList.add('oculto');
+      if($('devNuevoInfo')) $('devNuevoInfo').innerHTML='';
+      actualizarResumenCambio();
+    },150);
+  });
 
   auto(
     'posCodigo',
@@ -1105,7 +1117,7 @@ function cerrarSesion(){
     .classList.remove('oculto');
 }
 
-  function cargarResumen(){
+function cargarResumen(){
   if(!TOKEN){
     return;
   }
@@ -1139,64 +1151,26 @@ function cerrarSesion(){
   );
 }
 
-function cargarResumenSeguro(
-  cambioId,
-  sucursalEsperada
-){
-
-  api(
-    'resumen',
-    {
-      sucursal:sucursalEsperada
-    },
-    r=>{
-
-      if(
-        cambioId!==CAMBIO_SUCURSAL_ID ||
-        SUCURSAL!==sucursalEsperada
-      ){
-        return;
-      }
-
-      if(r&&r.ok){
-
-        $('rReferencias').textContent=
-          r.referencias;
-
-        $('rPares').textContent=
-          r.pares;
-      }
-
+function cargarResumenSeguro(cambioId,sucursalEsperada){
+  api('resumen',{sucursal:sucursalEsperada},r=>{
+    if(cambioId!==CAMBIO_SUCURSAL_ID||SUCURSAL!==sucursalEsperada) return;
+    if(r&&r.ok){
+      $('rReferencias').textContent=r.referencias;
+      $('rPares').textContent=r.pares;
     }
-  );
+  });
 
-  api(
-    'resumendia',
-    {
-      sucursal:sucursalEsperada
-    },
-    r=>{
-
-      if(
-        cambioId!==CAMBIO_SUCURSAL_ID ||
-        SUCURSAL!==sucursalEsperada
-      ){
-        return;
-      }
-
-      if(r&&r.ok){
-
-        $('rVentasHoy').textContent=
-          r.ventas;
-
-        $('rTotalHoy').textContent=
-          Q(r.total);
-      }
-
+  api('resumendia',{sucursal:sucursalEsperada},r=>{
+    if(cambioId!==CAMBIO_SUCURSAL_ID||SUCURSAL!==sucursalEsperada) return;
+    if(r&&r.ok){
+      $('rVentasHoy').textContent=r.ventas;
+      $('rTotalHoy').textContent=Q(r.total);
     }
-  );
+  });
 }
-  function auto(
+
+
+function auto(
   id,
   modo,
   getT,
@@ -4096,97 +4070,142 @@ function editarComisionUsuario(u){
 function api(a,p,cb,sinToken=false){
   if(!API_URL){
     mostrarConfigDesdeLogin();
+
     if(cb){
-      cb({ok:false,error:'Falta configurar la URL de Apps Script.'});
+      cb({
+        ok:false,
+        error:'Falta configurar la URL de Apps Script.'
+      });
     }
+
     return;
   }
 
-  const params=Object.assign({},p||{});
+  p=
+    Object.assign(
+      {},
+      p||
+      {}
+    );
 
-  if(!sinToken && TOKEN){
-    params.token=TOKEN;
-    params.sucursal=SUCURSAL;
+  if(
+    !sinToken &&
+    TOKEN
+  ){
+    p.token=TOKEN;
+    p.sucursal=SUCURSAL;
   }
 
-  params.accion=a;
+  const n=
+    '__cb_'+
+    Date.now()+
+    '_'+
+    Math.floor(
+      Math.random()*99999
+    );
 
-  const callbackName='cbAdelaida'+Date.now()+Math.floor(Math.random()*100000);
-  params.callback=callbackName;
-  params._ts=Date.now();
+  const s=
+    document.createElement(
+      'script'
+    );
 
-  const script=document.createElement('script');
-  let terminado=false;
+  p.accion=a;
+  p.callback=n;
 
-  const limpiar=()=>{
-    try{ script.remove(); }catch(e){}
-    try{ delete window[callbackName]; }catch(e){ window[callbackName]=undefined; }
-  };
+  const q=
+    Object.keys(p)
+      .map(
+        k=>
+          encodeURIComponent(k)+
+          '='+
+          encodeURIComponent(
+            p[k]??
+            ''
+          )
+      )
+      .join('&');
 
-  const finalizar=(respuesta)=>{
-    if(terminado) return;
-    terminado=true;
-    clearTimeout(timeoutId);
-    limpiar();
+  const tm=
+    setTimeout(
+      ()=>{
+        lim();
+
+        if(cb){
+          cb({
+            ok:false,
+            error:'Tiempo agotado.'
+          });
+        }
+      },
+      60000
+    );
+
+  window[n]=r=>{
+    clearTimeout(tm);
+    lim();
 
     if(
-      respuesta &&
-      respuesta.ok===false &&
-      /sesión|Inicie sesión/i.test(respuesta.error||'')
+      r &&
+      r.ok===false &&
+      /sesión|Inicie sesión/i.test(
+        r.error||
+        ''
+      )
     ){
       TOKEN='';
-      localStorage.removeItem('adelaida_token');
+
+      localStorage.removeItem(
+        'adelaida_token'
+      );
     }
 
-    if(cb) cb(respuesta);
+    if(cb){
+      cb(r);
+    }
   };
 
-  window[callbackName]=function(respuesta){
-    finalizar(respuesta);
+  s.onerror=()=>{
+    clearTimeout(tm);
+    lim();
+
+    if(cb){
+      cb({
+        ok:false,
+        error:'No se pudo conectar.'
+      });
+    }
   };
 
-  script.onerror=function(){
-    finalizar({ok:false,error:'No se pudo conectar con Google Sheets.'});
-  };
+  function lim(){
+    try{
+      delete window[n];
+    }catch(e){}
 
-  const query=Object.keys(params)
-    .map(k=>encodeURIComponent(k)+'='+encodeURIComponent(params[k]??''))
-    .join('&');
+    try{
+      s.remove();
+    }catch(e){}
+  }
 
-  script.src=API_URL+(API_URL.includes('?')?'&':'?')+query;
-  script.async=true;
+  s.src=
+    API_URL+
+    (
+      API_URL.includes('?')
+      ?
+      '&'
+      :
+      '?'
+    )+
+    q;
 
-  const timeoutId=setTimeout(function(){
-    finalizar({ok:false,error:'Tiempo agotado al conectar con Google Sheets.'});
-  },60000);
-
-  document.head.appendChild(script);
-}
-
-
-function corregirTextoAPI(v){
-  if(typeof v!=='string') return v;
-  return v
-    .replaceAll('√°','á')
-    .replaceAll('√©','é')
-    .replaceAll('√≠','í')
-    .replaceAll('√≥','ó')
-    .replaceAll('√∫','ú')
-    .replaceAll('√±','ñ')
-    .replaceAll('√Å','Á')
-    .replaceAll('√â','É')
-    .replaceAll('√ç','Í')
-    .replaceAll('√ì','Ó')
-    .replaceAll('√ö','Ú')
-    .replaceAll('√ë','Ñ')
-    .replaceAll('¬∑','·');
+  document.body.appendChild(
+    s
+  );
 }
 
 function msg(id,texto,tipo){
   const e=$(id);
 
   if(e){
-    texto=corregirTextoAPI(String(texto??''));
     e.innerHTML=
       '<div class="mensaje '+
       tipo+
@@ -4293,6 +4312,10 @@ function seleccionarVentaDevolucion(){
   const prod=$('devCodigo');
 
   DEV_VENTA_ACTUAL=null;
+  DEV_NUEVO_PRODUCTO=null;
+  if($('devNuevoCodigo')) $('devNuevoCodigo').value='';
+  if($('devNuevoInfo')) $('devNuevoInfo').innerHTML='';
+  if($('devNuevoSugerencias')) $('devNuevoSugerencias').classList.add('oculto');
   prod.innerHTML='<option value="">Primero seleccione una venta</option>';
   $('devVentaPreview').innerHTML='';
   $('devVentaPreviewCard').classList.add('oculto');
@@ -4330,12 +4353,115 @@ function seleccionarVentaDevolucion(){
 
     ticketHTML(r,'devVentaPreview');
     $('devVentaPreviewCard').classList.remove('oculto');
+    actualizarResumenCambio();
 
     $('devVentaPreviewCard').scrollIntoView({
       behavior:'smooth',
       block:'nearest'
     });
   });
+}
+
+
+function ajustarTipoDevolucion(){
+  const esCambio=$('devTipo').value==='CAMBIO';
+  $('devCambioBox').classList.toggle('oculto',!esCambio);
+  if(!esCambio){
+    DEV_NUEVO_PRODUCTO=null;
+    $('devNuevoCodigo').value='';
+    $('devNuevoSugerencias').innerHTML='';
+    $('devNuevoSugerencias').classList.add('oculto');
+    $('devNuevoInfo').innerHTML='';
+  }
+  actualizarResumenCambio();
+}
+
+function sugerirProductoCambio(){
+  clearTimeout(DEV_CAMBIO_TIMER);
+  const input=$('devNuevoCodigo');
+  const box=$('devNuevoSugerencias');
+  const q=input.value.trim();
+
+  DEV_NUEVO_PRODUCTO=null;
+  $('devNuevoInfo').innerHTML='';
+  actualizarResumenCambio();
+
+  if(!q){
+    box.innerHTML='';
+    box.classList.add('oculto');
+    return;
+  }
+
+  DEV_CAMBIO_TIMER=setTimeout(()=>{
+    api('sugerir',{q,sucursal:SUCURSAL},r=>{
+      if(input.value.trim()!==q) return;
+      box.innerHTML='';
+      const lista=(r&&r.sugerencias)||[];
+
+      lista.forEach(p=>{
+        const d=document.createElement('div');
+        d.className='itemSugerencia';
+        d.innerHTML=
+          '<div class="sugCodigo">'+esc(p.codigo)+'</div>'+ 
+          '<div class="sugDetalle">'+
+          esc(p.marca)+' · '+esc(p.modelo)+' · '+esc(p.color)+
+          ' · Talla '+esc(p.talla)+' · '+p.existencia+' disponibles · '+Q(p.precio)+
+          '</div>';
+        d.onmousedown=e=>{
+          e.preventDefault();
+          seleccionarProductoCambio(p);
+        };
+        box.appendChild(d);
+      });
+
+      box.classList.toggle('oculto',!lista.length);
+    });
+  },180);
+}
+
+function seleccionarProductoCambio(p){
+  DEV_NUEVO_PRODUCTO=p;
+  $('devNuevoCodigo').value=p.codigo;
+  $('devNuevoSugerencias').innerHTML='';
+  $('devNuevoSugerencias').classList.add('oculto');
+  $('devNuevoInfo').innerHTML=
+    '<div class="mensaje info"><b>'+esc(p.codigo)+'</b> · '+
+    esc(p.marca)+' '+esc(p.modelo)+' '+esc(p.color)+' · Talla '+esc(p.talla)+
+    ' · Existencia: '+p.existencia+' · Precio: '+Q(p.precio)+'</div>';
+  actualizarResumenCambio();
+}
+
+function consultarProductoCambio(){
+  const codigo=$('devNuevoCodigo').value.trim();
+  if(!codigo) return msg('mensajeDevoluciones','Escriba o escanee el producto que se entregará.','error');
+
+  api('buscar',{codigo,sucursal:SUCURSAL},p=>{
+    if(!p||!p.ok||!p.encontrado){
+      DEV_NUEVO_PRODUCTO=null;
+      actualizarResumenCambio();
+      return msg('mensajeDevoluciones',(p&&p.error)||'Producto nuevo no encontrado.','error');
+    }
+    seleccionarProductoCambio(p);
+  });
+}
+
+function actualizarResumenCambio(){
+  const cant=Math.max(1,Number($('devCantidad').value)||1);
+  if($('devNuevoCantidad')) $('devNuevoCantidad').value=cant;
+
+  let item=null;
+  if(DEV_VENTA_ACTUAL&&Array.isArray(DEV_VENTA_ACTUAL.items)){
+    item=DEV_VENTA_ACTUAL.items.find(x=>String(x.codigo)===String($('devCodigo').value));
+  }
+
+  const valorDevuelto=item ? (Number(item.precio)||0)*cant : 0;
+  const valorNuevo=DEV_NUEVO_PRODUCTO ? (Number(DEV_NUEVO_PRODUCTO.precio)||0)*cant : 0;
+  const diferencia=valorNuevo-valorDevuelto;
+
+  if($('devValorDevuelto')) $('devValorDevuelto').textContent=Q(valorDevuelto);
+  if($('devValorNuevo')) $('devValorNuevo').textContent=Q(valorNuevo);
+  if($('devDiferenciaCobrar')) $('devDiferenciaCobrar').textContent=Q(Math.max(0,diferencia));
+  if($('devSaldoFavor')) $('devSaldoFavor').textContent=Q(Math.max(0,-diferencia));
 }
 
 function registrarDevolucionUI(){
@@ -4347,27 +4473,57 @@ function registrarDevolucionUI(){
     return msg('mensajeDevoluciones','Seleccione el producto a devolver o cambiar.','error');
   }
 
-  if(!confirm('¿Registrar esta devolución/cambio?')) return;
+  const tipo=$('devTipo').value;
+  const cantidad=Math.max(1,Number($('devCantidad').value)||1);
+
+  if(tipo==='CAMBIO'){
+    if(!DEV_NUEVO_PRODUCTO||!DEV_NUEVO_PRODUCTO.codigo){
+      return msg('mensajeDevoluciones','Seleccione el producto que se entregará en el cambio.','error');
+    }
+    if(Number(DEV_NUEVO_PRODUCTO.existencia)<cantidad){
+      return msg('mensajeDevoluciones','No hay suficiente existencia del producto nuevo. Disponible: '+DEV_NUEVO_PRODUCTO.existencia,'error');
+    }
+  }
+
+  const texto=tipo==='CAMBIO'
+    ? '¿Registrar el cambio y actualizar ambos productos del inventario?'
+    : '¿Registrar esta devolución?';
+
+  if(!confirm(texto)) return;
 
   api('registrardevolucion',{
     numeroVenta:$('devVenta').value,
     codigo:$('devCodigo').value,
-    cantidad:$('devCantidad').value,
-    tipo:$('devTipo').value,
-    motivo:$('devMotivo').value
+    cantidad:cantidad,
+    tipo:tipo,
+    motivo:$('devMotivo').value,
+    nuevoCodigo:tipo==='CAMBIO' ? DEV_NUEVO_PRODUCTO.codigo : ''
   },r=>{
     if(!r.ok) return msg('mensajeDevoluciones',r.error,'error');
 
-    msg(
-      'mensajeDevoluciones',
-      r.mensaje+' · '+r.numeroDevolucion+' · '+Q(r.monto),
-      'ok'
-    );
+    let textoOk=r.mensaje+' · '+r.numeroDevolucion;
+
+    if(tipo==='CAMBIO'){
+      textoOk+=' · Regresa '+Q(r.monto)+' · Nuevo '+Q(r.montoNuevo);
+      if(Number(r.diferenciaCobrar)>0) textoOk+=' · COBRAR '+Q(r.diferenciaCobrar);
+      if(Number(r.saldoFavor)>0) textoOk+=' · SALDO A FAVOR '+Q(r.saldoFavor);
+    }else{
+      textoOk+=' · '+Q(r.monto);
+    }
+
+    msg('mensajeDevoluciones',textoOk,'ok');
 
     $('devCantidad').value=1;
     $('devMotivo').value='';
     $('devVentaPreview').innerHTML='';
     $('devVentaPreviewCard').classList.add('oculto');
+    DEV_VENTA_ACTUAL=null;
+    DEV_NUEVO_PRODUCTO=null;
+    $('devNuevoCodigo').value='';
+    $('devNuevoInfo').innerHTML='';
+    $('devNuevoSugerencias').innerHTML='';
+    $('devNuevoSugerencias').classList.add('oculto');
+    actualizarResumenCambio();
 
     cargarDevoluciones();
     cargarVentasDevolucion();
