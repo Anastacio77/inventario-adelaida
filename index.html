@@ -1330,11 +1330,15 @@ function sugerencias(q,modo){
 
         d.onmousedown=e=>{
           e.preventDefault();
+          e.stopPropagation();
 
           if(modo==='pos'){
-            // En Punto de venta la lista permanece abierta
-            // para poder seleccionar varias tallas seguidas.
+            // Punto de venta:
+            // agregar sin cerrar la lista para seleccionar varias tallas.
             agregarDesdeSugerencia(p);
+
+            // Forzar que la lista permanezca visible.
+            lista.classList.remove('oculto');
 
           }else if(modo==='inv'){
             lista.classList.add('oculto');
@@ -1344,6 +1348,17 @@ function sugerencias(q,modo){
           }else{
             lista.classList.add('oculto');
             $('trasCodigo').value=p.codigo;
+          }
+        };
+
+        // Evitar que el click posterior al mousedown llegue al
+        // manejador global que cierra la lista.
+        d.onclick=e=>{
+          e.preventDefault();
+          e.stopPropagation();
+
+          if(modo==='pos'){
+            lista.classList.remove('oculto');
           }
         };
 
@@ -1410,7 +1425,13 @@ function agregarDesdeSugerencia(p){
     'ok'
   );
 
+  // Mantener el buscador y la lista abiertos para elegir otra talla.
   $('posCodigo').focus();
+
+  const listaPos=$('sugerenciasPos');
+  if(listaPos){
+    listaPos.classList.remove('oculto');
+  }
 
   // Completar en segundo plano datos de FIFO/lote sin retrasar la selección.
   api(
@@ -1435,6 +1456,12 @@ function agregarDesdeSugerencia(p){
 
       Object.assign(actual,det,{cantidad,precioBase,precioVenta});
       renderCarrito();
+
+      // La consulta de FIFO/lote no debe cerrar la lista de tallas.
+      const listaPos=$('sugerenciasPos');
+      if(listaPos && $('posCodigo').value.trim()){
+        listaPos.classList.remove('oculto');
+      }
     }
   );
 }
