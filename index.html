@@ -4002,136 +4002,71 @@ function editarComisionUsuario(u){
 function api(a,p,cb,sinToken=false){
   if(!API_URL){
     mostrarConfigDesdeLogin();
-
     if(cb){
-      cb({
-        ok:false,
-        error:'Falta configurar la URL de Apps Script.'
-      });
+      cb({ok:false,error:'Falta configurar la URL de Apps Script.'});
     }
-
     return;
   }
 
-  p=
-    Object.assign(
-      {},
-      p||
-      {}
-    );
+  const params=Object.assign({},p||{});
 
-  if(
-    !sinToken &&
-    TOKEN
-  ){
-    p.token=TOKEN;
-    p.sucursal=SUCURSAL;
+  if(!sinToken && TOKEN){
+    params.token=TOKEN;
+    params.sucursal=SUCURSAL;
   }
 
-  const n=
-    '__cb_'+
-    Date.now()+
-    '_'+
-    Math.floor(
-      Math.random()*99999
-    );
+  params.accion=a;
 
-  const s=
-    document.createElement(
-      'script'
-    );
+  const callbackName='cbAdelaida'+Date.now()+Math.floor(Math.random()*100000);
+  params.callback=callbackName;
+  params._ts=Date.now();
 
-  p.accion=a;
-  p.callback=n;
+  const script=document.createElement('script');
+  let terminado=false;
 
-  const q=
-    Object.keys(p)
-      .map(
-        k=>
-          encodeURIComponent(k)+
-          '='+
-          encodeURIComponent(
-            p[k]??
-            ''
-          )
-      )
-      .join('&');
+  const limpiar=()=>{
+    try{ script.remove(); }catch(e){}
+    try{ delete window[callbackName]; }catch(e){ window[callbackName]=undefined; }
+  };
 
-  const tm=
-    setTimeout(
-      ()=>{
-        lim();
-
-        if(cb){
-          cb({
-            ok:false,
-            error:'Tiempo agotado.'
-          });
-        }
-      },
-      60000
-    );
-
-  window[n]=r=>{
-    clearTimeout(tm);
-    lim();
+  const finalizar=(respuesta)=>{
+    if(terminado) return;
+    terminado=true;
+    clearTimeout(timeoutId);
+    limpiar();
 
     if(
-      r &&
-      r.ok===false &&
-      /sesión|Inicie sesión/i.test(
-        r.error||
-        ''
-      )
+      respuesta &&
+      respuesta.ok===false &&
+      /sesión|Inicie sesión/i.test(respuesta.error||'')
     ){
       TOKEN='';
-
-      localStorage.removeItem(
-        'adelaida_token'
-      );
+      localStorage.removeItem('adelaida_token');
     }
 
-    if(cb){
-      cb(r);
-    }
+    if(cb) cb(respuesta);
   };
 
-  s.onerror=()=>{
-    clearTimeout(tm);
-    lim();
-
-    if(cb){
-      cb({
-        ok:false,
-        error:'No se pudo conectar.'
-      });
-    }
+  window[callbackName]=function(respuesta){
+    finalizar(respuesta);
   };
 
-  function lim(){
-    try{
-      delete window[n];
-    }catch(e){}
+  script.onerror=function(){
+    finalizar({ok:false,error:'No se pudo conectar con Google Sheets.'});
+  };
 
-    try{
-      s.remove();
-    }catch(e){}
-  }
+  const query=Object.keys(params)
+    .map(k=>encodeURIComponent(k)+'='+encodeURIComponent(params[k]??''))
+    .join('&');
 
-  s.src=
-    API_URL+
-    (
-      API_URL.includes('?')
-      ?
-      '&'
-      :
-      '?'
-    )+
-    q;
+  script.src=API_URL+(API_URL.includes('?')?'&':'?')+query;
+  script.async=true;
 
-  document.body.appendChild(
-    s
-  );
+  const timeoutId=setTimeout(function(){
+    finalizar({ok:false,error:'Tiempo agotado al conectar con Google Sheets.'});
+  },20000);
+
+  document.head.appendChild(script);
 }
 
 
