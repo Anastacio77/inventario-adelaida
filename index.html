@@ -4068,37 +4068,7 @@ function api(a,p,cb,sinToken=false){
       60000
     );
 
-function corregirTextoAPI(v){
-  if(typeof v!=='string') return v;
-  return v
-    .replaceAll('√°','á')
-    .replaceAll('√©','é')
-    .replaceAll('√≠','í')
-    .replaceAll('√≥','ó')
-    .replaceAll('√∫','ú')
-    .replaceAll('√±','ñ')
-    .replaceAll('√Å','Á')
-    .replaceAll('√â','É')
-    .replaceAll('√ç','Í')
-    .replaceAll('√ì','Ó')
-    .replaceAll('√ö','Ú')
-    .replaceAll('√ë','Ñ')
-    .replaceAll('¬∑','·');
-}
-
-function normalizarRespuestaAPI(v){
-  if(typeof v==='string') return corregirTextoAPI(v);
-  if(Array.isArray(v)) return v.map(normalizarRespuestaAPI);
-  if(v && typeof v==='object'){
-    Object.keys(v).forEach(k=>{
-      v[k]=normalizarRespuestaAPI(v[k]);
-    });
-  }
-  return v;
-}
-
   window[n]=r=>{
-    r=normalizarRespuestaAPI(r);
     clearTimeout(tm);
     lim();
 
@@ -4158,6 +4128,25 @@ function normalizarRespuestaAPI(v){
   document.body.appendChild(
     s
   );
+}
+
+
+function corregirTextoAPI(v){
+  if(typeof v!=='string') return v;
+  return v
+    .replaceAll('√°','á')
+    .replaceAll('√©','é')
+    .replaceAll('√≠','í')
+    .replaceAll('√≥','ó')
+    .replaceAll('√∫','ú')
+    .replaceAll('√±','ñ')
+    .replaceAll('√Å','Á')
+    .replaceAll('√â','É')
+    .replaceAll('√ç','Í')
+    .replaceAll('√ì','Ó')
+    .replaceAll('√ö','Ú')
+    .replaceAll('√ë','Ñ')
+    .replaceAll('¬∑','·');
 }
 
 function msg(id,texto,tipo){
