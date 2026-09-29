@@ -54,7 +54,7 @@
     <button id="tabUsuarios" onclick="vista('usuarios');cargarUsuarios()">👥 Usuarios</button>
     <button id="tabTrazabilidad" onclick="vista('trazabilidad')">🔎 Trazabilidad</button>
     <button id="tabComisiones" onclick="vista('comisiones');cargarComisiones()">💰 Comisiones</button>
-    <button id="tabDevoluciones" onclick="vista('devoluciones');cargarDevoluciones()">↩️ Devoluciones</button>
+    <button id="tabDevoluciones" onclick="vista('devoluciones');cargarDevoluciones();cargarVentasDevolucion()">↩️ Devoluciones</button>
     <button id="tabCompras" onclick="vista('compras');cargarProveedores();cargarCompras()">🚚 Compras</button>
     <button id="tabCaja" onclick="vista('caja');cargarCaja()">💵 Caja</button>
     <button id="tabReportes" onclick="vista('reportes');cargarReportes()">📊 Reportes</button>
@@ -475,11 +475,27 @@
     <div class="card">
       <h3 style="margin-top:0">Devoluciones y cambios</h3>
       <div class="grid2">
-        <div><label>Número de venta</label><input id="devVenta" placeholder="VTA-..."></div>
-        <div><label>Código del producto</label><input id="devCodigo"></div>
+        <div>
+          <label>Número de venta</label>
+          <select id="devVenta" onchange="seleccionarVentaDevolucion()">
+            <option value="">Seleccione una venta</option>
+          </select>
+        </div>
+        <div>
+          <label>Producto de la venta</label>
+          <select id="devCodigo">
+            <option value="">Primero seleccione una venta</option>
+          </select>
+        </div>
         <div><label>Cantidad</label><input id="devCantidad" type="number" min="1" value="1"></div>
         <div><label>Tipo</label><select id="devTipo"><option>DEVOLUCION</option><option>CAMBIO</option><option>SALDO_FAVOR</option></select></div>
       </div>
+
+      <div id="devVentaPreviewCard" class="card oculto" style="margin-top:12px">
+        <h3 style="margin-top:0">Vista previa de la venta</h3>
+        <div id="devVentaPreview" class="ticket"></div>
+      </div>
+
       <label>Motivo</label><input id="devMotivo">
       <button class="btnRojo w100" style="margin-top:12px" onclick="registrarDevolucionUI()">Registrar devolución / cambio</button>
       <div id="mensajeDevoluciones"></div>
@@ -4181,15 +4197,128 @@ function guardarAtributosProducto(){
   },r=>msg('mensaje',r.ok?r.mensaje:r.error,r.ok?'ok':'error'));
 }
 
+let DEV_VENTA_ACTUAL=null;
+
+function cargarVentasDevolucion(){
+  if(!SESION||!['ADMIN','CAJERO'].includes(SESION.rol)) return;
+
+  const sel=$('devVenta');
+  const prod=$('devCodigo');
+
+  sel.innerHTML='<option value="">Cargando ventas...</option>';
+  prod.innerHTML='<option value="">Primero seleccione una venta</option>';
+  $('devVentaPreviewCard').classList.add('oculto');
+  $('devVentaPreview').innerHTML='';
+  DEV_VENTA_ACTUAL=null;
+
+  api('buscarventas',{q:''},r=>{
+    if(!r.ok){
+      sel.innerHTML='<option value="">No se pudieron cargar las ventas</option>';
+      return msg('mensajeDevoluciones',r.error,'error');
+    }
+
+    sel.innerHTML='<option value="">Seleccione una venta</option>';
+
+    (r.ventas||[]).forEach(v=>{
+      const texto=
+        v.numeroVenta+
+        ' · '+(v.fecha||'')+
+        ' · '+(v.cliente||'CF')+
+        ' · '+Q(v.total);
+
+      sel.add(new Option(texto,v.numeroVenta));
+    });
+
+    if(!(r.ventas||[]).length){
+      sel.innerHTML='<option value="">No hay ventas disponibles</option>';
+    }
+  });
+}
+
+function seleccionarVentaDevolucion(){
+  const numero=$('devVenta').value;
+  const prod=$('devCodigo');
+
+  DEV_VENTA_ACTUAL=null;
+  prod.innerHTML='<option value="">Primero seleccione una venta</option>';
+  $('devVentaPreview').innerHTML='';
+  $('devVentaPreviewCard').classList.add('oculto');
+
+  if(!numero) return;
+
+  prod.innerHTML='<option value="">Cargando productos...</option>';
+
+  api('detalleventa',{numeroVenta:numero},r=>{
+    if(!r.ok){
+      prod.innerHTML='<option value="">No se pudieron cargar los productos</option>';
+      return msg('mensajeDevoluciones',r.error,'error');
+    }
+
+    DEV_VENTA_ACTUAL=r;
+
+    prod.innerHTML='<option value="">Seleccione un producto</option>';
+
+    (r.items||[]).forEach(x=>{
+      const descripcion=[
+        x.categoria||'',
+        x.marca||'',
+        x.modelo||'',
+        x.color||'',
+        x.talla ? 'T.'+x.talla : ''
+      ].filter(Boolean).join(' ');
+
+      prod.add(
+        new Option(
+          descripcion+' · Cant. '+x.cantidad+' · '+Q(x.precio),
+          x.codigo
+        )
+      );
+    });
+
+    ticketHTML(r,'devVentaPreview');
+    $('devVentaPreviewCard').classList.remove('oculto');
+
+    $('devVentaPreviewCard').scrollIntoView({
+      behavior:'smooth',
+      block:'nearest'
+    });
+  });
+}
+
 function registrarDevolucionUI(){
+  if(!$('devVenta').value){
+    return msg('mensajeDevoluciones','Seleccione una venta.','error');
+  }
+
+  if(!$('devCodigo').value){
+    return msg('mensajeDevoluciones','Seleccione el producto a devolver o cambiar.','error');
+  }
+
   if(!confirm('¿Registrar esta devolución/cambio?')) return;
+
   api('registrardevolucion',{
-    numeroVenta:$('devVenta').value,codigo:$('devCodigo').value,cantidad:$('devCantidad').value,
-    tipo:$('devTipo').value,motivo:$('devMotivo').value
+    numeroVenta:$('devVenta').value,
+    codigo:$('devCodigo').value,
+    cantidad:$('devCantidad').value,
+    tipo:$('devTipo').value,
+    motivo:$('devMotivo').value
   },r=>{
     if(!r.ok) return msg('mensajeDevoluciones',r.error,'error');
-    msg('mensajeDevoluciones',r.mensaje+' · '+r.numeroDevolucion+' · '+Q(r.monto),'ok');
-    cargarDevoluciones(); cargarResumen();
+
+    msg(
+      'mensajeDevoluciones',
+      r.mensaje+' · '+r.numeroDevolucion+' · '+Q(r.monto),
+      'ok'
+    );
+
+    $('devCantidad').value=1;
+    $('devMotivo').value='';
+    $('devVentaPreview').innerHTML='';
+    $('devVentaPreviewCard').classList.add('oculto');
+
+    cargarDevoluciones();
+    cargarVentasDevolucion();
+    cargarResumen();
   });
 }
 
