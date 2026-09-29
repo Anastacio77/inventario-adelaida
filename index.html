@@ -1189,9 +1189,9 @@ function auto(
 
       setT(
         setTimeout(
-          ()=>sugerencias(q,modo),
-          180
-        )
+  ()=>sugerencias(q,modo),
+  80
+)
       );
     }
   );
@@ -1284,15 +1284,13 @@ function sugerencias(q,modo){
        * salió del buscador o escribió otra cosa,
        * NO volver a abrir las sugerencias.
        */
-      if(
-        !input ||
-        input.value.trim()!==q ||
-        document.activeElement!==input
-      ){
-        c.classList.add('oculto');
-        return;
-      }
-
+     if(
+  !input ||
+  input.value.trim()!==q
+){
+  c.classList.add('oculto');
+  return;
+}
       c.innerHTML='';
 
       (r.sugerencias||[]).forEach(p=>{
