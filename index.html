@@ -3682,23 +3682,101 @@ function cargarPedidos(){
   });
 }
 
-function verPedido(numero){  // Cerrar ticket y detalle anterior antes de abrir otro pedido
+function verPedido(numero){
+
+  // Cerrar información del pedido anterior
   $('ticketPedidoCard').classList.add('oculto');
   $('ticketPedido').innerHTML='';
   $('pedidoDetalle').innerHTML='';
   $('pedidoCobroBox').classList.add('oculto');
-  api('detallepedido',{numeroPedido:numero},r=>{
-    if(!r.ok) return msg('mensajePedidos',r.error,'error');
-    PEDIDO_ACTUAL=r;
-    const filas=(r.items||[]).map(x=>'<tr><td>'+x.cantidad+'</td><td>'+esc((x.marca+' '+x.modelo+' '+x.color+' '+x.talla).trim())+'</td><td>'+Q(x.precio)+'</td><td>'+Q(x.subtotal)+'</td></tr>').join('');
-    $('pedidoDetalle').innerHTML='<h3 style="margin-top:0">Pedido '+esc(r.numeroPedido)+'</h3><div class="mini">'+esc(r.fecha)+' · '+esc(r.sucursal)+' · Vendedor: '+esc(r.vendedor||'—')+'</div><table class="tabla"><thead><tr><th>Cant.</th><th>Producto</th><th>P/Uni</th><th>Total</th></tr></thead><tbody>'+filas+'</tbody></table><div class="lineaTotal"><span>Subtotal</span><b>'+Q(r.subtotal)+'</b></div><div class="lineaTotal"><span>Descuento</span><b>'+Q(r.descuento)+'</b></div><div class="lineaTotal totalGrande"><span>Total</span><b>'+Q(r.total)+'</b></div>';
-    $('pedidoDetalleCard').classList.remove('oculto');
-    $('pedidoCobroBox').classList.toggle('oculto',r.estado!=='PENDIENTE');
-    actualizarCobroPedido();$('pedidoDetalleCard').scrollIntoView({
-  behavior:'smooth',
-  block:'start'
-});
-});
+
+  api(
+    'detallepedido',
+    {numeroPedido:numero},
+    r=>{
+
+      if(!r.ok){
+        return msg(
+          'mensajePedidos',
+          r.error,
+          'error'
+        );
+      }
+
+      PEDIDO_ACTUAL=r;
+
+      const filas=(r.items||[]).map(
+        x=>
+          '<tr>'+
+            '<td>'+x.cantidad+'</td>'+
+            '<td>'+
+              esc(
+                (
+                  x.marca+' '+
+                  x.modelo+' '+
+                  x.color+' '+
+                  x.talla
+                ).trim()
+              )+
+            '</td>'+
+            '<td>'+Q(x.precio)+'</td>'+
+            '<td>'+Q(x.subtotal)+'</td>'+
+          '</tr>'
+      ).join('');
+
+      $('pedidoDetalle').innerHTML=
+        '<h3 style="margin-top:0">'+
+          'Pedido '+esc(r.numeroPedido)+
+        '</h3>'+
+        '<div class="mini">'+
+          esc(r.fecha)+
+          ' · '+
+          esc(r.sucursal)+
+          ' · Vendedor: '+
+          esc(r.vendedor||'—')+
+        '</div>'+
+        '<table class="tabla">'+
+          '<thead>'+
+            '<tr>'+
+              '<th>Cant.</th>'+
+              '<th>Producto</th>'+
+              '<th>P/Uni</th>'+
+              '<th>Total</th>'+
+            '</tr>'+
+          '</thead>'+
+          '<tbody>'+
+            filas+
+          '</tbody>'+
+        '</table>'+
+        '<div class="lineaTotal">'+
+          '<span>Subtotal</span>'+
+          '<b>'+Q(r.subtotal)+'</b>'+
+        '</div>'+
+        '<div class="lineaTotal">'+
+          '<span>Descuento</span>'+
+          '<b>'+Q(r.descuento)+'</b>'+
+        '</div>'+
+        '<div class="lineaTotal totalGrande">'+
+          '<span>Total</span>'+
+          '<b>'+Q(r.total)+'</b>'+
+        '</div>';
+
+      $('pedidoDetalleCard').classList.remove('oculto');
+
+      $('pedidoCobroBox').classList.toggle(
+        'oculto',
+        r.estado!=='PENDIENTE'
+      );
+
+      actualizarCobroPedido();
+
+      $('pedidoDetalleCard').scrollIntoView({
+        behavior:'smooth',
+        block:'start'
+      });
+
+    }
+  );
 }
 
 function actualizarCobroPedido(){
