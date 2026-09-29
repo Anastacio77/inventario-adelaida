@@ -526,6 +526,15 @@
       <div id="mensajeDevoluciones"></div>
     </div>
     <div class="card"><h3 style="margin-top:0">Historial</h3><div id="listaDevoluciones"></div></div>
+
+    <div id="devDetalleCard" class="card oculto">
+      <div id="devDetalleTicket" class="ticket"></div>
+      <div class="fila noPrint" style="margin-top:10px">
+        <button class="btnNegro" style="flex:1" onclick="imprimirTicket('devDetalleTicket','MEDIA')">🖨 Media carta horizontal</button>
+        <button class="btnGris" style="flex:1" onclick="imprimirTicket('devDetalleTicket','CARTA')">🖨 Carta vertical</button>
+      </div>
+      <button class="btnGris noPrint w100" style="margin-top:8px" onclick="$('devDetalleCard').classList.add('oculto')">Cerrar detalle</button>
+    </div>
   </div>
 
   <div id="vistaCompras" class="vistaApp oculto">
@@ -1935,6 +1944,13 @@ function descripcionTicket(x){
 }
 
 function ticketHTML(v,id){
+  const tituloComprobante=v.tituloComprobante||'Comprobante de venta';
+  const etiquetaNumero=v.etiquetaNumero||'Venta';
+  const etiquetaSubtotal=v.etiquetaSubtotal||'Subtotal';
+  const etiquetaDescuento=v.etiquetaDescuento||'Descuento';
+  const etiquetaTotal=v.etiquetaTotal||'TOTAL';
+  const etiquetaPago=v.etiquetaPago||'Pago';
+  const textoFinal=v.textoFinal||'¡Gracias por su compra!';
   const grupos={};
 
   (v.items||[]).forEach(x=>{
@@ -2159,17 +2175,20 @@ function ticketHTML(v,id){
     esc(v.sucursal||SUCURSAL)+
     '</div>'+
 
-    '<div class="centro">Comprobante de venta</div>'+
+    '<div class="centro">'+esc(tituloComprobante)+'</div>'+
 
     '<hr>'+
 
-    '<div><b>Venta:</b> '+
+    '<div><b>'+esc(etiquetaNumero)+':</b> '+
     esc(v.numeroVenta||'')+
     '</div>'+
 
     '<div><b>Fecha:</b> '+
     esc(v.fecha||'')+
     '</div>'+
+
+    (v.ventaOriginal ? '<div><b>Venta original:</b> '+esc(v.ventaOriginal)+'</div>' : '')+
+    (v.motivo ? '<div><b>Motivo:</b> '+esc(v.motivo)+'</div>' : '')+
 
     (
       v.cliente
@@ -2238,27 +2257,27 @@ function ticketHTML(v,id){
     '<hr>'+
 
     '<div class="lineaTotal">'+
-      '<span>Subtotal</span>'+
+      '<span>'+esc(etiquetaSubtotal)+'</span>'+
       '<b>'+
       Q(v.subtotal)+
       '</b>'+
     '</div>'+
 
     '<div class="lineaTotal">'+
-      '<span>Descuento</span>'+
+      '<span>'+esc(etiquetaDescuento)+'</span>'+
       '<b>'+
       Q(v.descuento)+
       '</b>'+
     '</div>'+
 
     '<div class="lineaTotal" style="font-size:16px">'+
-      '<span><b>TOTAL</b></span>'+
+      '<span><b>'+esc(etiquetaTotal)+'</b></span>'+
       '<b>'+
       Q(v.total)+
       '</b>'+
     '</div>'+
 
-    '<div><b>Pago:</b> '+
+    '<div><b>'+esc(etiquetaPago)+':</b> '+
     esc(v.metodoPago||'')+
     '</div>'+
 
@@ -2268,7 +2287,7 @@ function ticketHTML(v,id){
     '<hr>'+
 
     '<div class="centro">'+
-    '¡Gracias por su compra!'+
+    esc(textoFinal)+
     '</div>';
 }
 
@@ -4647,11 +4666,185 @@ function registrarDevolucionUI(){
 
 function cargarDevoluciones(){
   if(!SESION||!['ADMIN','CAJERO'].includes(SESION.rol)) return;
+
   api('devoluciones',{},r=>{
-    if(!r.ok) return msg('mensajeDevoluciones',r.error,'error');
-    const rows=(r.devoluciones||[]).map(x=>'<tr><td>'+esc(x.fecha)+'</td><td>'+esc(x.numeroVenta)+'</td><td>'+esc(x.tipo)+'</td><td>'+esc(x.cliente)+'</td><td>'+Q(x.monto)+'</td></tr>').join('');
-    $('listaDevoluciones').innerHTML='<table class="tabla"><thead><tr><th>Fecha</th><th>Venta</th><th>Tipo</th><th>Cliente</th><th>Monto</th></tr></thead><tbody>'+rows+'</tbody></table>';
+    if(!r.ok){
+      return msg('mensajeDevoluciones',r.error,'error');
+    }
+
+    const lista=r.devoluciones||[];
+
+    const rows=lista.map(x=>
+      '<tr>'+
+        '<td>'+esc(x.fecha)+'</td>'+
+        '<td>'+esc(x.numeroVenta)+'</td>'+
+        '<td>'+esc(x.tipo)+'</td>'+
+        '<td>'+esc(x.cliente)+'</td>'+
+        '<td>'+Q(x.monto)+'</td>'+
+        '<td><button class="btnGris" onclick="abrirDetalleDevolucion('+JSON.stringify(x.numeroDevolucion)+',false)">👁 Ver</button></td>'+
+        '<td><button class="btnNegro" onclick="abrirDetalleDevolucion('+JSON.stringify(x.numeroDevolucion)+',true)">🖨 Reimprimir</button></td>'+
+      '</tr>'
+    ).join('');
+
+    $('listaDevoluciones').innerHTML=
+      '<table class="tabla">'+
+        '<thead><tr>'+
+          '<th>Fecha</th>'+
+          '<th>Venta</th>'+
+          '<th>Tipo</th>'+
+          '<th>Cliente</th>'+
+          '<th>Monto</th>'+
+          '<th>Detalle</th>'+
+          '<th>Imprimir</th>'+
+        '</tr></thead>'+
+        '<tbody>'+rows+'</tbody>'+
+      '</table>';
+
+    if(!lista.length){
+      $('listaDevoluciones').innerHTML=
+        '<div class="sub">No hay devoluciones o cambios registrados.</div>';
+    }
   });
+}
+
+function ticketDevolucionHTML(r,id){
+  const esCambio=String(r.tipo||'').toUpperCase()==='CAMBIO';
+  const esSaldo=String(r.tipo||'').toUpperCase()==='SALDO_FAVOR';
+
+  const regresan=(r.itemsRegresan||[]).map(x=>({
+    ...x,
+    categoria:
+      (esCambio ? 'REGRESA · ' : 'DEVOLUCIÓN · ')+
+      String(x.categoria||'')
+  }));
+
+  const entregados=(r.itemsEntregados||[]).map(x=>({
+    ...x,
+    categoria:
+      'ENTREGA · '+
+      String(x.categoria||'')
+  }));
+
+  let etiquetaTotal='TOTAL DEVOLUCIÓN';
+  let total=Number(r.montoRegresa||r.monto||0);
+
+  if(esCambio){
+    if(Number(r.diferenciaCobrar)>0){
+      etiquetaTotal='DIFERENCIA A COBRAR';
+      total=Number(r.diferenciaCobrar)||0;
+    }else if(Number(r.saldoFavor)>0){
+      etiquetaTotal='SALDO A FAVOR';
+      total=Number(r.saldoFavor)||0;
+    }else{
+      etiquetaTotal='DIFERENCIA';
+      total=0;
+    }
+  }else if(esSaldo){
+    etiquetaTotal='SALDO A FAVOR';
+    total=Number(r.saldoFavor||r.montoRegresa||r.monto||0);
+  }
+
+  ticketHTML({
+    tituloComprobante:
+      esCambio
+        ? 'Comprobante de cambio'
+        : (
+            esSaldo
+              ? 'Comprobante de saldo a favor'
+              : 'Comprobante de devolución'
+          ),
+    etiquetaNumero:
+      esCambio
+        ? 'Cambio'
+        : (
+            esSaldo
+              ? 'Saldo'
+              : 'Devolución'
+          ),
+    numeroVenta:r.numeroDevolucion,
+    ventaOriginal:r.numeroVenta,
+    fecha:r.fecha,
+    cliente:r.cliente,
+    nit:r.nit,
+    sucursal:r.sucursal,
+    usuario:r.usuario,
+    motivo:r.motivo,
+    items:regresan.concat(entregados),
+    subtotal:
+      esCambio
+        ? Number(r.montoEntrega||0)
+        : Number(r.montoRegresa||r.monto||0),
+    descuento:
+      esCambio
+        ? Number(r.montoRegresa||0)
+        : 0,
+    total,
+    etiquetaSubtotal:
+      esCambio
+        ? 'Valor entregado'
+        : 'Valor que regresa',
+    etiquetaDescuento:
+      esCambio
+        ? 'Valor que regresa'
+        : 'Ajuste',
+    etiquetaTotal,
+    etiquetaPago:
+      esCambio
+        ? 'Operación'
+        : 'Tipo',
+    metodoPago:r.tipo,
+    textoFinal:
+      esCambio
+        ? 'Comprobante de cambio'
+        : (
+            esSaldo
+              ? 'Comprobante de saldo a favor'
+              : 'Comprobante de devolución'
+          )
+  },id);
+}
+
+function abrirDetalleDevolucion(numeroDevolucion,imprimir){
+  api(
+    'detalledevolucion',
+    {
+      numeroDevolucion,
+      sucursal:SUCURSAL
+    },
+    r=>{
+      if(!r.ok){
+        return msg(
+          'mensajeDevoluciones',
+          r.error,
+          'error'
+        );
+      }
+
+      ticketDevolucionHTML(
+        r,
+        'devDetalleTicket'
+      );
+
+      $('devDetalleCard')
+        .classList.remove('oculto');
+
+      $('devDetalleCard')
+        .scrollIntoView({
+          behavior:'smooth',
+          block:'start'
+        });
+
+      if(imprimir){
+        setTimeout(
+          ()=>imprimirTicket(
+            'devDetalleTicket',
+            'MEDIA'
+          ),
+          250
+        );
+      }
+    }
+  );
 }
 
 function cargarProveedores(){
