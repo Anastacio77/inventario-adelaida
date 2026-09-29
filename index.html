@@ -659,6 +659,7 @@ let ultimoTs=0;
 let t1=null;
 let t2=null;
 let t3=null;
+let SUGERENCIA_ID={pos:0,inv:0,tras:0};
 let CAMBIO_SUCURSAL_ID=0;
 let DEV_NUEVO_PRODUCTO=null;
 let DEV_CAMBIO_TIMER=null;
@@ -1189,9 +1190,9 @@ function auto(
 
       setT(
         setTimeout(
-  ()=>sugerencias(q,modo),
-  80
-)
+          ()=>sugerencias(q,modo),
+          80
+        )
       );
     }
   );
@@ -1265,39 +1266,42 @@ function sugerencias(q,modo){
         ? 'codigo'
         : 'trasCodigo';
 
-  const c=$(idLista);
+  const lista=$(idLista);
   const input=$(idInput);
 
   if(!q){
-    c.classList.add('oculto');
+    lista.classList.add('oculto');
+    lista.innerHTML='';
     return;
   }
+
+  const solicitud=++SUGERENCIA_ID[modo];
 
   api(
     'sugerir',
     {q,sucursal:SUCURSAL},
     r=>{
 
-      /*
-       * IMPORTANTE:
-       * Si mientras esperaba Google Sheets el usuario
-       * salió del buscador o escribió otra cosa,
-       * NO volver a abrir las sugerencias.
-       */
-     if(
-  !input ||
-  input.value.trim()!==q
-){
-  c.classList.add('oculto');
-  return;
-}
-      c.innerHTML='';
+      // Ignorar respuestas anteriores que lleguen tarde.
+      if(solicitud!==SUGERENCIA_ID[modo]){
+        return;
+      }
 
-      (r.sugerencias||[]).forEach(p=>{
+      // Si el texto cambió, esta respuesta ya no corresponde.
+      if(!input || input.value.trim()!==q){
+        return;
+      }
 
-        const d=
-          document.createElement('div');
+      lista.innerHTML='';
 
+      const resultados=
+        r&&Array.isArray(r.sugerencias)
+          ? r.sugerencias
+          : [];
+
+      resultados.forEach(p=>{
+
+        const d=document.createElement('div');
         d.className='itemSugerencia';
 
         d.innerHTML=
@@ -1316,57 +1320,125 @@ function sugerencias(q,modo){
           p.existencia+
           ' '+
           (
-            String(
-              p.tipoIngreso||'INDIVIDUAL'
-            ).toUpperCase()==='INDIVIDUAL'
-              ? (
-                  Number(p.existencia)===1
-                    ? 'unidad'
-                    : 'unidades'
-                )
+            String(p.tipoIngreso||'INDIVIDUAL').toUpperCase()==='INDIVIDUAL'
+              ? (Number(p.existencia)===1?'unidad':'unidades')
               : 'pares'
           )+
           ' · '+
           Q(p.precio)+
           '</div>';
 
-        /*
-         * mousedown evita que el campo pierda el foco
-         * antes de seleccionar el producto.
-         */
         d.onmousedown=e=>{
-
           e.preventDefault();
 
-          c.classList.add('oculto');
-
           if(modo==='pos'){
-
-            $('posCodigo').value=p.codigo;
-            agregar(p.codigo);
+            // En Punto de venta la lista permanece abierta
+            // para poder seleccionar varias tallas seguidas.
+            agregarDesdeSugerencia(p);
 
           }else if(modo==='inv'){
-
+            lista.classList.add('oculto');
             $('codigo').value=p.codigo;
             consultar(p.codigo);
 
           }else{
-
+            lista.classList.add('oculto');
             $('trasCodigo').value=p.codigo;
-
           }
         };
 
-        c.appendChild(d);
+        lista.appendChild(d);
       });
 
-      c.classList.toggle(
-        'oculto',
-        !(r.sugerencias||[]).length
-      );
+      if(resultados.length){
+        lista.classList.remove('oculto');
+      }else{
+        lista.classList.add('oculto');
+      }
     }
   );
 }
+
+function agregarDesdeSugerencia(p){
+
+  if(!p){
+    return;
+  }
+
+  const disponible=Number(p.existencia)||0;
+
+  if(disponible<=0){
+    return msg(
+      'mensajePos',
+      'Producto agotado en '+SUCURSAL+'.',
+      'error'
+    );
+  }
+
+  let x=carrito.find(
+    z=>String(z.codigo).toUpperCase()===String(p.codigo).toUpperCase()
+  );
+
+  if(x){
+    if(x.cantidad+1>disponible){
+      return msg(
+        'mensajePos',
+        'No hay más existencia.',
+        'error'
+      );
+    }
+
+    x.cantidad++;
+
+  }else{
+    x={
+      ...p,
+      cantidad:1,
+      precioBase:Number(p.precio)||0,
+      precioVenta:Number(p.precio)||0
+    };
+
+    carrito.push(x);
+  }
+
+  // Mostrar el producto inmediatamente, sin esperar otra consulta.
+  renderCarrito();
+
+  msg(
+    'mensajePos',
+    'Agregado: '+p.codigo,
+    'ok'
+  );
+
+  $('posCodigo').focus();
+
+  // Completar en segundo plano datos de FIFO/lote sin retrasar la selección.
+  api(
+    'buscar',
+    {codigo:p.codigo,sucursal:SUCURSAL},
+    det=>{
+      if(!det || !det.ok || !det.encontrado){
+        return;
+      }
+
+      const actual=carrito.find(
+        z=>String(z.codigo).toUpperCase()===String(p.codigo).toUpperCase()
+      );
+
+      if(!actual){
+        return;
+      }
+
+      const cantidad=actual.cantidad;
+      const precioBase=actual.precioBase;
+      const precioVenta=actual.precioVenta;
+
+      Object.assign(actual,det,{cantidad,precioBase,precioVenta});
+      renderCarrito();
+    }
+  );
+}
+
   function agregar(cod,intento=0){
   $('mensajePos').innerHTML='';
 
