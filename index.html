@@ -5852,6 +5852,11 @@ function cargarCuentasPorPagar(){
             '<b>'+esc(c.proveedor)+'</b>'+
             '<div class="mini">'+esc(c.cuentaPagarId)+' · Compra '+esc(c.numeroCompra)+'</div>'+
             '<div class="mini">'+esc(c.condicionPago)+' · '+c.diasCredito+' días · Vence: '+esc(c.fechaVencimiento)+'</div>'+
+            (
+              Number(c.descuentos||0)>0
+                ? '<div class="mini">Descuentos aplicados: <b>'+Q(c.descuentos)+'</b></div>'
+                : ''
+            )+
           '</div>'+
           '<div style="text-align:right">'+
             '<span class="badge '+(vencida?'badgeCancelado':'badgePendiente')+'">'+esc(c.estado)+'</span>'+
@@ -5882,6 +5887,40 @@ function cargarCuentasPorPagar(){
         fila.appendChild(inp);
         fila.appendChild(btn);
         d.appendChild(fila);
+
+        const desc=document.createElement('div');
+        desc.className='grid2';
+        desc.style.marginTop='8px';
+
+        const tipo=document.createElement('select');
+        tipo.innerHTML=
+          '<option value="MONTO">Descuento Q</option>'+
+          '<option value="PORCENTAJE">Descuento %</option>';
+
+        const valor=document.createElement('input');
+        valor.type='number';
+        valor.min='0.01';
+        valor.step='0.01';
+        valor.placeholder='Valor descuento';
+
+        const motivo=document.createElement('input');
+        motivo.placeholder='Motivo, ej. pronto pago';
+
+        const btnDesc=document.createElement('button');
+        btnDesc.className='btnAzul';
+        btnDesc.textContent='Aplicar descuento';
+        btnDesc.onclick=()=>aplicarDescuentoProveedor(
+          c.cuentaPagarId,
+          tipo.value,
+          valor.value,
+          motivo.value
+        );
+
+        desc.appendChild(tipo);
+        desc.appendChild(valor);
+        desc.appendChild(motivo);
+        desc.appendChild(btnDesc);
+        d.appendChild(desc);
       }
 
       box.appendChild(d);
@@ -5891,6 +5930,63 @@ function cargarCuentasPorPagar(){
       box.innerHTML='<div class="sub">No hay cuentas por pagar pendientes.</div>';
     }
   });
+}
+
+
+function aplicarDescuentoProveedor(id,tipo,valor,motivo){
+  const n=Number(valor)||0;
+
+  if(n<=0){
+    return msg(
+      'mensajeCompras',
+      'Ingrese el descuento.',
+      'error'
+    );
+  }
+
+  const texto=
+    tipo==='PORCENTAJE'
+      ? n.toFixed(2)+'%'
+      : Q(n);
+
+  if(
+    !confirm(
+      '¿Aplicar descuento de '+texto+
+      ' a esta cuenta por pagar?'
+    )
+  ){
+    return;
+  }
+
+  api(
+    'aplicardescuentocxp',
+    {
+      cuentaPagarId:id,
+      tipo,
+      valor:n,
+      motivo:motivo||'Descuento de proveedor'
+    },
+    r=>{
+      if(!r.ok){
+        return msg(
+          'mensajeCompras',
+          r.error,
+          'error'
+        );
+      }
+
+      msg(
+        'mensajeCompras',
+        r.mensaje+
+        ' · Descuento '+Q(r.descuento)+
+        ' · Saldo '+Q(r.saldo),
+        'ok'
+      );
+
+      cargarCuentasPorPagar();
+      cargarCompras();
+    }
+  );
 }
 
 function pagarCuentaProveedor(id,monto){
