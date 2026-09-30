@@ -144,7 +144,7 @@
 
   <div id="vistaNuevo" class="vistaApp oculto">
     <div class="card">
-      <h3 style="margin-top:0">Ingreso de producto</h3>
+      <h3 style="margin-top:0">Catálogo maestro de productos</h3><div class="mensaje info" style="margin-bottom:12px">Crear aquí las referencias desde <b>Bodega Principal</b>. Este paso no suma existencias; las cantidades entran únicamente al recibir una compra.</div>
 
       <label>Tipo de ingreso</label>
       <select id="tipoIngreso" onchange="cambiarTipoIngreso()">
@@ -195,19 +195,12 @@
             <input id="nPrecio" type="number" step="0.01">
           </div>
 
-          <div>
-            <label>Existencia inicial</label>
-            <input id="nExistencia" type="number" value="0">
-          </div>
+          <input id="nExistencia" type="hidden" value="0">
+          <input id="nLote" type="hidden" value="">
 
           <div>
             <label>Stock mínimo</label>
             <input id="nStockMinimo" type="number" value="2">
-          </div>
-
-          <div>
-            <label>Lote (opcional)</label>
-            <input id="nLote" placeholder="Vacío = automático">
           </div>
 
           <div>
@@ -222,7 +215,7 @@
         <label>Nota</label>
         <textarea id="nNota"></textarea>
 
-        <button class="btnMorado w100" style="margin-top:12px" onclick="guardarProducto()">Guardar producto y generar QR</button>
+        <button class="btnMorado w100" style="margin-top:12px" onclick="guardarProducto()">Crear referencia y generar QR</button>
 
         <div id="mensajeNuevo"></div>
 
@@ -268,10 +261,7 @@
             <select id="cProveedor"></select>
           </div>
 
-          <div>
-            <label>Lote de la corrida (opcional)</label>
-            <input id="cLote" placeholder="Vacío = automático">
-          </div>
+          <input id="cLote" type="hidden" value="">
 
           <div>
             <label>Costo</label>
@@ -590,8 +580,28 @@
         <div><label>Costo unitario</label><input id="compCosto" type="number" min="0" step="0.01"></div>
         <div><label>Otros costos Q</label><input id="compOtros" type="number" min="0" step="0.01" value="0"></div>
       </div>
-      <button class="btnGris w100" style="margin-top:8px" onclick="agregarItemCompra()">+ Agregar producto</button>
-      <div id="compItems" style="margin-top:8px"></div>
+      <button class="btnGris w100" style="margin-top:8px" onclick="agregarItemCompra()">+ Agregar talla / producto</button>
+
+      <hr style="margin:18px 0">
+
+      <h4 style="margin:0 0 8px">Agregar corrida completa</h4>
+      <label>Modelo / corrida existente</label>
+      <select id="compCorrida" onchange="seleccionarCorridaCompra()">
+        <option value="">Seleccione una corrida</option>
+      </select>
+
+      <div id="compCorridaBox" class="oculto" style="margin-top:10px">
+        <div class="fila" style="margin-bottom:8px">
+          <input id="compCantidadTodas" type="number" min="0" value="1" placeholder="Cantidad por talla">
+          <button class="btnGris" type="button" onclick="aplicarCantidadATodasCorrida()">Aplicar a todas</button>
+        </div>
+        <div id="compCorridaTabla"></div>
+        <button class="btnAzul w100" type="button" style="margin-top:8px" onclick="agregarCorridaCompra()">
+          + Agregar corrida a la orden
+        </button>
+      </div>
+
+      <div id="compItems" style="margin-top:14px"></div>
       <label>Nota</label><input id="compNota">
       <button class="btnVerde w100" style="margin-top:12px" onclick="crearCompraUI()">Crear orden de compra</button>
     </div>
@@ -2920,10 +2930,11 @@ function guardarProducto(){
       talla:$('nTalla').value,
       costo:$('nCosto').value,
       precio:$('nPrecio').value,
-      existencia:$('nExistencia').value,
+      existencia:0,
+      catalogo:'SI',
       stockMinimo:$('nStockMinimo').value,
       ubicacion:$('nUbicacion').value,
-      lote:$('nLote').value,
+      lote:'',
       proveedorId:$('nProveedor').value,
       nota:$('nNota').value
     },
@@ -2957,10 +2968,8 @@ function guardarProducto(){
       msg(
         'mensajeNuevo',
         r.mensaje+
-        ' '+
-        r.codigo+
-        ' · '+
-        r.sucursal,
+        ' '+r.codigo+
+        ' · existencia inicial 0',
         'ok'
       );
     }
@@ -3211,162 +3220,90 @@ function cambiarTipoIngreso(){
 }
 
 function dibujarCorrida(){
-  const cont=
-    $('tablaCorrida');
-
-  if(!cont){
-    return;
-  }
+  const cont=$('tablaCorrida');
+  if(!cont) return;
 
   corridaBorrador=[];
 
-  if(
-    $('previewCorrida')
-  ){
-    $('previewCorrida')
-      .classList.add(
-        'oculto'
-      );
+  if($('previewCorrida')){
+    $('previewCorrida').classList.add('oculto');
   }
 
-  const escala=
-    $('cEscala').value;
-
-  const tallas=
-    ESCALAS_MAP[
-      escala
-    ]||
-    [];
+  const escala=$('cEscala').value;
+  const tallas=ESCALAS_MAP[escala]||[];
 
   let h=
     '<table class="corridaTabla">'+
-    '<thead>'+
-    '<tr>'+
-    '<th>Talla</th>'+
-    '<th>Cantidad</th>'+
-    '</tr>'+
-    '</thead>'+
-    '<tbody>';
+    '<thead><tr>'+
+      '<th>Talla</th>'+
+      '<th>Referencia</th>'+
+    '</tr></thead><tbody>';
 
   tallas.forEach(t=>{
     h+=
       '<tr>'+
-      '<td><b>'+
-      esc(t)+
-      '</b></td>'+
-      '<td>'+
-      '<input type="number" min="0" step="1" value="0" data-talla="'+
-      esc(t)+
-      '" class="cantidadCorrida" oninput="totalizarCorrida()">'+
-      '</td>'+
+        '<td><b>'+esc(t)+'</b></td>'+
+        '<td>Se creará en el catálogo con existencia 0</td>'+
       '</tr>';
   });
 
-  cont.innerHTML=
-    h+
-    '</tbody>'+
-    '</table>';
+  cont.innerHTML=h+'</tbody></table>';
 
-  totalizarCorrida();
+  if($('totalCorrida')){
+    $('totalCorrida').textContent=tallas.length;
+  }
 }
 
 function totalizarCorrida(){
-  let t=0;
-
-  document
-    .querySelectorAll(
-      '.cantidadCorrida'
-    )
-    .forEach(x=>{
-      t+=Math.max(
-        0,
-        Number(x.value)||0
-      );
-    });
-
-  $('totalCorrida').textContent=
-    t;
+  const escala=$('cEscala').value;
+  const tallas=ESCALAS_MAP[escala]||[];
+  if($('totalCorrida')){
+    $('totalCorrida').textContent=tallas.length;
+  }
 }function prepararCorrida(){
   const marca=$('cMarca').value.trim();
   const modelo=$('cModelo').value.trim();
   const color=$('cColor').value.trim();
+  const escala=$('cEscala').value;
 
-  if(!marca||!modelo||!color){
+  if(!marca||!modelo||!color||!escala){
     return msg(
       'mensajeCorrida',
-      'Ingrese marca, modelo y color.',
+      'Ingrese marca, modelo, color y escala.',
       'error'
     );
   }
 
-  corridaBorrador=[];
+  const tallas=ESCALAS_MAP[escala]||[];
 
-  document
-    .querySelectorAll(
-      '.cantidadCorrida'
+  if(!tallas.length){
+    return msg(
+      'mensajeCorrida',
+      'La escala seleccionada no tiene tallas.',
+      'error'
+    );
+  }
+
+  corridaBorrador=tallas.map(t=>({
+    talla:String(t),
+    cantidad:0,
+    color,
+    costo:Number($('cCosto').value)||0,
+    precio:Number($('cPrecio').value)||0,
+    ubicacion:$('cUbicacion').value.trim(),
+    stockMinimo:Math.max(
+      0,
+      parseInt($('cStockMinimo').value||'0',10)||0
     )
-    .forEach(x=>{
-      const cantidad=
-        Math.max(
-          0,
-          parseInt(
-            x.value||
-            '0',
-            10
-          )||0
-        );
-
-      if(cantidad>0){
-        corridaBorrador.push({
-          talla:String(
-            x.dataset.talla
-          ),
-          cantidad,
-          color,
-          costo:
-            Number(
-              $('cCosto').value
-            )||0,
-          precio:
-            Number(
-              $('cPrecio').value
-            )||0,
-          ubicacion:
-            $('cUbicacion')
-              .value
-              .trim(),
-          stockMinimo:
-            Math.max(
-              0,
-              parseInt(
-                $('cStockMinimo').value||
-                '0',
-                10
-              )||0
-            )
-        });
-      }
-    });
-
-  if(!corridaBorrador.length){
-    return msg(
-      'mensajeCorrida',
-      'Ingrese por lo menos una cantidad.',
-      'error'
-    );
-  }
+  }));
 
   renderPreviewCorrida();
-
-  $('previewCorrida')
-    .classList.remove('oculto');
-
+  $('previewCorrida').classList.remove('oculto');
   $('mensajeCorrida').innerHTML='';
 
-  $('previewCorrida')
-    .scrollIntoView({
-      behavior:'smooth'
-    });
+  $('previewCorrida').scrollIntoView({
+    behavior:'smooth'
+  });
 }
 
 function codigoPreviewCorrida(f){
@@ -3384,105 +3321,40 @@ function codigoPreviewCorrida(f){
 function renderPreviewCorrida(){
   let h=
     '<table class="tabla">'+
-    '<thead>'+
-    '<tr>'+
-    '<th>Código</th>'+
-    '<th>Talla</th>'+
-    '<th>Cant.</th>'+
-    '<th>Color</th>'+
-    '<th>Costo</th>'+
-    '<th>Precio</th>'+
-    '<th>Ubicación</th>'+
-    '<th></th>'+
-    '</tr>'+
-    '</thead>'+
-    '<tbody>';
+    '<thead><tr>'+
+      '<th>Código</th>'+
+      '<th>Talla</th>'+
+      '<th>Color</th>'+
+      '<th>Costo</th>'+
+      '<th>Precio</th>'+
+      '<th>Ubicación</th>'+
+      '<th></th>'+
+    '</tr></thead><tbody>';
 
   corridaBorrador.forEach((x,i)=>{
     h+=
       '<tr>'+
-      '<td><b>'+
-      esc(
-        codigoPreviewCorrida(x)
-      )+
-      '</b></td>'+
-      '<td>'+
-      '<input value="'+
-      esc(x.talla)+
-      '" onchange="editarFilaCorrida('+
-      i+
-      ',\'talla\',this.value)">'+
-      '</td>'+
-      '<td>'+
-      '<input type="number" min="1" value="'+
-      x.cantidad+
-      '" onchange="editarFilaCorrida('+
-      i+
-      ',\'cantidad\',this.value)">'+
-      '</td>'+
-      '<td>'+
-      '<input value="'+
-      esc(x.color)+
-      '" onchange="editarFilaCorrida('+
-      i+
-      ',\'color\',this.value)">'+
-      '</td>'+
-      '<td>'+
-      '<input type="number" step="0.01" value="'+
-      x.costo+
-      '" onchange="editarFilaCorrida('+
-      i+
-      ',\'costo\',this.value)">'+
-      '</td>'+
-      '<td>'+
-      '<input type="number" step="0.01" value="'+
-      x.precio+
-      '" onchange="editarFilaCorrida('+
-      i+
-      ',\'precio\',this.value)">'+
-      '</td>'+
-      '<td>'+
-      '<input value="'+
-      esc(x.ubicacion)+
-      '" onchange="editarFilaCorrida('+
-      i+
-      ',\'ubicacion\',this.value)">'+
-      '</td>'+
-      '<td>'+
-      '<button class="btnRojo" onclick="eliminarFilaCorrida('+
-      i+
-      ')">Eliminar</button>'+
-      '</td>'+
+        '<td><b>'+esc(codigoPreviewCorrida(x))+'</b></td>'+
+        '<td><input value="'+esc(x.talla)+'" onchange="editarFilaCorrida('+i+',\'talla\',this.value)"></td>'+
+        '<td><input value="'+esc(x.color)+'" onchange="editarFilaCorrida('+i+',\'color\',this.value)"></td>'+
+        '<td><input type="number" step="0.01" value="'+x.costo+'" onchange="editarFilaCorrida('+i+',\'costo\',this.value)"></td>'+
+        '<td><input type="number" step="0.01" value="'+x.precio+'" onchange="editarFilaCorrida('+i+',\'precio\',this.value)"></td>'+
+        '<td><input value="'+esc(x.ubicacion)+'" onchange="editarFilaCorrida('+i+',\'ubicacion\',this.value)"></td>'+
+        '<td><button class="btnRojo" onclick="eliminarFilaCorrida('+i+')">Eliminar</button></td>'+
       '</tr>';
   });
 
-  const total=
-    corridaBorrador.reduce(
-      (s,x)=>
-        s+
-        Number(
-          x.cantidad||
-          0
-        ),
-      0
-    );
-
   $('tablaPreviewCorrida').innerHTML=
     h+
-    '</tbody>'+
-    '</table>'+
+    '</tbody></table>'+
     '<div class="totales">'+
       '<div class="lineaTotal">'+
-        '<span>Referencias</span>'+
-        '<b>'+
-        corridaBorrador.length+
-        '</b>'+
+        '<span>Referencias a crear</span>'+
+        '<b>'+corridaBorrador.length+'</b>'+
       '</div>'+
       '<div class="lineaTotal">'+
-        '<span>Total pares</span>'+
-        '<b>'+
-        total+
-        '</b>'+
+        '<span>Existencia inicial</span>'+
+        '<b>0</b>'+
       '</div>'+
     '</div>';
 }
@@ -3548,24 +3420,10 @@ function guardarCorrida(){
     );
   }
 
-  const total=
-    corridaBorrador.reduce(
-      (s,x)=>
-        s+
-        Number(
-          x.cantidad||
-          0
-        ),
-      0
-    );
-
   if(
     !confirm(
-      '¿Guardar '+
-      corridaBorrador.length+
-      ' referencias y '+
-      total+
-      ' pares?'
+      '¿Crear '+corridaBorrador.length+
+      ' referencias en el catálogo con existencia 0?'
     )
   ){
     return;
@@ -3573,7 +3431,7 @@ function guardarCorrida(){
 
   msg(
     'mensajeCorrida',
-    'Guardando corrida…',
+    'Guardando referencias del catálogo…',
     'info'
   );
 
@@ -3584,12 +3442,11 @@ function guardarCorrida(){
       marca:$('cMarca').value,
       modelo:$('cModelo').value,
       escala:$('cEscala').value,
-      lote:$('cLote').value,
+      lote:'',
       proveedorId:$('cProveedor').value,
       nota:$('cNota').value,
-      filas:JSON.stringify(
-        corridaBorrador
-      )
+      catalogo:'SI',
+      filas:JSON.stringify(corridaBorrador)
     },
     r=>{
       if(!r.ok){
@@ -3602,27 +3459,17 @@ function guardarCorrida(){
 
       msg(
         'mensajeCorrida',
-        '✅ Corrida guardada. '+
-        r.totalPares+
-        ' pares · lote '+
-        r.lote+
-        ' · '+
-        r.creados+
-        ' nuevos · '+
-        r.actualizados+
-        ' actualizados.',
+        '✅ Catálogo actualizado. '+
+        r.creados+' referencias nuevas · '+
+        r.actualizados+' existentes · existencia 0.',
         'ok'
       );
 
       corridaBorrador=[];
-
-      $('previewCorrida')
-        .classList.add(
-          'oculto'
-        );
-
+      $('previewCorrida').classList.add('oculto');
       dibujarCorrida();
       cargarResumen();
+      cargarProductosCompra();
     }
   );
 }
@@ -5155,44 +5002,102 @@ function cargarProductosCompra(){
 
 function llenarProductosCompra(productos){
   const s=$('compCodigo');
+  const sc=$('compCorrida');
 
-  if(!s){
-    return;
+  window.PRODUCTOS_COMPRA=productos||[];
+
+  if(s){
+    s.innerHTML='<option value="">Seleccione un producto</option>';
+
+    (productos||[]).forEach(p=>{
+      const texto=
+        p.codigo+' · '+
+        [p.marca,p.modelo,p.color,p.talla]
+          .filter(Boolean)
+          .join(' · ');
+
+      const o=new Option(texto,p.codigo);
+      o.dataset.costo=String(Number(p.costo)||0);
+      o.dataset.descripcion=[
+        p.marca,p.modelo,p.color,p.talla
+      ].filter(Boolean).join(' ');
+      s.add(o);
+    });
+
+    if(!(productos||[]).length){
+      s.innerHTML='<option value="">No hay productos existentes</option>';
+    }
   }
 
-  s.innerHTML=
-    '<option value="">Seleccione un producto</option>';
+  if(sc){
+    sc.innerHTML='<option value="">Seleccione una corrida</option>';
 
-  productos.forEach(p=>{
-    const texto=
-      p.codigo+
-      ' · '+
-      [
+    const grupos={};
+
+    (productos||[]).forEach(p=>{
+      if(
+        String(p.tipoIngreso||'').toUpperCase()!=='CORRIDA' ||
+        !p.escala
+      ){
+        return;
+      }
+
+      const key=[
         p.marca,
         p.modelo,
         p.color,
-        p.talla
-      ]
-      .filter(Boolean)
-      .join(' · ');
+        p.escala
+      ].join('||');
 
-    const o=
-      new Option(
-        texto,
-        p.codigo
-      );
+      if(!grupos[key]){
+        grupos[key]={
+          key,
+          marca:p.marca||'',
+          modelo:p.modelo||'',
+          color:p.color||'',
+          escala:p.escala||'',
+          productos:[]
+        };
+      }
 
-    o.dataset.costo=
-      String(
-        Number(p.costo)||0
-      );
+      grupos[key].productos.push(p);
+    });
 
-    s.add(o);
-  });
+    window.CORRIDAS_COMPRA=Object.values(grupos);
 
-  if(!productos.length){
-    s.innerHTML=
-      '<option value="">No hay productos existentes</option>';
+    window.CORRIDAS_COMPRA
+      .sort((a,b)=>
+        (a.marca+' '+a.modelo+' '+a.color+' '+a.escala)
+          .localeCompare(
+            b.marca+' '+b.modelo+' '+b.color+' '+b.escala,
+            undefined,
+            {numeric:true,sensitivity:'base'}
+          )
+      )
+      .forEach(g=>{
+        const tallas=g.productos
+          .map(x=>x.talla)
+          .sort((a,b)=>
+            String(a).localeCompare(
+              String(b),
+              undefined,
+              {numeric:true,sensitivity:'base'}
+            )
+          );
+
+        sc.add(
+          new Option(
+            [
+              g.marca,
+              g.modelo,
+              g.color,
+              'Escala '+g.escala,
+              tallas.join('-')
+            ].filter(Boolean).join(' · '),
+            g.key
+          )
+        );
+      });
   }
 }
 
@@ -5222,6 +5127,169 @@ function seleccionarProductoCompra(){
   }
 }
 
+
+function seleccionarCorridaCompra(){
+  const key=$('compCorrida').value;
+  const box=$('compCorridaBox');
+  const tabla=$('compCorridaTabla');
+
+  if(!key){
+    box.classList.add('oculto');
+    tabla.innerHTML='';
+    return;
+  }
+
+  const g=(window.CORRIDAS_COMPRA||[]).find(x=>x.key===key);
+
+  if(!g){
+    box.classList.add('oculto');
+    return;
+  }
+
+  const productos=[...g.productos].sort((a,b)=>
+    String(a.talla).localeCompare(
+      String(b.talla),
+      undefined,
+      {numeric:true,sensitivity:'base'}
+    )
+  );
+
+  let h=
+    '<table class="tabla">'+
+    '<thead><tr>'+
+      '<th>Talla</th>'+
+      '<th>Código</th>'+
+      '<th>Cantidad</th>'+
+      '<th>Costo unit.</th>'+
+    '</tr></thead><tbody>';
+
+  productos.forEach((p,i)=>{
+    h+=
+      '<tr>'+
+        '<td><b>'+esc(p.talla)+'</b></td>'+
+        '<td>'+esc(p.codigo)+'</td>'+
+        '<td><input class="compCorridaCant" data-codigo="'+esc(p.codigo)+'" data-i="'+i+'" type="number" min="0" step="1" value="0"></td>'+
+        '<td><input class="compCorridaCosto" data-codigo="'+esc(p.codigo)+'" type="number" min="0" step="0.01" value="'+(Number(p.costo)||0).toFixed(2)+'"></td>'+
+      '</tr>';
+  });
+
+  tabla.innerHTML=h+'</tbody></table>';
+  box.classList.remove('oculto');
+}
+
+function aplicarCantidadATodasCorrida(){
+  const n=Math.max(
+    0,
+    parseInt($('compCantidadTodas').value||'0',10)||0
+  );
+
+  document.querySelectorAll('.compCorridaCant').forEach(x=>{
+    x.value=n;
+  });
+}
+
+function agregarItemCompraInterno(item){
+  const existente=COMPRA_ITEMS.find(
+    x=>String(x.codigo).toUpperCase()===String(item.codigo).toUpperCase()
+  );
+
+  if(existente){
+    existente.cantidad+=Number(item.cantidad)||0;
+    existente.costo=Number(item.costo)||0;
+    if(item.descripcion){
+      existente.descripcion=item.descripcion;
+    }
+  }else{
+    COMPRA_ITEMS.push({
+      codigo:item.codigo,
+      cantidad:Number(item.cantidad)||0,
+      costo:Number(item.costo)||0,
+      descripcion:item.descripcion||''
+    });
+  }
+}
+
+function agregarCorridaCompra(){
+  const key=$('compCorrida').value;
+  const g=(window.CORRIDAS_COMPRA||[]).find(x=>x.key===key);
+
+  if(!g){
+    return msg(
+      'mensajeCompras',
+      'Seleccione una corrida.',
+      'error'
+    );
+  }
+
+  const cantidades=[
+    ...document.querySelectorAll('.compCorridaCant')
+  ];
+
+  let agregados=0;
+  let pares=0;
+
+  cantidades.forEach(inp=>{
+    const cantidad=Math.max(
+      0,
+      parseInt(inp.value||'0',10)||0
+    );
+
+    if(cantidad<=0){
+      return;
+    }
+
+    const codigo=inp.dataset.codigo;
+    const p=g.productos.find(
+      x=>String(x.codigo)===String(codigo)
+    );
+
+    const costoInput=document.querySelector(
+      '.compCorridaCosto[data-codigo="'+
+      CSS.escape(codigo)+
+      '"]'
+    );
+
+    const costo=costoInput
+      ? Number(costoInput.value)||0
+      : Number(p&&p.costo)||0;
+
+    agregarItemCompraInterno({
+      codigo,
+      cantidad,
+      costo,
+      descripcion:p
+        ? [p.marca,p.modelo,p.color,'Talla '+p.talla]
+            .filter(Boolean)
+            .join(' · ')
+        : codigo
+    });
+
+    agregados++;
+    pares+=cantidad;
+  });
+
+  if(!agregados){
+    return msg(
+      'mensajeCompras',
+      'Ingrese cantidad en al menos una talla de la corrida.',
+      'error'
+    );
+  }
+
+  renderCompraItems();
+
+  msg(
+    'mensajeCompras',
+    'Corrida agregada: '+agregados+
+    ' tallas · '+pares+' pares.',
+    'ok'
+  );
+
+  document.querySelectorAll('.compCorridaCant').forEach(x=>{
+    x.value=0;
+  });
+}
+
 function guardarProveedorUI(){
   api('guardarproveedor',{
     nombre:$('provNombre').value,nit:$('provNit').value,telefono:$('provTelefono').value,
@@ -5233,17 +5301,104 @@ function guardarProveedorUI(){
 }
 
 function agregarItemCompra(){
-  const codigo=$('compCodigo').value.trim(), cantidad=Number($('compCantidad').value), costo=Number($('compCosto').value);
-  if(!codigo||!Number.isInteger(cantidad)||cantidad<=0||isNaN(costo)||costo<0) return msg('mensajeCompras','Código, cantidad y costo inválidos.','error');
-  COMPRA_ITEMS.push({codigo,cantidad,costo});
+  const s=$('compCodigo');
+  const codigo=s.value.trim();
+  const cantidad=Number($('compCantidad').value);
+  const costo=Number($('compCosto').value);
+
+  if(
+    !codigo ||
+    !Number.isInteger(cantidad) ||
+    cantidad<=0 ||
+    isNaN(costo) ||
+    costo<0
+  ){
+    return msg(
+      'mensajeCompras',
+      'Seleccione producto, cantidad y costo válidos.',
+      'error'
+    );
+  }
+
+  const o=s.options[s.selectedIndex];
+
+  agregarItemCompraInterno({
+    codigo,
+    cantidad,
+    costo,
+    descripcion:o&&o.dataset.descripcion
+      ? o.dataset.descripcion
+      : codigo
+  });
+
   $('compCodigo').value='';
   $('compCantidad').value=1;
   $('compCosto').value='';
+
   renderCompraItems();
 }
 
 function renderCompraItems(){
-  $('compItems').innerHTML=COMPRA_ITEMS.length?'<table class="tabla"><thead><tr><th>Código</th><th>Cant.</th><th>Costo</th><th></th></tr></thead><tbody>'+COMPRA_ITEMS.map((x,i)=>'<tr><td>'+esc(x.codigo)+'</td><td>'+x.cantidad+'</td><td>'+Q(x.costo)+'</td><td><button class="btnRojo" onclick="COMPRA_ITEMS.splice('+i+',1);renderCompraItems()">×</button></td></tr>').join('')+'</tbody></table>':'<div class="sub">Sin productos agregados.</div>';
+  const box=$('compItems');
+
+  if(!COMPRA_ITEMS.length){
+    box.innerHTML=
+      '<div class="sub">Sin productos agregados.</div>';
+    return;
+  }
+
+  const totalPares=COMPRA_ITEMS.reduce(
+    (s,x)=>s+(Number(x.cantidad)||0),
+    0
+  );
+
+  const subtotal=COMPRA_ITEMS.reduce(
+    (s,x)=>s+
+      (Number(x.cantidad)||0)*
+      (Number(x.costo)||0),
+    0
+  );
+
+  box.innerHTML=
+    '<h4 style="margin:0 0 8px">Productos de esta orden</h4>'+
+    '<table class="tabla">'+
+      '<thead><tr>'+
+        '<th>Producto</th>'+
+        '<th>Cant.</th>'+
+        '<th>Costo</th>'+
+        '<th>Subtotal</th>'+
+        '<th></th>'+
+      '</tr></thead>'+
+      '<tbody>'+
+      COMPRA_ITEMS.map((x,i)=>
+        '<tr>'+
+          '<td><b>'+esc(x.codigo)+'</b>'+
+            (x.descripcion
+              ? '<div class="mini">'+esc(x.descripcion)+'</div>'
+              : '')+
+          '</td>'+
+          '<td>'+
+            '<input type="number" min="1" value="'+x.cantidad+
+            '" onchange="COMPRA_ITEMS['+i+'].cantidad=Math.max(1,parseInt(this.value||1,10));renderCompraItems()">'+
+          '</td>'+
+          '<td>'+
+            '<input type="number" min="0" step="0.01" value="'+Number(x.costo).toFixed(2)+
+            '" onchange="COMPRA_ITEMS['+i+'].costo=Math.max(0,Number(this.value)||0);renderCompraItems()">'+
+          '</td>'+
+          '<td>'+Q(
+            (Number(x.cantidad)||0)*
+            (Number(x.costo)||0)
+          )+'</td>'+
+          '<td><button class="btnRojo" onclick="COMPRA_ITEMS.splice('+i+',1);renderCompraItems()">×</button></td>'+
+        '</tr>'
+      ).join('')+
+      '</tbody>'+
+    '</table>'+
+    '<div class="totales">'+
+      '<div class="lineaTotal"><span>Referencias</span><b>'+COMPRA_ITEMS.length+'</b></div>'+
+      '<div class="lineaTotal"><span>Pares / unidades</span><b>'+totalPares+'</b></div>'+
+      '<div class="lineaTotal"><span>Subtotal productos</span><b>'+Q(subtotal)+'</b></div>'+
+    '</div>';
 }
 
 function crearCompraUI(){
