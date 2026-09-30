@@ -606,6 +606,28 @@
       <button class="btnVerde w100" style="margin-top:12px" onclick="crearCompraUI()">Crear orden de compra</button>
     </div>
     <div class="card"><h3 style="margin-top:0">Compras</h3><div id="listaCompras"></div></div>
+
+    <div id="compDetalleCard" class="card oculto">
+      <div id="compDetalleTicket" class="ticket"></div>
+
+      <div class="fila noPrint" style="margin-top:10px">
+        <button class="btnNegro" style="flex:1" onclick="imprimirTicket('compDetalleTicket','MEDIA')">
+          🖨 Media carta horizontal
+        </button>
+        <button class="btnGris" style="flex:1" onclick="imprimirTicket('compDetalleTicket','CARTA')">
+          🖨 Carta vertical
+        </button>
+      </div>
+
+      <div class="fila noPrint" style="margin-top:8px">
+        <button class="btnAzul" style="flex:1" onclick="exportarCompraCSV()">
+          ⬇ Exportar CSV / Excel
+        </button>
+        <button class="btnGris" style="flex:1" onclick="$('compDetalleCard').classList.add('oculto')">
+          Cerrar detalle
+        </button>
+      </div>
+    </div>
     <div class="card">
       <h3 style="margin-top:0">Cuentas por pagar</h3>
       <div id="listaCuentasPagar"></div>
@@ -2019,6 +2041,8 @@ function ticketHTML(v,id){
   const etiquetaDescuento=v.etiquetaDescuento||'Descuento';
   const etiquetaTotal=v.etiquetaTotal||'TOTAL';
   const etiquetaPago=v.etiquetaPago||'Pago';
+  const etiquetaCliente=v.etiquetaCliente||'Cliente';
+  const etiquetaUsuario=v.etiquetaUsuario||'Cajero';
   const textoFinal=v.textoFinal||'¡Gracias por su compra!';
   const grupos={};
 
@@ -2262,7 +2286,7 @@ function ticketHTML(v,id){
     (
       v.cliente
         ?
-        '<div><b>Cliente:</b> '+
+        '<div><b>'+esc(etiquetaCliente)+':</b> '+
         esc(v.cliente)+
         '</div>'
         :
@@ -2281,7 +2305,7 @@ function ticketHTML(v,id){
 
     (v.vendedor ? '<div><b>Vendedor:</b> '+esc(v.vendedor)+'</div>' : '')+
     (v.numeroPedido ? '<div><b>Pedido:</b> '+esc(v.numeroPedido)+'</div>' : '')+
-    (v.usuario ? '<div><b>Cajero:</b> '+esc(v.usuario)+'</div>' : '')+
+    (v.usuario ? '<div><b>'+esc(etiquetaUsuario)+':</b> '+esc(v.usuario)+'</div>' : '')+
 
     '<hr>'+
 
@@ -4273,6 +4297,7 @@ function L(v){
 
 
 let COMPRA_ITEMS=[];
+const COMPRAS_RECIBIENDO=new Set();
 
 function cargarAtributosProducto(){
   if(!productoActual||!productoActual.codigo) return;
@@ -5469,35 +5494,336 @@ function crearCompraUI(){
 }
 function cargarCompras(){
   if(!SESION||!['ADMIN','BODEGA'].includes(SESION.rol)) return;
+
   api('compras',{estado:''},r=>{
-    if(!r.ok) return msg('mensajeCompras',r.error,'error');
+    if(!r.ok){
+      return msg('mensajeCompras',r.error,'error');
+    }
+
     const box=$('listaCompras');
     box.innerHTML='';
+
     (r.compras||[]).forEach(c=>{
       const d=document.createElement('div');
       d.className='pedidoCard';
-      d.innerHTML='<div class="cartTop"><div><b>'+esc(c.numeroCompra)+'</b><div class="mini">'+esc(c.fecha)+' · '+esc(c.proveedor)+' · '+esc(c.condicionPago||'CONTADO')+(c.condicionPago==='CREDITO'?' · '+c.diasCredito+' días':'')+'</div></div><div><span class="badge">'+esc(c.estado)+'</span><br><b>'+Q(c.total)+'</b><div class="mini">Pago: '+esc(c.estadoPago||'PENDIENTE')+'</div></div></div>';
+
+      d.innerHTML=
+        '<div class="cartTop">'+
+          '<div>'+
+            '<b>'+esc(c.numeroCompra)+'</b>'+
+            '<div class="mini">'+
+              esc(c.fecha)+' · '+
+              esc(c.proveedor)+' · '+
+              esc(c.condicionPago||'CONTADO')+
+              (
+                c.condicionPago==='CREDITO'
+                  ? ' · '+c.diasCredito+' días'
+                  : ''
+              )+
+            '</div>'+
+          '</div>'+
+          '<div>'+
+            '<span class="badge">'+esc(c.estado)+'</span>'+
+            '<br><b>'+Q(c.total)+'</b>'+
+            '<div class="mini">Pago: '+esc(c.estadoPago||'PENDIENTE')+'</div>'+
+          '</div>'+
+        '</div>';
+
+      const acciones=document.createElement('div');
+      acciones.className='fila';
+      acciones.style.marginTop='8px';
+
+      const ver=document.createElement('button');
+      ver.className='btnGris';
+      ver.style.flex='1';
+      ver.textContent='👁 Ver / imprimir';
+      ver.onclick=()=>abrirDetalleCompra(c.numeroCompra,false,false);
+
+      const exportar=document.createElement('button');
+      exportar.className='btnAzul';
+      exportar.style.flex='1';
+      exportar.textContent='⬇ Exportar';
+      exportar.onclick=()=>abrirDetalleCompra(c.numeroCompra,false,true);
+
+      acciones.appendChild(ver);
+      acciones.appendChild(exportar);
+      d.appendChild(acciones);
+
       if(c.estado==='PENDIENTE'){
         const b=document.createElement('button');
         b.className='btnVerde w100';
         b.style.marginTop='8px';
         b.textContent='Recibir mercancía';
-        b.onclick=()=>recibirCompraUI(c.numeroCompra);
+        b.onclick=()=>recibirCompraUI(c.numeroCompra,b);
         d.appendChild(b);
       }
+
       box.appendChild(d);
     });
-    if(!(r.compras||[]).length) box.innerHTML='<div class="sub">Sin compras.</div>';
+
+    if(!(r.compras||[]).length){
+      box.innerHTML='<div class="sub">Sin compras.</div>';
+    }
+
     cargarCuentasPorPagar();
   });
 }
 
-function recibirCompraUI(numero){
-  if(!confirm('¿Recibir toda la mercancía pendiente de '+numero+'?')) return;
+function recibirCompraUI(numero,boton){
+  if(COMPRAS_RECIBIENDO.has(numero)){
+    return;
+  }
+
+  if(!confirm('¿Recibir toda la mercancía pendiente de '+numero+'?')){
+    return;
+  }
+
+  COMPRAS_RECIBIENDO.add(numero);
+
+  if(boton){
+    boton.disabled=true;
+    boton.textContent='Recibiendo…';
+  }
+
+  msg(
+    'mensajeCompras',
+    'Recibiendo '+numero+'… espere hasta que termine.',
+    'info'
+  );
+
   api('recibircompra',{numeroCompra:numero},r=>{
-    msg('mensajeCompras',r.ok?r.mensaje:r.error,r.ok?'ok':'error');
-    if(r.ok){cargarCompras();cargarCuentasPorPagar();cargarResumen();}
+    COMPRAS_RECIBIENDO.delete(numero);
+
+    if(!r||!r.ok){
+      if(boton){
+        boton.disabled=false;
+        boton.textContent='Recibir mercancía';
+      }
+
+      return msg(
+        'mensajeCompras',
+        (r&&r.error)||
+        'No se recibió respuesta. Actualice Compras antes de volver a presionar.',
+        'error'
+      );
+    }
+
+    msg(
+      'mensajeCompras',
+      r.mensaje+
+      (
+        r.yaProcesada
+          ? ' · Protección contra duplicados activa.'
+          : ' · Recibidos: '+r.recibidos
+      ),
+      r.yaProcesada?'info':'ok'
+    );
+
+    cargarCompras();
+    cargarCuentasPorPagar();
+    cargarResumen();
   });
+}
+
+
+let COMPRA_DETALLE_ACTUAL=null;
+
+function ticketCompraHTML(r,id){
+  const items=(r.items||[]).map(x=>({
+    ...x,
+    precio:Number(x.costo)||0,
+    subtotal:Number(x.subtotal)||0
+  }));
+
+  const motivo=[
+    r.condicionPago||'',
+    r.condicionPago==='CREDITO'
+      ? (r.diasCredito+' días · Vence '+(r.fechaVencimiento||''))
+      : '',
+    r.estado||'',
+    r.estadoPago ? 'Pago '+r.estadoPago : '',
+    r.nota||''
+  ].filter(Boolean).join(' · ');
+
+  ticketHTML({
+    tituloComprobante:'Orden de compra',
+    etiquetaNumero:'Compra',
+    numeroVenta:r.numeroCompra,
+    fecha:r.fecha,
+    cliente:r.proveedor,
+    nit:r.nitProveedor||'',
+    sucursal:r.sucursal,
+    usuario:r.usuario,
+    motivo,
+    items,
+    subtotal:Number(r.subtotal)||0,
+    descuento:0,
+    total:Number(r.total)||0,
+    etiquetaSubtotal:'Subtotal productos',
+    etiquetaDescuento:'Descuento',
+    etiquetaTotal:'TOTAL COMPRA',
+    etiquetaPago:'Condición',
+    metodoPago:r.condicionPago||'',
+    etiquetaCliente:'Proveedor',
+    etiquetaUsuario:'Registró',
+    textoFinal:'Orden de compra · Comercial Adelaida'
+  },id);
+
+  const ticket=$(id);
+
+  if(ticket && Number(r.otrosCostos)>0){
+    const totales=ticket.querySelector('.totales');
+
+    if(totales){
+      const linea=document.createElement('div');
+      linea.className='lineaTotal';
+      linea.innerHTML=
+        '<span>Otros costos</span>'+
+        '<b>'+Q(r.otrosCostos)+'</b>';
+
+      const lineas=totales.querySelectorAll('.lineaTotal');
+      const ultima=lineas[lineas.length-1];
+
+      if(ultima){
+        totales.insertBefore(linea,ultima);
+      }else{
+        totales.appendChild(linea);
+      }
+    }
+  }
+}
+
+function abrirDetalleCompra(numeroCompra,imprimir=false,exportar=false){
+  const card=$('compDetalleCard');
+  const ticket=$('compDetalleTicket');
+
+  card.classList.remove('oculto');
+
+  ticket.innerHTML=
+    '<div class="mensaje info">'+
+      'Cargando compra <b>'+
+      esc(numeroCompra)+
+      '</b>…'+
+    '</div>';
+
+  card.scrollIntoView({
+    behavior:'smooth',
+    block:'start'
+  });
+
+  api(
+    'detallecompra',
+    {numeroCompra},
+    r=>{
+      if(!r||!r.ok){
+        const error=(r&&r.error)||'No se pudo cargar la compra.';
+        ticket.innerHTML=
+          '<div class="mensaje error">'+esc(error)+'</div>';
+
+        return msg(
+          'mensajeCompras',
+          error,
+          'error'
+        );
+      }
+
+      COMPRA_DETALLE_ACTUAL=r;
+      ticketCompraHTML(
+        r,
+        'compDetalleTicket'
+      );
+
+      if(exportar){
+        setTimeout(
+          exportarCompraCSV,
+          150
+        );
+      }else if(imprimir){
+        setTimeout(
+          ()=>imprimirTicket(
+            'compDetalleTicket',
+            'MEDIA'
+          ),
+          300
+        );
+      }
+    }
+  );
+}
+
+function exportarCompraCSV(){
+  const r=COMPRA_DETALLE_ACTUAL;
+
+  if(!r){
+    return msg(
+      'mensajeCompras',
+      'Abra primero el detalle de una compra.',
+      'error'
+    );
+  }
+
+  const filas=[
+    ['COMERCIAL ADELAIDA'],
+    ['ORDEN DE COMPRA',r.numeroCompra],
+    ['Fecha',r.fecha],
+    ['Proveedor',r.proveedor],
+    ['NIT',r.nitProveedor||''],
+    ['Sucursal',r.sucursal],
+    ['Condición',r.condicionPago],
+    ['Días de crédito',r.diasCredito],
+    ['Vencimiento',r.fechaVencimiento],
+    ['Estado',r.estado],
+    ['Estado pago',r.estadoPago],
+    [],
+    ['Código','Marca','Modelo','Color','Talla','Escala','Cantidad','Costo unitario','Subtotal']
+  ];
+
+  (r.items||[]).forEach(x=>{
+    filas.push([
+      x.codigo||'',
+      x.marca||'',
+      x.modelo||'',
+      x.color||'',
+      x.talla||'',
+      x.escala||'',
+      Number(x.cantidad)||0,
+      Number(x.costo)||0,
+      Number(x.subtotal)||0
+    ]);
+  });
+
+  filas.push([]);
+  filas.push(['Subtotal',Number(r.subtotal)||0]);
+  filas.push(['Otros costos',Number(r.otrosCostos)||0]);
+  filas.push(['TOTAL',Number(r.total)||0]);
+  filas.push(['Nota',r.nota||'']);
+
+  const csv=filas.map(f=>
+    f.map(v=>{
+      const s=String(v??'').replace(/"/g,'""');
+      return '"'+s+'"';
+    }).join(',')
+  ).join('\r\n');
+
+  const blob=new Blob(
+    ['\uFEFF'+csv],
+    {type:'text/csv;charset=utf-8;'}
+  );
+
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+
+  a.href=url;
+  a.download=(r.numeroCompra||'compra')+'.csv';
+
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  setTimeout(
+    ()=>URL.revokeObjectURL(url),
+    1000
+  );
 }
 
 function cargarCuentasPorPagar(){
