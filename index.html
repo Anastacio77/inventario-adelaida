@@ -5558,14 +5558,8 @@ function cargarCompras(){
         d.appendChild(b);
       }
 
-      if(c.estado==='RECIBIDA' && SESION && SESION.rol==='ADMIN'){
-        const corregir=document.createElement('button');
-        corregir.className='btnRojo w100';
-        corregir.style.marginTop='8px';
-        corregir.textContent='🧹 Revisar / corregir duplicado';
-        corregir.onclick=()=>corregirDuplicadoCompraUI(c.numeroCompra,corregir);
-        d.appendChild(corregir);
-      }
+      d.dataset.numeroCompra=c.numeroCompra;
+      d.dataset.estadoCompra=c.estado;
 
       box.appendChild(d);
     });
@@ -5856,6 +5850,49 @@ function exportarCompraCSV(){
   );
 }
 
+
+function actualizarBotonesDuplicado(cuentas){
+  if(!SESION||SESION.rol!=='ADMIN'){
+    return;
+  }
+
+  const conteo={};
+
+  (cuentas||[]).forEach(c=>{
+    const numero=String(c.numeroCompra||'').trim();
+    if(!numero) return;
+
+    conteo[numero]=(conteo[numero]||0)+1;
+  });
+
+  document.querySelectorAll('#listaCompras .pedidoCard').forEach(card=>{
+    const numero=String(card.dataset.numeroCompra||'').trim();
+    const estado=String(card.dataset.estadoCompra||'').toUpperCase();
+
+    const anterior=card.querySelector('.btnCorregirDuplicado');
+    if(anterior){
+      anterior.remove();
+    }
+
+    if(
+      estado==='RECIBIDA' &&
+      numero &&
+      (conteo[numero]||0)>1
+    ){
+      const corregir=document.createElement('button');
+      corregir.className='btnRojo w100 btnCorregirDuplicado';
+      corregir.style.marginTop='8px';
+      corregir.textContent='🧹 Revisar / corregir duplicado';
+      corregir.onclick=()=>corregirDuplicadoCompraUI(
+        numero,
+        corregir
+      );
+
+      card.appendChild(corregir);
+    }
+  });
+}
+
 function cargarCuentasPorPagar(){
   if(!SESION||!['ADMIN','CAJERO','BODEGA'].includes(SESION.rol)) return;
 
@@ -5983,6 +6020,8 @@ function cargarCuentasPorPagar(){
     if(!(r.cuentas||[]).length){
       box.innerHTML='<div class="sub">No hay cuentas por pagar pendientes.</div>';
     }
+
+    actualizarBotonesDuplicado(r.cuentas||[]);
   });
 }
 
