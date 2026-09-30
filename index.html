@@ -5558,6 +5558,15 @@ function cargarCompras(){
         d.appendChild(b);
       }
 
+      if(c.estado==='RECIBIDA' && SESION && SESION.rol==='ADMIN'){
+        const corregir=document.createElement('button');
+        corregir.className='btnRojo w100';
+        corregir.style.marginTop='8px';
+        corregir.textContent='🧹 Revisar / corregir duplicado';
+        corregir.onclick=()=>corregirDuplicadoCompraUI(c.numeroCompra,corregir);
+        d.appendChild(corregir);
+      }
+
       box.appendChild(d);
     });
 
@@ -5566,6 +5575,27 @@ function cargarCompras(){
     }
 
     cargarCuentasPorPagar();
+  });
+}
+
+
+function corregirDuplicadoCompraUI(numero,boton){
+  if(!confirm('Se revisará '+numero+' y se corregirán solamente duplicados detectados de cuenta por pagar e inventario. ¿Continuar?')) return;
+
+  const original=boton?boton.textContent:'';
+  if(boton){ boton.disabled=true; boton.textContent='Revisando…'; }
+
+  msg('mensajeCompras','Revisando duplicados de '+numero+'…','info');
+
+  api('corregirduplicadocompra',{numeroCompra:numero},r=>{
+    if(boton){ boton.disabled=false; boton.textContent=original; }
+    if(!r||!r.ok){
+      return msg('mensajeCompras',(r&&r.error)||'No se pudo realizar la corrección.','error');
+    }
+    msg('mensajeCompras',r.mensaje,'ok');
+    cargarCompras();
+    cargarCuentasPorPagar();
+    cargarResumen();
   });
 }
 
