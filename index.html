@@ -565,7 +565,7 @@
     </div>
     <div class="card">
       <h3 style="margin-top:0">Nueva compra</h3>
-      <label>Proveedor</label><select id="compProveedor" onchange="actualizarDiasCreditoProveedor()"></select>
+      <label>Proveedor</label><select id="compProveedor" onchange="actualizarDiasCreditoProveedor();cargarProductosCompra()"></select>
       <div class="grid2">
         <div>
           <label>Condición de pago</label>
@@ -580,7 +580,12 @@
         </div>
       </div>
       <div class="grid2">
-        <div><label>Código producto</label><input id="compCodigo"></div>
+        <div>
+          <label>Producto existente</label>
+          <select id="compCodigo" onchange="seleccionarProductoCompra()">
+            <option value="">Seleccione un producto</option>
+          </select>
+        </div>
         <div><label>Cantidad</label><input id="compCantidad" type="number" min="1" value="1"></div>
         <div><label>Costo unitario</label><input id="compCosto" type="number" min="0" step="0.01"></div>
         <div><label>Otros costos Q</label><input id="compOtros" type="number" min="0" step="0.01" value="0"></div>
@@ -5061,6 +5066,7 @@ function cargarProveedores(){
     });
 
     actualizarDiasCreditoProveedor();
+    cargarProductosCompra();
   });
 }
 
@@ -5081,6 +5087,141 @@ function ajustarCondicionCompra(){
   $('compDiasCreditoBox').classList.toggle('oculto',!credito);
 }
 
+
+function cargarProductosCompra(){
+  const s=$('compCodigo');
+
+  if(!s||!SESION||!['ADMIN','BODEGA'].includes(SESION.rol)){
+    return;
+  }
+
+  const proveedorId=
+    $('compProveedor')
+      ? $('compProveedor').value
+      : '';
+
+  s.innerHTML=
+    '<option value="">Cargando productos...</option>';
+
+  api(
+    'productoscompra',
+    {
+      proveedorId
+    },
+    r=>{
+
+      if(!r||!r.ok){
+        s.innerHTML=
+          '<option value="">No se pudieron cargar los productos</option>';
+
+        return msg(
+          'mensajeCompras',
+          (r&&r.error)||'No se pudieron cargar los productos.',
+          'error'
+        );
+      }
+
+      let productos=r.productos||[];
+
+      // Si al filtrar por proveedor no hay productos asociados,
+      // cargar todos para no bloquear una compra nueva.
+      if(
+        proveedorId &&
+        !productos.length
+      ){
+        api(
+          'productoscompra',
+          {
+            proveedorId:''
+          },
+          rr=>{
+            llenarProductosCompra(
+              rr&&rr.ok
+                ? rr.productos||[]
+                : []
+            );
+          }
+        );
+
+        return;
+      }
+
+      llenarProductosCompra(
+        productos
+      );
+    }
+  );
+}
+
+function llenarProductosCompra(productos){
+  const s=$('compCodigo');
+
+  if(!s){
+    return;
+  }
+
+  s.innerHTML=
+    '<option value="">Seleccione un producto</option>';
+
+  productos.forEach(p=>{
+    const texto=
+      p.codigo+
+      ' · '+
+      [
+        p.marca,
+        p.modelo,
+        p.color,
+        p.talla
+      ]
+      .filter(Boolean)
+      .join(' · ');
+
+    const o=
+      new Option(
+        texto,
+        p.codigo
+      );
+
+    o.dataset.costo=
+      String(
+        Number(p.costo)||0
+      );
+
+    s.add(o);
+  });
+
+  if(!productos.length){
+    s.innerHTML=
+      '<option value="">No hay productos existentes</option>';
+  }
+}
+
+function seleccionarProductoCompra(){
+  const s=$('compCodigo');
+
+  if(!s){
+    return;
+  }
+
+  const o=s.options[s.selectedIndex];
+
+  if(
+    o &&
+    $('compCosto')
+  ){
+    const costo=
+      Number(o.dataset.costo);
+
+    if(
+      !isNaN(costo) &&
+      costo>=0
+    ){
+      $('compCosto').value=
+        costo.toFixed(2);
+    }
+  }
+}
+
 function guardarProveedorUI(){
   api('guardarproveedor',{
     nombre:$('provNombre').value,nit:$('provNit').value,telefono:$('provTelefono').value,
@@ -5095,7 +5236,9 @@ function agregarItemCompra(){
   const codigo=$('compCodigo').value.trim(), cantidad=Number($('compCantidad').value), costo=Number($('compCosto').value);
   if(!codigo||!Number.isInteger(cantidad)||cantidad<=0||isNaN(costo)||costo<0) return msg('mensajeCompras','Código, cantidad y costo inválidos.','error');
   COMPRA_ITEMS.push({codigo,cantidad,costo});
-  $('compCodigo').value=''; $('compCantidad').value=1; $('compCosto').value='';
+  $('compCodigo').value='';
+  $('compCantidad').value=1;
+  $('compCosto').value='';
   renderCompraItems();
 }
 
