@@ -7,6 +7,40 @@
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript" defer>
 document.addEventListener('DOMContentLoaded',()=>{
   prepararBuscadorVentas();
+  prepararSelectorDevoluciones();
+
+  const inv=$('codigo');
+  if(inv){
+    ['focus','click'].forEach(ev=>{
+      inv.addEventListener(ev,()=>{
+        const card=$('productoCard');
+        if(card){
+          card.classList.add('oculto');
+        }
+
+        if(inv.value.trim()){
+          sugerencias(
+            inv.value.trim(),
+            'inv'
+          );
+        }
+      });
+    });
+  }
+
+  const tras=$('trasCodigo');
+  if(tras){
+    ['focus','click'].forEach(ev=>{
+      tras.addEventListener(ev,()=>{
+        if(tras.value.trim()){
+          sugerencias(
+            tras.value.trim(),
+            'tras'
+          );
+        }
+      });
+    });
+  }
 });
 
 </script>
@@ -51,7 +85,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   <div id="tabs" class="tabs oculto">
     <button id="tabPos" class="activo" onclick="vista('pos')">🛒 Punto de venta</button>
-    <button id="tabPedidos" onclick="vista('pedidos');cargarPedidos()">📋 Pedidos</button>
+    <button id="tabPedidos" onclick="vista('pedidos');mostrarListaPedidos();cargarPedidos()">📋 Pedidos</button>
     <button id="tabVentas" onclick="vista('ventas');buscarVentas()">🧾 Ventas</button>
     <button id="tabInventario" onclick="vista('inventario')">📦 Inventario</button>
     <button id="tabNuevo" onclick="vista('nuevo')">➕ Producto</button>
@@ -60,7 +94,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     <button id="tabTrazabilidad" onclick="vista('trazabilidad')">🔎 Trazabilidad</button>
     <button id="tabComisiones" onclick="vista('comisiones');cargarComisiones()">💰 Comisiones</button>
     <button id="tabDevoluciones" onclick="vista('devoluciones');cargarDevoluciones();cargarVentasDevolucion()">↩️ Devoluciones</button>
-    <button id="tabCompras" onclick="vista('compras');cargarProveedores();cargarCompras()">🚚 Compras</button>
+    <button id="tabCompras" onclick="vista('compras');mostrarListaCompras();cargarProveedores();cargarCompras()">🚚 Compras</button>
     <button id="tabCaja" onclick="vista('caja');cargarCaja()">💵 Caja</button>
     <button id="tabReportes" onclick="vista('reportes');cargarReportes()">📊 Reportes</button>
     <button id="tabClientes" onclick="vista('clientes');cargarClientes();cargarCreditos()">👤 Clientes</button>
@@ -88,14 +122,16 @@ document.addEventListener('DOMContentLoaded',()=>{
   </div>
 
   <div id="vistaPedidos" class="vistaApp oculto">
-    <div class="card"><h3 style="margin-top:0">Pedidos</h3><div class="fila"><select id="filtroEstadoPedido" onchange="cargarPedidos()"><option value="PENDIENTE">Pendientes</option><option value="">Todos</option><option value="COMPLETADO">Completados</option><option value="CANCELADO">Cancelados</option></select><button class="btnNegro" onclick="cargarPedidos()">Actualizar</button></div><div id="mensajePedidos"></div><div id="listaPedidos"></div></div>
+    <div id="pedidoListaCard" class="card"><h3 style="margin-top:0">Pedidos</h3><div class="fila"><select id="filtroEstadoPedido" onchange="mostrarListaPedidos();cargarPedidos()"><option value="PENDIENTE">Pendientes</option><option value="">Todos</option><option value="COMPLETADO">Completados</option><option value="CANCELADO">Cancelados</option></select><button class="btnNegro" onclick="mostrarListaPedidos();cargarPedidos()">Actualizar</button></div><div id="mensajePedidos"></div><div id="listaPedidos"></div></div>
     <div id="pedidoDetalleCard" class="card oculto"><div id="pedidoDetalle"></div><div id="pedidoCobroBox"><div class="grid2"><div><label>Forma de pago</label><select id="pedMetodo" onchange="actualizarCobroPedido()">
   <option>EFECTIVO</option>
   <option>TRANSFERENCIA</option>
   <option>TARJETA</option>
   <option>CREDITO</option>
-</select></div><div><label>Divisa</label><select id="pedMoneda" onchange="actualizarCobroPedido()"></select></div><div id="pedEfectivoBox"><label>Efectivo recibido</label><input id="pedEfectivo" type="number" min="0" step="0.01" value="0" oninput="actualizarCobroPedido()"></div><div><label>Dar cambio en</label><select id="pedCambioMoneda" onchange="actualizarCobroPedido()"><option value="GTQ">GTQ - Quetzal</option></select></div></div><div id="pedCambio" class="cambio">Cambio: <b>Q0.00</b></div><div class="fila" style="margin-top:12px"><button class="btnVerde" style="flex:1" onclick="completarPedidoUI()">✅ COMPLETAR PEDIDO</button><button class="btnRojo" style="flex:1" onclick="cancelarPedidoUI()">Cancelar pedido</button></div></div></div>
-    <div id="ticketPedidoCard" class="card oculto"><div id="ticketPedido" class="ticket"></div><div class="fila noPrint" style="margin-top:10px"><button class="btnNegro" style="flex:1" onclick="imprimirTicket('ticketPedido','MEDIA')">🖨 Media carta horizontal</button><button class="btnGris" style="flex:1" onclick="imprimirTicket('ticketPedido','CARTA')">🖨 Carta vertical</button></div></div>
+</select></div><div><label>Divisa</label><select id="pedMoneda" onchange="actualizarCobroPedido()"></select></div><div id="pedEfectivoBox"><label>Efectivo recibido</label><input id="pedEfectivo" type="number" min="0" step="0.01" value="0" oninput="actualizarCobroPedido()"></div><div><label>Dar cambio en</label><select id="pedCambioMoneda" onchange="actualizarCobroPedido()"><option value="GTQ">GTQ - Quetzal</option></select></div></div><div id="pedCambio" class="cambio">Cambio: <b>Q0.00</b></div><div class="fila" style="margin-top:12px"><button class="btnVerde" style="flex:1" onclick="completarPedidoUI()">✅ COMPLETAR PEDIDO</button><button class="btnRojo" style="flex:1" onclick="cancelarPedidoUI()">Cancelar pedido</button></div></div>
+      <button class="btnGris noPrint w100" style="margin-top:8px" onclick="mostrarListaPedidos()">Volver a pedidos</button>
+    </div>
+    <div id="ticketPedidoCard" class="card oculto"><div id="ticketPedido" class="ticket"></div><div class="fila noPrint" style="margin-top:10px"><button class="btnNegro" style="flex:1" onclick="imprimirTicket('ticketPedido','MEDIA')">🖨 Media carta horizontal</button><button class="btnGris" style="flex:1" onclick="imprimirTicket('ticketPedido','CARTA')">🖨 Carta vertical</button></div><button class="btnGris noPrint w100" style="margin-top:8px" onclick="mostrarListaPedidos()">Volver a pedidos</button></div>
   </div>
 
   <div id="vistaVentas" class="vistaApp oculto">
@@ -535,7 +571,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       <button class="btnRojo w100" style="margin-top:12px" onclick="registrarDevolucionUI()">Registrar devolución / cambio</button>
       <div id="mensajeDevoluciones"></div>
     </div>
-    <div class="card"><h3 style="margin-top:0">Historial</h3><div id="listaDevoluciones"></div></div>
+    <div id="devHistorialCard" class="card"><h3 style="margin-top:0">Historial</h3><div id="listaDevoluciones"></div></div>
 
     <div id="devDetalleCard" class="card oculto">
       <div id="devDetalleTicket" class="ticket"></div>
@@ -543,7 +579,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         <button class="btnNegro" style="flex:1" onclick="imprimirTicket('devDetalleTicket','MEDIA')">🖨 Media carta horizontal</button>
         <button class="btnGris" style="flex:1" onclick="imprimirTicket('devDetalleTicket','CARTA')">🖨 Carta vertical</button>
       </div>
-      <button class="btnGris noPrint w100" style="margin-top:8px" onclick="$('devDetalleCard').classList.add('oculto')">Cerrar detalle</button>
+      <button class="btnGris noPrint w100" style="margin-top:8px" onclick="mostrarHistorialDevoluciones()">Cerrar detalle</button>
     </div>
   </div>
 
@@ -614,7 +650,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       <label>Nota</label><input id="compNota">
       <button class="btnVerde w100" style="margin-top:12px" onclick="crearCompraUI()">Crear orden de compra</button>
     </div>
-    <div class="card"><h3 style="margin-top:0">Compras</h3><div id="listaCompras"></div></div>
+    <div id="compListaCard" class="card"><h3 style="margin-top:0">Compras</h3><div id="listaCompras"></div></div>
 
     <div id="compDetalleCard" class="card oculto">
       <div id="compDetalleTicket" class="ticket"></div>
@@ -632,8 +668,8 @@ document.addEventListener('DOMContentLoaded',()=>{
         <button class="btnAzul" style="flex:1" onclick="exportarCompraCSV()">
           ⬇ Exportar CSV / Excel
         </button>
-        <button class="btnGris" style="flex:1" onclick="$('compDetalleCard').classList.add('oculto')">
-          Cerrar detalle
+        <button class="btnGris" style="flex:1" onclick="mostrarListaCompras()">
+          Volver a compras
         </button>
       </div>
     </div>
@@ -4355,6 +4391,31 @@ function guardarPedido(){
   });
 }
 
+
+function mostrarListaPedidos(){
+  const lista=$('pedidoListaCard');
+  const detalle=$('pedidoDetalleCard');
+  const ticket=$('ticketPedidoCard');
+
+  if(detalle){
+    detalle.classList.add('oculto');
+  }
+
+  if(ticket){
+    ticket.classList.add('oculto');
+  }
+
+  if(lista){
+    lista.classList.remove('oculto');
+    setTimeout(()=>{
+      lista.scrollIntoView({
+        behavior:'smooth',
+        block:'start'
+      });
+    },50);
+  }
+}
+
 function cargarPedidos(){
   if(!SESION||!['ADMIN','CAJERO','VENDEDOR'].includes(SESION.rol)) return;
   api('pedidos',{estado:$('filtroEstadoPedido').value},r=>{
@@ -4372,6 +4433,12 @@ function cargarPedidos(){
 
 function verPedido(numero){
 
+  const lista=$('pedidoListaCard');
+
+  if(lista){
+    lista.classList.add('oculto');
+  }
+
   // Cerrar cualquier pedido/ticket anterior antes de abrir otro.
   $('ticketPedidoCard').classList.add('oculto');
   $('ticketPedido').innerHTML='';
@@ -4384,6 +4451,8 @@ function verPedido(numero){
     r=>{
 
       if(!r.ok){
+        mostrarListaPedidos();
+
         return msg(
           'mensajePedidos',
           r.error,
@@ -4984,6 +5053,36 @@ function registrarDevolucionUI(){
   });
 }
 
+
+function mostrarHistorialDevoluciones(){
+  const historial=$('devHistorialCard');
+  const detalle=$('devDetalleCard');
+
+  if(detalle){
+    detalle.classList.add('oculto');
+  }
+
+  if(historial){
+    historial.classList.remove('oculto');
+  }
+}
+
+function prepararSelectorDevoluciones(){
+  const venta=$('devVenta');
+
+  if(!venta || venta.dataset.logicaHistorial==='SI'){
+    return;
+  }
+
+  venta.dataset.logicaHistorial='SI';
+
+  ['focus','click'].forEach(ev=>{
+    venta.addEventListener(ev,()=>{
+      mostrarHistorialDevoluciones();
+    });
+  });
+}
+
 function cargarDevoluciones(){
   if(!SESION||!['ADMIN','CAJERO'].includes(SESION.rol)) return;
 
@@ -5196,22 +5295,20 @@ function ticketDevolucionHTML(r,id){
 }
 
 function abrirDetalleDevolucion(numeroDevolucion,imprimir){
+  const historial=$('devHistorialCard');
   const card=$('devDetalleCard');
   const ticket=$('devDetalleTicket');
 
-  if(!card||!ticket){
-    return msg(
-      'mensajeDevoluciones',
-      'No se encontró el área de detalle.',
-      'error'
-    );
+  // Igual que Ventas: al elegir un registro, cerrar la lista.
+  if(historial){
+    historial.classList.add('oculto');
   }
 
   card.classList.remove('oculto');
 
   ticket.innerHTML=
     '<div class="mensaje info">'+
-      'Cargando detalle de <b>'+
+      'Cargando devolución / cambio <b>'+
       esc(numeroDevolucion)+
       '</b>…'+
     '</div>';
@@ -5223,28 +5320,20 @@ function abrirDetalleDevolucion(numeroDevolucion,imprimir){
 
   api(
     'detalledevolucion',
-    {
-      numeroDevolucion,
-      sucursal:SUCURSAL
-    },
+    {numeroDevolucion},
     r=>{
       if(!r||!r.ok){
-        const error=
-          (r&&r.error)||
-          'No se pudo cargar el detalle. Verifique que Code.gs esté publicado en una nueva versión.';
+        if(historial){
+          historial.classList.remove('oculto');
+        }
 
-        ticket.innerHTML=
-          '<div class="mensaje error">'+
-            esc(error)+
-          '</div>';
+        card.classList.add('oculto');
 
-        msg(
+        return msg(
           'mensajeDevoluciones',
-          error,
+          (r&&r.error)||'No se pudo cargar el detalle.',
           'error'
         );
-
-        return;
       }
 
       ticketDevolucionHTML(
@@ -5252,13 +5341,22 @@ function abrirDetalleDevolucion(numeroDevolucion,imprimir){
         'devDetalleTicket'
       );
 
+      $('mensajeDevoluciones').innerHTML='';
+
+      setTimeout(()=>{
+        card.scrollIntoView({
+          behavior:'smooth',
+          block:'start'
+        });
+      },50);
+
       if(imprimir){
         setTimeout(
           ()=>imprimirTicket(
             'devDetalleTicket',
             'MEDIA'
           ),
-          350
+          250
         );
       }
     }
@@ -5886,6 +5984,26 @@ function crearCompraUI(){
     }
   );
 }
+
+function mostrarListaCompras(){
+  const lista=$('compListaCard');
+  const detalle=$('compDetalleCard');
+
+  if(detalle){
+    detalle.classList.add('oculto');
+  }
+
+  if(lista){
+    lista.classList.remove('oculto');
+    setTimeout(()=>{
+      lista.scrollIntoView({
+        behavior:'smooth',
+        block:'start'
+      });
+    },50);
+  }
+}
+
 function cargarCompras(){
   if(!SESION||!['ADMIN','BODEGA'].includes(SESION.rol)) return;
 
@@ -6112,8 +6230,13 @@ function ticketCompraHTML(r,id){
 }
 
 function abrirDetalleCompra(numeroCompra,imprimir=false,exportar=false){
+  const lista=$('compListaCard');
   const card=$('compDetalleCard');
   const ticket=$('compDetalleTicket');
+
+  if(lista){
+    lista.classList.add('oculto');
+  }
 
   card.classList.remove('oculto');
 
@@ -6135,6 +6258,9 @@ function abrirDetalleCompra(numeroCompra,imprimir=false,exportar=false){
     r=>{
       if(!r||!r.ok){
         const error=(r&&r.error)||'No se pudo cargar la compra.';
+
+        mostrarListaCompras();
+
         ticket.innerHTML=
           '<div class="mensaje error">'+esc(error)+'</div>';
 
