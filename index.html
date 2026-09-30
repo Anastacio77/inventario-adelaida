@@ -38,7 +38,7 @@
   <div id="loginCard" class="card">
     <h3 style="margin-top:0">Iniciar sesión</h3>
     <label>Usuario</label><input id="loginUsuario" value="admin" autocomplete="username">
-    <label>Clave</label><input id="loginClave" type="password" autocomplete="current-password">
+    <label>Contraseña</label><input id="loginClave" type="password" autocomplete="current-password" required>
     <button class="btnNegro w100" style="margin-top:12px" onclick="login()">Entrar</button>
     <a class="btnGris w100 botonEnlace" style="margin-top:8px" href="#vistaConfig" onclick="mostrarConfigDesdeLogin()">⚙ Configuración de conexión</a>
     <div id="mensajeLogin"></div>
@@ -118,7 +118,7 @@
           <div><label>Material</label><input id="aMaterial" placeholder="Cuero, sintético, hule..."></div>
           <div><label>Género / línea</label><input id="aGenero" placeholder="Dama, caballero, niño..."></div>
           <div><label>Temporada</label><input id="aTemporada"></div>
-          <div><label>Proveedor preferido</label><input id="aProveedorPreferido"></div>
+          <div><label>Proveedor preferido</label><select id="aProveedorPreferido"></select></div>
           <div><label>Observación</label><input id="aObservacion"></div>
         </div>
         <button class="btnGris w100" style="margin-top:8px" onclick="guardarAtributosProducto()">Guardar atributos</button>
@@ -210,6 +210,11 @@
             <input id="nLote" placeholder="Vacío = automático">
           </div>
 
+          <div>
+            <label>Proveedor</label>
+            <select id="nProveedor"></select>
+          </div>
+
         </div>
 
         <div id="codigoAuto" class="codigoAuto">Código automático: —</div>
@@ -255,6 +260,12 @@
           <div>
             <label>Escala</label>
             <select id="cEscala" onchange="dibujarCorrida()"></select>
+          </div>
+
+
+          <div>
+            <label>Proveedor</label>
+            <select id="cProveedor"></select>
           </div>
 
           <div>
@@ -382,7 +393,7 @@
 
         <div>
           <label>Clave</label>
-          <input id="uClave" type="password">
+          <input id="uClave" minlength="4" required type="password">
         </div>
 
         <div>
@@ -547,13 +558,27 @@
         <div><label>WhatsApp</label><input id="provWhatsapp"></div>
         <div><label>Contacto</label><input id="provContacto"></div>
         <div><label>Dirección</label><input id="provDireccion"></div>
+        <div><label>Días de crédito por defecto</label><input id="provDiasCredito" type="number" min="0" value="30"></div>
       </div>
       <button class="btnAzul w100" style="margin-top:12px" onclick="guardarProveedorUI()">Guardar proveedor</button>
       <div id="mensajeCompras"></div>
     </div>
     <div class="card">
       <h3 style="margin-top:0">Nueva compra</h3>
-      <label>Proveedor</label><select id="compProveedor"></select>
+      <label>Proveedor</label><select id="compProveedor" onchange="actualizarDiasCreditoProveedor()"></select>
+      <div class="grid2">
+        <div>
+          <label>Condición de pago</label>
+          <select id="compCondicionPago" onchange="ajustarCondicionCompra()">
+            <option value="CONTADO">CONTADO</option>
+            <option value="CREDITO">CRÉDITO</option>
+          </select>
+        </div>
+        <div id="compDiasCreditoBox" class="oculto">
+          <label>Días de crédito</label>
+          <input id="compDiasCredito" type="number" min="1" value="30">
+        </div>
+      </div>
       <div class="grid2">
         <div><label>Código producto</label><input id="compCodigo"></div>
         <div><label>Cantidad</label><input id="compCantidad" type="number" min="1" value="1"></div>
@@ -566,6 +591,10 @@
       <button class="btnVerde w100" style="margin-top:12px" onclick="crearCompraUI()">Crear orden de compra</button>
     </div>
     <div class="card"><h3 style="margin-top:0">Compras</h3><div id="listaCompras"></div></div>
+    <div class="card">
+      <h3 style="margin-top:0">Cuentas por pagar</h3>
+      <div id="listaCuentasPagar"></div>
+    </div>
   </div>
 
   <div id="vistaCaja" class="vistaApp oculto">
@@ -1026,6 +1055,14 @@ function iniciarApp(u){
   $('usuarioActual').textContent=u.nombre+' · '+u.rol;
   $('btnVolverLogin').classList.add('oculto');
 
+  if(u.rol==='VENDEDOR'){
+    msg(
+      'mensajePos',
+      'Sesión de vendedor: puede preparar y guardar pedidos. El cobro final requiere un cajero o administrador con caja abierta.',
+      'info'
+    );
+  }
+
   $('tabUsuarios').classList.toggle('oculto',u.rol!=='ADMIN');
   $('tabNuevo').classList.toggle('oculto',['CAJERO','VENDEDOR'].includes(u.rol));
   $('tabTraslados').classList.toggle('oculto',['CAJERO','VENDEDOR'].includes(u.rol));
@@ -1040,7 +1077,7 @@ function iniciarApp(u){
   $('atributosProductoBox').classList.toggle('oculto',!['ADMIN','BODEGA'].includes(u.rol));
   $('movimientoBox').classList.toggle('oculto',['CAJERO','VENDEDOR'].includes(u.rol));
   $('btnGuardarPedido').classList.toggle('oculto',!['ADMIN','CAJERO','VENDEDOR'].includes(u.rol));
-  $('btnCobrarVenta').classList.toggle('oculto',!['ADMIN','CAJERO','VENDEDOR'].includes(u.rol));
+  $('btnCobrarVenta').classList.toggle('oculto',!['ADMIN','CAJERO'].includes(u.rol));
   if($('divisasAdmin')) $('divisasAdmin').classList.toggle('oculto',u.rol!=='ADMIN');
 
   api('sucursales',{},r=>{
@@ -1050,8 +1087,17 @@ function iniciarApp(u){
     cargarEscalas();
     cargarDivisas();
     cargarVendedores();
+
+    if(SESION&&['ADMIN','BODEGA'].includes(SESION.rol)){
+      cargarProveedores();
+    }
+
     vista('pos');
     cargarResumen();
+
+    if(SESION&&['ADMIN','CAJERO'].includes(SESION.rol)){
+      cargarCaja();
+    }
   });
 }
 
@@ -1904,6 +1950,14 @@ function actualizarCambio(){
 }
 
 function cobrar(){
+  if(!SESION||!['ADMIN','CAJERO'].includes(SESION.rol)){
+    return msg(
+      'mensajePos',
+      'Los vendedores deben guardar el pedido. La venta la completa un cajero o administrador con caja abierta.',
+      'error'
+    );
+  }
+
   if(!carrito.length) return msg('mensajePos','Carrito vacío.','error');
   const t=total();
   const d=divisaActual($('posMoneda').value);
@@ -2865,6 +2919,7 @@ function guardarProducto(){
       stockMinimo:$('nStockMinimo').value,
       ubicacion:$('nUbicacion').value,
       lote:$('nLote').value,
+      proveedorId:$('nProveedor').value,
       nota:$('nNota').value
     },
     r=>{
@@ -3525,6 +3580,7 @@ function guardarCorrida(){
       modelo:$('cModelo').value,
       escala:$('cEscala').value,
       lote:$('cLote').value,
+      proveedorId:$('cProveedor').value,
       nota:$('cNota').value,
       filas:JSON.stringify(
         corridaBorrador
@@ -4113,7 +4169,9 @@ function verPedido(numero){
 
       $('pedidoCobroBox').classList.toggle(
         'oculto',
-        r.estado!=='PENDIENTE'
+        r.estado!=='PENDIENTE' ||
+        !SESION ||
+        !['ADMIN','CAJERO'].includes(SESION.rol)
       );
 
       actualizarCobroPedido();
@@ -4643,6 +4701,20 @@ function registrarDevolucionUI(){
       textoOk+=' · '+Q(r.monto);
     }
 
+    if(r.cajaMovimiento&&r.cajaMovimiento.registrado){
+      if(r.cajaMovimiento.tipo==='INGRESO'){
+        textoOk+=' · CAJA +'+Q(r.cajaMovimiento.monto);
+      }else if(r.cajaMovimiento.tipo==='RETIRO'){
+        textoOk+=' · CAJA -'+Q(r.cajaMovimiento.monto);
+      }
+    }else if(
+      r.cajaMovimiento&&
+      r.cajaMovimiento.motivo==='SIN_CAJA_ABIERTA'&&
+      Number(r.cajaMovimiento.monto)>0
+    ){
+      textoOk+=' · AVISO: no había caja abierta; el ajuste no se registró en efectivo';
+    }
+
     msg('mensajeDevoluciones',textoOk,'ok');
 
     $('devCantidad').value=1;
@@ -4661,6 +4733,9 @@ function registrarDevolucionUI(){
     cargarDevoluciones();
     cargarVentasDevolucion();
     cargarResumen();
+    if(SESION&&['ADMIN','CAJERO'].includes(SESION.rol)){
+      cargarCaja();
+    }
 
     // Mostrar inmediatamente el comprobante con el mismo formato del ticket de venta.
     setTimeout(
@@ -4806,6 +4881,21 @@ function ticketDevolucionHTML(r,id){
     total=Number(r.saldoFavor||r.montoRegresa||r.monto||0);
   }
 
+  let resolucionCaja='';
+
+  if(r.cajaMovimiento){
+    if(String(r.cajaMovimiento.tipo||'').toUpperCase()==='INGRESO'){
+      resolucionCaja='Caja: cobrado '+Q(r.cajaMovimiento.monto);
+    }else if(String(r.cajaMovimiento.tipo||'').toUpperCase()==='RETIRO'){
+      resolucionCaja='Caja: devuelto '+Q(r.cajaMovimiento.monto);
+    }
+  }
+
+  const motivoTicket=[
+    r.motivo||'',
+    resolucionCaja
+  ].filter(Boolean).join(' · ');
+
   ticketHTML({
     tituloComprobante:
       esCambio
@@ -4830,7 +4920,7 @@ function ticketDevolucionHTML(r,id){
     nit:r.nit,
     sucursal:r.sucursal,
     usuario:r.usuario,
-    motivo:r.motivo,
+    motivo:motivoTicket,
     items:regresan.concat(entregados),
     subtotal:
       esCambio
@@ -4938,17 +5028,63 @@ function abrirDetalleDevolucion(numeroDevolucion,imprimir){
 
 function cargarProveedores(){
   if(!SESION||!['ADMIN','BODEGA'].includes(SESION.rol)) return;
+
   api('proveedores',{q:''},r=>{
     if(!r.ok) return msg('mensajeCompras',r.error,'error');
-    const s=$('compProveedor'); s.innerHTML='';
-    (r.proveedores||[]).forEach(p=>s.add(new Option(p.nombre,p.proveedorId)));
+
+    const proveedores=r.proveedores||[];
+    window.PROVEEDORES=proveedores;
+
+    ['compProveedor','nProveedor','cProveedor','aProveedorPreferido'].forEach(id=>{
+      const s=$(id);
+      if(!s) return;
+
+      const prev=s.value;
+      s.innerHTML='';
+
+      if(id!=='compProveedor'){
+        s.add(new Option('Sin proveedor',''));
+      }
+
+      proveedores.forEach(p=>{
+        s.add(
+          new Option(
+            p.nombre,
+            p.proveedorId
+          )
+        );
+      });
+
+      if([...s.options].some(o=>o.value===prev)){
+        s.value=prev;
+      }
+    });
+
+    actualizarDiasCreditoProveedor();
   });
+}
+
+function actualizarDiasCreditoProveedor(){
+  const s=$('compProveedor');
+  if(!s||!window.PROVEEDORES) return;
+
+  const p=window.PROVEEDORES.find(x=>x.proveedorId===s.value);
+
+  if(p&&$('compDiasCredito')){
+    $('compDiasCredito').value=
+      Math.max(1,Number(p.diasCreditoDefault)||30);
+  }
+}
+
+function ajustarCondicionCompra(){
+  const credito=$('compCondicionPago').value==='CREDITO';
+  $('compDiasCreditoBox').classList.toggle('oculto',!credito);
 }
 
 function guardarProveedorUI(){
   api('guardarproveedor',{
     nombre:$('provNombre').value,nit:$('provNit').value,telefono:$('provTelefono').value,
-    whatsapp:$('provWhatsapp').value,contacto:$('provContacto').value,direccion:$('provDireccion').value
+    whatsapp:$('provWhatsapp').value,contacto:$('provContacto').value,direccion:$('provDireccion').value,diasCreditoDefault:$('provDiasCredito').value
   },r=>{
     msg('mensajeCompras',r.ok?r.mensaje:r.error,r.ok?'ok':'error');
     if(r.ok) cargarProveedores();
@@ -4985,6 +5121,8 @@ function crearCompraUI(){
 
   const datos={
     proveedorId:$('compProveedor').value,
+    condicionPago:$('compCondicionPago').value,
+    diasCredito:$('compDiasCredito').value,
     otrosCostos:$('compOtros').value,
     nota:$('compNota').value,
     items:JSON.stringify(COMPRA_ITEMS),
@@ -5021,7 +5159,7 @@ function crearCompraUI(){
       msg(
         'mensajeCompras',
         'Compra '+r.numeroCompra+
-        ' creada por '+Q(r.total)+'.',
+        ' creada por '+Q(r.total)+' · '+r.condicionPago+(r.condicionPago==='CREDITO'?' · '+r.diasCredito+' días':'')+'.',
         'ok'
       );
 
@@ -5040,7 +5178,7 @@ function cargarCompras(){
     (r.compras||[]).forEach(c=>{
       const d=document.createElement('div');
       d.className='pedidoCard';
-      d.innerHTML='<div class="cartTop"><div><b>'+esc(c.numeroCompra)+'</b><div class="mini">'+esc(c.fecha)+' · '+esc(c.proveedor)+'</div></div><div><span class="badge">'+esc(c.estado)+'</span><br><b>'+Q(c.total)+'</b></div></div>';
+      d.innerHTML='<div class="cartTop"><div><b>'+esc(c.numeroCompra)+'</b><div class="mini">'+esc(c.fecha)+' · '+esc(c.proveedor)+' · '+esc(c.condicionPago||'CONTADO')+(c.condicionPago==='CREDITO'?' · '+c.diasCredito+' días':'')+'</div></div><div><span class="badge">'+esc(c.estado)+'</span><br><b>'+Q(c.total)+'</b><div class="mini">Pago: '+esc(c.estadoPago||'PENDIENTE')+'</div></div></div>';
       if(c.estado==='PENDIENTE'){
         const b=document.createElement('button');
         b.className='btnVerde w100';
@@ -5052,6 +5190,7 @@ function cargarCompras(){
       box.appendChild(d);
     });
     if(!(r.compras||[]).length) box.innerHTML='<div class="sub">Sin compras.</div>';
+    cargarCuentasPorPagar();
   });
 }
 
@@ -5059,9 +5198,123 @@ function recibirCompraUI(numero){
   if(!confirm('¿Recibir toda la mercancía pendiente de '+numero+'?')) return;
   api('recibircompra',{numeroCompra:numero},r=>{
     msg('mensajeCompras',r.ok?r.mensaje:r.error,r.ok?'ok':'error');
-    if(r.ok){cargarCompras();cargarResumen();}
+    if(r.ok){cargarCompras();cargarCuentasPorPagar();cargarResumen();}
   });
 }
+
+function cargarCuentasPorPagar(){
+  if(!SESION||!['ADMIN','CAJERO','BODEGA'].includes(SESION.rol)) return;
+
+  const box=$('listaCuentasPagar');
+  if(!box) return;
+
+  api('cuentasporpagar',{soloPendientes:'SI'},r=>{
+    if(!r.ok){
+      box.innerHTML='<div class="mensaje error">'+esc(r.error)+'</div>';
+      return;
+    }
+
+    box.innerHTML='';
+
+    (r.cuentas||[]).forEach(c=>{
+      const d=document.createElement('div');
+      d.className='pedidoCard';
+
+      const vencida=c.estado==='VENCIDA';
+
+      d.innerHTML=
+        '<div class="cartTop">'+
+          '<div>'+
+            '<b>'+esc(c.proveedor)+'</b>'+
+            '<div class="mini">'+esc(c.cuentaPagarId)+' · Compra '+esc(c.numeroCompra)+'</div>'+
+            '<div class="mini">'+esc(c.condicionPago)+' · '+c.diasCredito+' días · Vence: '+esc(c.fechaVencimiento)+'</div>'+
+          '</div>'+
+          '<div style="text-align:right">'+
+            '<span class="badge '+(vencida?'badgeCancelado':'badgePendiente')+'">'+esc(c.estado)+'</span>'+
+            '<br><b>'+Q(c.saldo)+'</b>'+
+          '</div>'+
+        '</div>';
+
+      if(['ADMIN','CAJERO'].includes(SESION.rol)){
+        const fila=document.createElement('div');
+        fila.className='fila';
+        fila.style.marginTop='8px';
+
+        const inp=document.createElement('input');
+        inp.type='number';
+        inp.min='0.01';
+        inp.step='0.01';
+        inp.max=String(c.saldo);
+        inp.placeholder='Pago Q';
+
+        const btn=document.createElement('button');
+        btn.className='btnVerde';
+        btn.textContent='Pagar';
+        btn.onclick=()=>pagarCuentaProveedor(
+          c.cuentaPagarId,
+          inp.value
+        );
+
+        fila.appendChild(inp);
+        fila.appendChild(btn);
+        d.appendChild(fila);
+      }
+
+      box.appendChild(d);
+    });
+
+    if(!(r.cuentas||[]).length){
+      box.innerHTML='<div class="sub">No hay cuentas por pagar pendientes.</div>';
+    }
+  });
+}
+
+function pagarCuentaProveedor(id,monto){
+  const n=Number(monto)||0;
+
+  if(n<=0){
+    return msg(
+      'mensajeCompras',
+      'Ingrese el monto a pagar.',
+      'error'
+    );
+  }
+
+  api(
+    'abonarcuentaporpagar',
+    {
+      cuentaPagarId:id,
+      monto:n,
+      metodo:'EFECTIVO'
+    },
+    r=>{
+      if(!r.ok){
+        return msg(
+          'mensajeCompras',
+          r.error,
+          'error'
+        );
+      }
+
+      msg(
+        'mensajeCompras',
+        r.mensaje+' · Saldo '+Q(r.saldo),
+        'ok'
+      );
+
+      cargarCuentasPorPagar();
+      cargarCompras();
+
+      if(
+        SESION&&
+        ['ADMIN','CAJERO'].includes(SESION.rol)
+      ){
+        cargarCaja();
+      }
+    }
+  );
+}
+
 
 function cargarCaja(){
   if(!SESION||!['ADMIN','CAJERO'].includes(SESION.rol)) return;
@@ -5070,7 +5323,7 @@ function cargarCaja(){
     $('cajaAbrirBox').classList.toggle('oculto',r.abierta);
     $('cajaAbiertaBox').classList.toggle('oculto',!r.abierta);
     $('cajaEstado').innerHTML=r.abierta
-      ? '<div class="totales"><div class="lineaTotal"><span>Caja</span><b>'+esc(r.cajaId)+'</b></div><div class="lineaTotal"><span>Inicial</span><b>'+Q(r.montoInicial)+'</b></div><div class="lineaTotal"><span>Ventas efectivo</span><b>'+Q(r.ventasEfectivo)+'</b></div><div class="lineaTotal"><span>Ingresos</span><b>'+Q(r.ingresos)+'</b></div><div class="lineaTotal"><span>Retiros</span><b>'+Q(r.retiros)+'</b></div><div class="lineaTotal"><span>Esperado</span><b>'+Q(r.esperado)+'</b></div></div>'
+      ? '<div class="totales"><div class="lineaTotal"><span>Caja</span><b>'+esc(r.cajaId)+'</b></div><div class="lineaTotal"><span>Inicial</span><b>'+Q(r.montoInicial)+'</b></div><div class="lineaTotal"><span>Ventas efectivo</span><b>'+Q(r.ventasEfectivo)+'</b></div><div class="lineaTotal"><span>Ingresos / diferencias de cambios</span><b>'+Q(r.ingresos)+'</b></div><div class="lineaTotal"><span>Retiros / devoluciones</span><b>'+Q(r.retiros)+'</b></div><div class="lineaTotal"><span>Esperado</span><b>'+Q(r.esperado)+'</b></div></div>'
       : '<div class="info mensaje">No hay caja abierta para este usuario en la sucursal actual.</div>';
   });
 }
@@ -5141,13 +5394,51 @@ function abonarCreditoUI(id,monto){
 
 function cargarReportes(){
   if(!SESION||SESION.rol!=='ADMIN') return;
+
   api('reportes',{dias:$('repDias').value},r=>{
     if(!r.ok) return;
-    $('repResumen').innerHTML='<div class="dato"><b>'+Q(r.total)+'</b><span>Vendido</span></div><div class="dato"><b>'+r.numeroVentas+'</b><span>Ventas</span></div><div class="dato"><b>'+r.unidades+'</b><span>Unidades</span></div><div class="dato"><b>'+r.dias+'</b><span>Días</span></div>';
-    $('repTop').innerHTML=tablaReporte(['Producto','Cantidad','Total'],(r.topProductos||[]).map(x=>[x.producto,x.cantidad,Q(x.total)]));
-    $('repLentos').innerHTML=tablaReporte(['Código','Producto','Existencia','Vendido'],(r.slowMoving||[]).map(x=>[x.codigo,x.producto,x.existencia,x.vendido]));
-    $('repHorarios').innerHTML=tablaReporte(['Hora','Vendido'],(r.horarios||[]).map(x=>[x.hora,Q(x.total)]));
-    $('repVendedores').innerHTML=tablaReporte(['Vendedor','Ventas','Total'],(r.vendedores||[]).map(x=>[x.vendedor,x.ventas,Q(x.total)]));
+
+    $('repResumen').innerHTML=
+      '<div class="dato"><b>'+Q(r.ventasBrutas??r.total)+'</b><span>Ventas brutas</span></div>'+
+      '<div class="dato"><b>'+Q(r.cambiosCobrado||0)+'</b><span>+ Cambios cobrados</span></div>'+
+      '<div class="dato"><b>'+Q(r.devolucionesDinero||0)+'</b><span>- Devoluciones</span></div>'+
+      '<div class="dato"><b>'+Q(r.cambiosSaldoFavor||0)+'</b><span>- Saldo por cambios</span></div>'+
+      '<div class="dato"><b>'+Q(r.saldosFavorDirectos||0)+'</b><span>- Saldos a favor</span></div>'+
+      '<div class="dato"><b>'+Q(r.ventaNeta??r.total)+'</b><span>VENTA NETA</span></div>'+
+      '<div class="dato"><b>'+r.numeroVentas+'</b><span>Ventas</span></div>'+
+      '<div class="dato"><b>'+r.unidades+'</b><span>Unidades</span></div>';
+
+    $('repTop').innerHTML=
+      tablaReporte(
+        ['Producto','Cantidad','Total'],
+        (r.topProductos||[]).map(
+          x=>[x.producto,x.cantidad,Q(x.total)]
+        )
+      );
+
+    $('repLentos').innerHTML=
+      tablaReporte(
+        ['Código','Producto','Existencia','Vendido'],
+        (r.slowMoving||[]).map(
+          x=>[x.codigo,x.producto,x.existencia,x.vendido]
+        )
+      );
+
+    $('repHorarios').innerHTML=
+      tablaReporte(
+        ['Hora','Vendido'],
+        (r.horarios||[]).map(
+          x=>[x.hora,Q(x.total)]
+        )
+      );
+
+    $('repVendedores').innerHTML=
+      tablaReporte(
+        ['Vendedor','Ventas','Total'],
+        (r.vendedores||[]).map(
+          x=>[x.vendedor,x.ventas,Q(x.total)]
+        )
+      );
   });
 }
 function tablaReporte(cols,rows){
