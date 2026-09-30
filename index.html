@@ -917,7 +917,7 @@ function vista(v){
     if(b) b.classList.toggle('activo',n===v);
   });
 
-  if(v==='pos'){
+  if(['pos','inventario','traslados'].includes(v)){
     precargarCatalogoPos(false);
   }
 }
@@ -1285,7 +1285,7 @@ function precargarCatalogoPos(forzar=false){
   const vigente=
     CATALOGO_POS.length &&
     CATALOGO_POS_SUCURSAL===SUCURSAL &&
-    (Date.now()-CATALOGO_POS_TS)<30000;
+    (Date.now()-CATALOGO_POS_TS)<90000;
 
   if(!forzar && vigente){
     return;
@@ -1330,20 +1330,26 @@ function precargarCatalogoPos(forzar=false){
   );
 }
 
-function sugerenciasPosLocales(q){
+function sugerenciasLocales(q,modo){
   const buscado=L(q);
 
   if(!buscado){
     return [];
   }
 
-  const resultados=[];
+  let resultados=[];
 
   for(const p of CATALOGO_POS){
-    if(
-      CATALOGO_POS_SUCURSAL!==SUCURSAL
-    ){
+    if(CATALOGO_POS_SUCURSAL!==SUCURSAL){
       break;
+    }
+
+    // En POS y Traslados no mostrar agotados.
+    if(
+      ['pos','tras'].includes(modo) &&
+      Number(p.existencia||0)<=0
+    ){
+      continue;
     }
 
     const campos=[
@@ -1351,21 +1357,38 @@ function sugerenciasPosLocales(q){
       p.marca,
       p.modelo,
       p.color,
-      p.talla
+      p.talla,
+      p.categoria
     ].map(L);
 
-    if(
-      campos.some(x=>x.startsWith(buscado))
-    ){
+    if(campos.some(x=>x.startsWith(buscado))){
       resultados.push(p);
-
-      if(resultados.length>=20){
-        break;
-      }
     }
   }
 
-  return resultados;
+  // Primero coincidencia exacta de código/modelo,
+  // luego mayor existencia y finalmente talla.
+  resultados.sort((a,b)=>{
+    const axCodigo=L(a.codigo)===buscado ? 0 : 1;
+    const bxCodigo=L(b.codigo)===buscado ? 0 : 1;
+    if(axCodigo!==bxCodigo) return axCodigo-bxCodigo;
+
+    const axModelo=L(a.modelo)===buscado ? 0 : 1;
+    const bxModelo=L(b.modelo)===buscado ? 0 : 1;
+    if(axModelo!==bxModelo) return axModelo-bxModelo;
+
+    const ea=Number(a.existencia)||0;
+    const eb=Number(b.existencia)||0;
+    if(eb!==ea) return eb-ea;
+
+    return String(a.talla||'').localeCompare(
+      String(b.talla||''),
+      undefined,
+      {numeric:true,sensitivity:'base'}
+    );
+  });
+
+  return resultados.slice(0,25);
 }
 
 function actualizarExistenciaCatalogoPos(codigo,nuevaExistencia){
@@ -1401,7 +1424,7 @@ function auto(
       setT(
         setTimeout(
           ()=>sugerencias(q,modo),
-          80
+          35
         )
       );
     }
@@ -1566,57 +1589,66 @@ function sugerencias(q,modo){
     return;
   }
 
-  // POS: búsqueda totalmente local después de una sola precarga.
-  if(modo==='pos'){
-    const catalogoListo=
-      CATALOGO_POS.length &&
-      CATALOGO_POS_SUCURSAL===SUCURSAL;
+  // POS, Inventario y Traslados comparten el mismo catálogo local.
+  const catalogoListo=
+    CATALOGO_POS.length &&
+    CATALOGO_POS_SUCURSAL===SUCURSAL;
 
-    if(catalogoListo){
-      pintarSugerencias(
-        sugerenciasPosLocales(q),
-        'pos',
-        q
-      );
-      return;
-    }
-
-    lista.innerHTML=
-      '<div class="itemSugerencia">'+
-        '<div class="sugDetalle">Cargando productos…</div>'+
-      '</div>';
-
-    lista.classList.remove('oculto');
-    precargarCatalogoPos(false);
+  if(catalogoListo){
+    pintarSugerencias(
+      sugerenciasLocales(q,modo),
+      modo,
+      q
+    );
     return;
   }
 
-  const solicitud=++SUGERENCIA_ID[modo];
+  lista.innerHTML=
+    '<div class="itemSugerencia">'+
+      '<div class="sugDetalle">Cargando productos…</div>'+
+    '</div>';
 
-  api(
-    'sugerir',
-    {q,sucursal:SUCURSAL},
-    r=>{
-      if(solicitud!==SUGERENCIA_ID[modo]){
+  lista.classList.remove('oculto');
+
+  precargarCatalogoPos(false);
+
+  // Respaldo: si por alguna razón la precarga no responde,
+  // Inventario/Traslados conservan la consulta anterior.
+  if(modo!=='pos'){
+    const solicitud=++SUGERENCIA_ID[modo];
+
+    setTimeout(()=>{
+      const sigueSinCatalogo=
+        !CATALOGO_POS.length ||
+        CATALOGO_POS_SUCURSAL!==SUCURSAL;
+
+      if(!sigueSinCatalogo){
         return;
       }
 
-      if(!input || input.value.trim()!==q){
-        return;
-      }
+      api(
+        'sugerir',
+        {q,sucursal:SUCURSAL},
+        r=>{
+          if(solicitud!==SUGERENCIA_ID[modo]){
+            return;
+          }
 
-      const resultados=
-        r&&Array.isArray(r.sugerencias)
-          ? r.sugerencias
-          : [];
+          if(!input || input.value.trim()!==q){
+            return;
+          }
 
-      pintarSugerencias(
-        resultados,
-        modo,
-        q
+          pintarSugerencias(
+            r&&Array.isArray(r.sugerencias)
+              ? r.sugerencias
+              : [],
+            modo,
+            q
+          );
+        }
       );
-    }
-  );
+    },700);
+  }
 }
 
 function agregarDesdeSugerencia(p){
@@ -3615,8 +3647,10 @@ function guardarCorrida(){
       corridaBorrador=[];
       $('previewCorrida').classList.add('oculto');
       dibujarCorrida();
+      CATALOGO_COMPRA=[];
+      CATALOGO_COMPRA_TS=0;
       cargarResumen();
-      cargarProductosCompra();
+      cargarProductosCompra(true);
     }
   );
 }
@@ -4420,6 +4454,9 @@ function L(v){
 
 
 let COMPRA_ITEMS=[];
+let CATALOGO_COMPRA=[];
+let CATALOGO_COMPRA_TS=0;
+let CATALOGO_COMPRA_CARGANDO=false;
 const COMPRAS_RECIBIENDO=new Set();
 
 function cargarAtributosProducto(){
@@ -5083,27 +5120,36 @@ function ajustarCondicionCompra(){
 }
 
 
-function cargarProductosCompra(){
+function cargarProductosCompra(forzar=false){
   const s=$('compCodigo');
 
   if(!s||!SESION||!['ADMIN','BODEGA'].includes(SESION.rol)){
     return;
   }
 
-  const proveedorId=
-    $('compProveedor')
-      ? $('compProveedor').value
-      : '';
+  const vigente=
+    CATALOGO_COMPRA.length &&
+    (Date.now()-CATALOGO_COMPRA_TS)<120000;
+
+  if(!forzar && vigente){
+    mostrarProductosCompraProveedor();
+    return;
+  }
+
+  if(CATALOGO_COMPRA_CARGANDO){
+    return;
+  }
+
+  CATALOGO_COMPRA_CARGANDO=true;
 
   s.innerHTML=
     '<option value="">Cargando productos...</option>';
 
   api(
     'productoscompra',
-    {
-      proveedorId
-    },
+    {proveedorId:''},
     r=>{
+      CATALOGO_COMPRA_CARGANDO=false;
 
       if(!r||!r.ok){
         s.innerHTML=
@@ -5116,36 +5162,59 @@ function cargarProductosCompra(){
         );
       }
 
-      let productos=r.productos||[];
+      CATALOGO_COMPRA=
+        Array.isArray(r.productos)
+          ? r.productos
+          : [];
 
-      // Si al filtrar por proveedor no hay productos asociados,
-      // cargar todos para no bloquear una compra nueva.
-      if(
-        proveedorId &&
-        !productos.length
-      ){
-        api(
-          'productoscompra',
-          {
-            proveedorId:''
-          },
-          rr=>{
-            llenarProductosCompra(
-              rr&&rr.ok
-                ? rr.productos||[]
-                : []
-            );
-          }
-        );
+      CATALOGO_COMPRA_TS=Date.now();
 
-        return;
-      }
-
-      llenarProductosCompra(
-        productos
-      );
+      mostrarProductosCompraProveedor();
     }
   );
+}
+
+function mostrarProductosCompraProveedor(){
+  const proveedorId=
+    $('compProveedor')
+      ? $('compProveedor').value
+      : '';
+
+  const productos=[...CATALOGO_COMPRA];
+
+  productos.sort((a,b)=>{
+    const ap=
+      proveedorId &&
+      String(a.proveedorId||'')===proveedorId
+        ? 0
+        : 1;
+
+    const bp=
+      proveedorId &&
+      String(b.proveedorId||'')===proveedorId
+        ? 0
+        : 1;
+
+    if(ap!==bp){
+      return ap-bp;
+    }
+
+    return (
+      String(a.marca||'')+' '+
+      String(a.modelo||'')+' '+
+      String(a.color||'')+' '+
+      String(a.talla||'')
+    ).localeCompare(
+      String(b.marca||'')+' '+
+      String(b.modelo||'')+' '+
+      String(b.color||'')+' '+
+      String(b.talla||''),
+      undefined,
+      {numeric:true,sensitivity:'base'}
+    );
+  });
+
+  llenarProductosCompra(productos);
 }
 
 function llenarProductosCompra(productos){
