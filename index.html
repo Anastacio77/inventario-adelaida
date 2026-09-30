@@ -90,6 +90,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     <button id="tabInventario" onclick="vista('inventario')">📦 Inventario</button>
     <button id="tabNuevo" onclick="vista('nuevo')">➕ Producto</button>
     <button id="tabTraslados" onclick="vista('traslados')">🔁 Traslados</button>
+    <button id="tabStockglobal" onclick="vista('stockglobal');cargarStockGlobal()">🏬 Stock global</button>
     <button id="tabUsuarios" onclick="vista('usuarios');cargarUsuarios()">👥 Usuarios</button>
     <button id="tabTrazabilidad" onclick="vista('trazabilidad')">🔎 Trazabilidad</button>
     <button id="tabComisiones" onclick="vista('comisiones');cargarComisiones()">💰 Comisiones</button>
@@ -111,7 +112,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         Verificando caja…
       </div>
       <div id="carritoLista"></div>
-      <div class="totales"><div class="lineaTotal"><span>Pares</span><strong id="posPares">0</strong></div><div class="lineaTotal"><span>Subtotal</span><strong id="posSubtotal">Q0.00</strong></div><div class="lineaTotal"><span>Descuento</span><strong id="posDescuentoVista">Q0.00</strong></div><div class="lineaTotal"><span>Total</span><span class="totalGrande" id="posTotal">Q0.00</span></div></div>
+      <div class="totales"><div class="lineaTotal"><span>Pares</span><strong id="posPares">0</strong></div><div class="lineaTotal"><span>Subtotal</span><strong id="posSubtotal">Q0.00</strong></div><div class="lineaTotal"><span>Promoción</span><strong id="posPromocionVista">Q0.00</strong></div><div class="lineaTotal"><span>Descuento manual</span><strong id="posDescuentoVista">Q0.00</strong></div><div class="lineaTotal"><span>Total</span><span class="totalGrande" id="posTotal">Q0.00</span></div></div><div id="posPromoNombre" class="sub" style="margin-top:6px"></div>
       <div class="grid2"><div><label>Cliente</label><input id="posCliente" placeholder="Opcional"></div><div><label>NIT</label><input id="posNit" placeholder="CF o NIT"></div><div><label>Vendedor</label><select id="posVendedor"></select></div><div><label>Forma de pago</label><select id="posMetodo" onchange="actualizarPago()"><option>EFECTIVO</option><option>TRANSFERENCIA</option><option>TARJETA</option><option>CREDITO</option></select></div><div><label>Tipo de documento</label><select id="posTipoDocumento"><option value="TICKET">TICKET</option><option value="FACTURA_INTERNA">FACTURA INTERNA</option><option value="FEL">FEL (requiere integración)</option></select></div><div><label>Divisa de pago</label><select id="posMoneda" onchange="actualizarPago()"></select></div><div><label>Descuento Q</label><input id="posDescuento" type="number" min="0" step="0.01" value="0" oninput="renderCarrito()"></div><div id="efectivoBox"><label id="efectivoEtiqueta">Efectivo recibido</label><input id="posEfectivo" type="number" min="0" step="0.01" value="0" oninput="actualizarCambio()"></div><div id="cambioMonedaBox"><label>Dar cambio en</label><select id="posCambioMoneda" onchange="actualizarCambio()"><option value="GTQ">GTQ - Quetzal</option></select></div><div><label>Nota</label><input id="posNota"></div></div>
       <div id="divisaInfo" class="info mensaje">Total en divisa: —</div>
       <div id="cambioBox" class="cambio">Cambio: <b id="posCambio">Q0.00</b></div>
@@ -185,6 +186,52 @@ document.addEventListener('DOMContentLoaded',()=>{
         </div>
       </div>
     </div>
+    <div id="inventarioCurvasCard" class="card">
+      <h3 style="margin-top:0">Curvas de tallas</h3>
+      <div class="sub">Guarde composiciones de fábrica y aplíquelas como entrada o salida por cajas completas.</div>
+
+      <div class="grid2" style="margin-top:10px">
+        <div>
+          <label>Nombre de curva</label>
+          <input id="curvaNombre" placeholder="Ej. Caja dama 12 pares">
+        </div>
+        <div>
+          <label>Escala</label>
+          <select id="curvaEscala" onchange="dibujarCurvaEditor()"></select>
+        </div>
+      </div>
+
+      <div id="curvaEditor" style="margin-top:10px"></div>
+      <button class="btnAzul w100" style="margin-top:8px" onclick="guardarCurvaUI()">Guardar curva</button>
+
+      <hr style="margin:18px 0">
+
+      <div class="grid2">
+        <div>
+          <label>Modelo / corrida</label>
+          <select id="invCorridaCurva"></select>
+        </div>
+        <div>
+          <label>Curva predefinida</label>
+          <select id="invCurvaSelect"></select>
+        </div>
+        <div>
+          <label>Número de cajas</label>
+          <input id="invCurvaCajas" type="number" min="1" step="1" value="1">
+        </div>
+        <div>
+          <label>Nota</label>
+          <input id="invCurvaNota" placeholder="Ingreso fábrica, ajuste, salida...">
+        </div>
+      </div>
+
+      <div class="fila" style="margin-top:10px">
+        <button class="btnVerde" style="flex:1" onclick="moverCurvaUI('ENTRADA')">+ Entrada por curva</button>
+        <button class="btnRojo" style="flex:1" onclick="moverCurvaUI('SALIDA')">− Salida por curva</button>
+      </div>
+      <div id="mensajeCurvas"></div>
+    </div>
+
   </div>
 
   <div id="vistaNuevo" class="vistaApp oculto">
@@ -409,7 +456,31 @@ document.addEventListener('DOMContentLoaded',()=>{
     </div>
   </div>
 
+
+  <div id="vistaStockglobal" class="vistaApp oculto">
+    <div class="card">
+      <h3 style="margin-top:0">Stock global consolidado</h3>
+      <div class="sub">Consulta existencias por código, modelo, color o talla en todas las sucursales y bodegas.</div>
+      <div class="fila" style="margin-top:10px">
+        <input id="stockGlobalQ" placeholder="Modelo, código, color o talla" oninput="filtrarStockGlobalLocal()">
+        <button class="btnNegro" onclick="cargarStockGlobal(true)">Actualizar</button>
+      </div>
+      <div id="stockGlobalResumen" class="sub" style="margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <div id="stockGlobalTabla" style="overflow:auto"></div>
+    </div>
+  </div>
+
   <div id="vistaUsuarios" class="vistaApp oculto">
+
+    <div class="card">
+      <h3 style="margin-top:0">Administración de usuarios y permisos</h3>
+      <div class="sub">
+        El administrador puede editar nombre, rol, sucursal base, contraseña y comisión.
+        Los vendedores pueden cambiar de sucursal desde el selector superior; los cajeros permanecen fijos en su sucursal asignada.
+      </div>
+    </div>
 
     <div class="card">
       <h3 style="margin-top:0">Crear usuario</h3>
@@ -734,6 +805,27 @@ document.addEventListener('DOMContentLoaded',()=>{
         </button>
       </div>
     </div>
+
+    <div id="recepcionCompraCard" class="card oculto">
+      <h3 style="margin-top:0">Recepción selectiva de mercancía</h3>
+      <div class="sub">Verifique talla por talla. Solo se ingresará al inventario lo que indique como recibido.</div>
+      <div id="recepcionCompraTitulo" style="margin-top:8px"></div>
+      <div id="recepcionCompraTabla" style="overflow:auto;margin-top:10px"></div>
+      <div class="fila" style="margin-top:10px">
+        <button class="btnVerde" style="flex:1" onclick="confirmarRecepcionSelectiva()">Registrar recepción</button>
+        <button class="btnGris" style="flex:1" onclick="$('recepcionCompraCard').classList.add('oculto')">Cancelar</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">Historial de costos por proveedor</h3>
+      <div class="fila">
+        <select id="histCostoCodigo"><option value="">Seleccione un producto</option></select>
+        <button class="btnNegro" onclick="cargarHistorialCostos()">Consultar</button>
+      </div>
+      <div id="histCostoTabla" style="overflow:auto;margin-top:10px"></div>
+    </div>
+
     <div class="card">
       <h3 style="margin-top:0">Cuentas por pagar</h3>
       <div id="listaCuentasPagar"></div>
@@ -772,6 +864,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       <div class="fila"><select id="repDias"><option value="7">Últimos 7 días</option><option value="30" selected>Últimos 30 días</option><option value="90">Últimos 90 días</option><option value="365">Último año</option></select><button class="btnNegro" onclick="cargarReportes()">Actualizar</button></div>
       <div id="repResumen" class="resumen"></div>
     </div>
+    <div class="card"><h3>Márgenes de ganancia</h3><div id="repMargen"></div></div>
     <div class="card"><h3>Modelos más vendidos</h3><div id="repTop"></div></div>
     <div class="card"><h3>Calzado de bajo movimiento</h3><div id="repLentos"></div></div>
     <div class="card"><h3>Horarios pico</h3><div id="repHorarios"></div></div>
@@ -814,6 +907,24 @@ document.addEventListener('DOMContentLoaded',()=>{
 
       <div id="mensajeConfig"></div>
     </div>
+
+    <div id="promocionesAdmin" class="card">
+      <h3 style="margin-top:0">Promociones POS</h3>
+      <div class="grid2">
+        <div><label>Nombre</label><input id="prNombre" placeholder="Segundo par al 50%"></div>
+        <div><label>Tipo</label><select id="prTipo" onchange="ajustarPromoUI()"><option value="SEGUNDO_50">SEGUNDO PAR CON DESCUENTO</option><option value="PORCENTAJE">PORCENTAJE GENERAL</option></select></div>
+        <div><label>Valor %</label><input id="prValor" type="number" min="0" max="100" step="0.01" value="50"></div>
+        <div><label>Marca (opcional)</label><input id="prMarca"></div>
+        <div><label>Modelo (opcional)</label><input id="prModelo"></div>
+        <div><label>Categoría (opcional)</label><input id="prCategoria"></div>
+        <div><label>Color (opcional)</label><input id="prColor"></div>
+        <div><label>Inicio</label><input id="prInicio" type="date"></div>
+        <div><label>Fin</label><input id="prFin" type="date"></div>
+      </div>
+      <button class="btnAzul w100" style="margin-top:10px" onclick="guardarPromocionUI()">Guardar promoción</button>
+      <div id="listaPromociones" style="margin-top:10px"></div>
+    </div>
+
     <div id="divisasAdmin" class="card"><h3 style="margin-top:0">Divisas</h3><div class="grid2"><div><label>Código</label><input id="dCodigo" placeholder="USD"></div><div><label>Nombre</label><input id="dNombre" placeholder="Dólar"></div><div><label>Símbolo</label><input id="dSimbolo" placeholder="$"></div><div><label>Tipo de cambio a GTQ</label><input id="dCambio" type="number" min="0.0001" step="0.0001" value="1"></div></div><button class="btnAzul w100" style="margin-top:12px" onclick="guardarDivisa()">Guardar divisa</button><div id="listaDivisas" style="margin-top:12px"></div></div>
   </div>
 
@@ -850,6 +961,12 @@ let CAJA_POS_ID='';
 let CAMBIO_SUCURSAL_ID=0;
 let DEV_NUEVO_PRODUCTO=null;
 let DEV_CAMBIO_TIMER=null;
+let PROMOCIONES_POS=[];
+let CURVAS_TALLAS=[];
+let STOCK_GLOBAL_CACHE=[];
+let STOCK_GLOBAL_SUCURSALES=[];
+let STOCK_GLOBAL_TS=0;
+let RECEPCION_COMPRA_ACTUAL=null;
 
 const $=id=>document.getElementById(id);
 
@@ -1032,13 +1149,22 @@ function vista(v){
   ocultarVistas();
   const el=$('vista'+v.charAt(0).toUpperCase()+v.slice(1));
   if(el) el.classList.remove('oculto');
-  ['pos','pedidos','ventas','inventario','nuevo','traslados','usuarios','trazabilidad','comisiones','devoluciones','compras','caja','reportes','clientes','config'].forEach(n=>{
+  ['pos','pedidos','ventas','inventario','nuevo','traslados','stockglobal','usuarios','trazabilidad','comisiones','devoluciones','compras','caja','reportes','clientes','config'].forEach(n=>{
     const b=$('tab'+n.charAt(0).toUpperCase()+n.slice(1));
     if(b) b.classList.toggle('activo',n===v);
   });
 
   if(['pos','inventario','traslados'].includes(v)){
     precargarCatalogoPos(false);
+  }
+
+  if(v==='inventario'){
+    cargarCurvas();
+    setTimeout(actualizarCorridasCurvaUI,100);
+  }
+
+  if(v==='stockglobal'){
+    cargarStockGlobal(false);
   }
 
   if(v==='pos'){
@@ -1240,6 +1366,7 @@ function iniciarApp(u){
   $('tabUsuarios').classList.toggle('oculto',u.rol!=='ADMIN');
   $('tabNuevo').classList.toggle('oculto',['CAJERO','VENDEDOR'].includes(u.rol));
   $('tabTraslados').classList.toggle('oculto',['CAJERO','VENDEDOR'].includes(u.rol));
+  $('tabStockglobal').classList.toggle('oculto',!['ADMIN','CAJERO','BODEGA','VENDEDOR'].includes(u.rol));
   $('tabConfig').classList.toggle('oculto',u.rol!=='ADMIN');
   $('tabComisiones').classList.toggle('oculto',!['ADMIN','VENDEDOR'].includes(u.rol));
   $('tabPedidos').classList.toggle('oculto',!['ADMIN','CAJERO','VENDEDOR'].includes(u.rol));
@@ -1249,10 +1376,12 @@ function iniciarApp(u){
   $('tabReportes').classList.toggle('oculto',u.rol!=='ADMIN');
   $('tabClientes').classList.toggle('oculto',!['ADMIN','CAJERO','VENDEDOR'].includes(u.rol));
   $('atributosProductoBox').classList.toggle('oculto',!['ADMIN','BODEGA'].includes(u.rol));
+  if($('inventarioCurvasCard')) $('inventarioCurvasCard').classList.toggle('oculto',!['ADMIN','BODEGA'].includes(u.rol));
   $('movimientoBox').classList.toggle('oculto',['CAJERO','VENDEDOR'].includes(u.rol));
   $('btnGuardarPedido').classList.toggle('oculto',!['ADMIN','CAJERO','VENDEDOR'].includes(u.rol));
   $('btnCobrarVenta').classList.toggle('oculto',!['ADMIN','CAJERO'].includes(u.rol));
   if($('divisasAdmin')) $('divisasAdmin').classList.toggle('oculto',u.rol!=='ADMIN');
+  if($('promocionesAdmin')) $('promocionesAdmin').classList.toggle('oculto',u.rol!=='ADMIN');
 
   api('sucursales',{},r=>{
     if(!r.ok) return;
@@ -1261,6 +1390,8 @@ function iniciarApp(u){
     cargarEscalas();
     cargarDivisas();
     cargarVendedores();
+    cargarPromocionesPOS();
+    cargarCurvas();
 
     if(SESION&&['ADMIN','BODEGA'].includes(SESION.rol)){
       cargarProveedores();
@@ -1563,6 +1694,8 @@ function precargarCatalogoPos(forzar=false){
 
       CATALOGO_POS_SUCURSAL=SUCURSAL;
       CATALOGO_POS_TS=Date.now();
+
+      actualizarCorridasCurvaUI();
 
       const input=$('posCodigo');
 
@@ -2080,6 +2213,214 @@ function agregarDesdeSugerencia(p){
   );
 }
 
+
+function cargarPromocionesPOS(){
+  if(!TOKEN) return;
+
+  api(
+    'promociones',
+    {incluirInactivas:SESION&&SESION.rol==='ADMIN'?'SI':'NO'},
+    r=>{
+      if(!r||!r.ok) return;
+
+      PROMOCIONES_POS=(r.promociones||[])
+        .filter(x=>x.activa==='SI'&&x.vigente!=='NO');
+
+      if(SESION&&SESION.rol==='ADMIN'){
+        renderPromocionesAdmin(r.promociones||[]);
+      }
+
+      renderCarrito();
+    }
+  );
+}
+
+function promoCoincideLocal(pr,x){
+  const filtros=[
+    ['marca',x.marca],
+    ['modelo',x.modelo],
+    ['categoria',x.categoria],
+    ['color',x.color]
+  ];
+
+  return filtros.every(([k,v])=>{
+    const f=L(pr[k]||'');
+    return !f || L(v).includes(f);
+  });
+}
+
+function calcularPromoLocal(){
+  let mejor={
+    descuento:0,
+    promocion:''
+  };
+
+  (PROMOCIONES_POS||[]).forEach(pr=>{
+    const unidades=[];
+
+    carrito.forEach(x=>{
+      if(!promoCoincideLocal(pr,x)){
+        return;
+      }
+
+      const precio=
+        Number(
+          x.precioVenta??
+          x.precio
+        )||0;
+
+      for(let i=0;i<x.cantidad;i++){
+        unidades.push(precio);
+      }
+    });
+
+    if(!unidades.length){
+      return;
+    }
+
+    let descuento=0;
+
+    if(pr.tipo==='PORCENTAJE'){
+      descuento=
+        unidades.reduce((s,p)=>s+p,0)*
+        Math.min(100,Math.max(0,Number(pr.valor)||0))/100;
+
+    }else if(pr.tipo==='SEGUNDO_50'){
+      const porc=
+        Math.min(
+          100,
+          Math.max(0,Number(pr.valor)||50)
+        )/100;
+
+      unidades.sort((a,b)=>a-b);
+
+      const n=
+        Math.floor(
+          unidades.length/2
+        );
+
+      for(let i=0;i<n;i++){
+        descuento+=
+          unidades[i]*porc;
+      }
+    }
+
+    descuento=
+      Math.round(
+        Math.max(0,descuento)*100
+      )/100;
+
+    if(descuento>mejor.descuento){
+      mejor={
+        descuento,
+        promocion:pr.nombre||''
+      };
+    }
+  });
+
+  return mejor;
+}
+
+function ajustarPromoUI(){
+  if(!$('prTipo')||!$('prValor')) return;
+  if($('prTipo').value==='SEGUNDO_50' && !(Number($('prValor').value)>0)){
+    $('prValor').value=50;
+  }
+}
+
+function guardarPromocionUI(){
+  api(
+    'guardarpromocion',
+    {
+      nombre:$('prNombre').value,
+      tipo:$('prTipo').value,
+      valor:$('prValor').value,
+      marca:$('prMarca').value,
+      modelo:$('prModelo').value,
+      categoria:$('prCategoria').value,
+      color:$('prColor').value,
+      fechaInicio:$('prInicio').value,
+      fechaFin:$('prFin').value
+    },
+    r=>{
+      if(!r.ok){
+        return msg(
+          'mensajeConfig',
+          r.error,
+          'error'
+        );
+      }
+
+      msg(
+        'mensajeConfig',
+        r.mensaje,
+        'ok'
+      );
+
+      ['prNombre','prMarca','prModelo','prCategoria','prColor','prInicio','prFin']
+        .forEach(id=>{
+          if($(id)) $(id).value='';
+        });
+
+      cargarPromocionesPOS();
+    }
+  );
+}
+
+function renderPromocionesAdmin(promos){
+  const box=$('listaPromociones');
+  if(!box) return;
+
+  box.innerHTML='';
+
+  (promos||[]).forEach(pr=>{
+    const d=document.createElement('div');
+    d.className='pedidoCard';
+
+    const filtros=[
+      pr.marca,
+      pr.modelo,
+      pr.categoria,
+      pr.color
+    ].filter(Boolean).join(' · ')||'Todos los productos';
+
+    d.innerHTML=
+      '<div class="cartTop">'+
+        '<div><b>'+esc(pr.nombre)+'</b>'+
+        '<div class="sub">'+
+          esc(pr.tipo)+' · '+esc(pr.valor)+'% · '+esc(filtros)+
+        '</div></div>'+
+        '<span class="badge">'+esc(pr.activa)+'</span>'+
+      '</div>'+
+      '<button class="btnGris w100" style="margin-top:8px">'+
+        (pr.activa==='SI'?'Desactivar':'Activar')+
+      '</button>';
+
+    d.querySelector('button').onclick=()=>{
+      api(
+        'cambiarpromocion',
+        {
+          promoId:pr.promoId,
+          activa:pr.activa==='SI'?'NO':'SI'
+        },
+        r=>{
+          if(!r.ok){
+            return msg('mensajeConfig',r.error,'error');
+          }
+          cargarPromocionesPOS();
+        }
+      );
+    };
+
+    box.appendChild(d);
+  });
+
+  if(!(promos||[]).length){
+    box.innerHTML=
+      '<div class="sub">No hay promociones registradas.</div>';
+  }
+}
+
 function renderCarrito(){
   const l=$('carritoLista');
 
@@ -2189,10 +2530,13 @@ function renderCarrito(){
     l.appendChild(d);
   });
 
+  const promo=calcularPromoLocal();
+  const promoDesc=Math.min(sub,Math.max(0,Number(promo.descuento)||0));
+
   const maxDesc=
     Math.max(
       0,
-      sub-base
+      sub-promoDesc-base
     );
 
   const pedido=
@@ -2210,7 +2554,7 @@ function renderCarrito(){
     );
 
   const tot=
-    sub-desc;
+    sub-promoDesc-desc;
 
   if(
     pedido>maxDesc
@@ -2220,7 +2564,7 @@ function renderCarrito(){
 
     msg(
       'mensajePos',
-      'Descuento ajustado para no vender por debajo del precio base.',
+      'Descuento manual ajustado después de aplicar la promoción.',
       'info'
     );
   }
@@ -2230,6 +2574,14 @@ function renderCarrito(){
 
   $('posSubtotal').textContent=
     Q(sub);
+
+  $('posPromocionVista').textContent=
+    Q(promoDesc);
+
+  $('posPromoNombre').textContent=
+    promo.promocion
+      ? 'Promoción aplicada: '+promo.promocion
+      : '';
 
   $('posDescuentoVista').textContent=
     Q(desc);
@@ -2339,6 +2691,16 @@ function total(){
       x.cantidad;
   });
 
+  const promo=calcularPromoLocal();
+  const promoDesc=
+    Math.min(
+      sub,
+      Math.max(
+        0,
+        Number(promo.descuento)||0
+      )
+    );
+
   const desc=
     Math.min(
       Math.max(
@@ -2349,7 +2711,7 @@ function total(){
       ),
       Math.max(
         0,
-        sub-base
+        sub-promoDesc-base
       )
     );
 
@@ -2357,7 +2719,9 @@ function total(){
     sub,
     base,
     desc,
-    total:sub-desc
+    promoDesc,
+    promocion:promo.promocion||'',
+    total:sub-promoDesc-desc
   };
 }
 
@@ -3438,6 +3802,8 @@ function cargarEscalas(){
           e.tallas||
           [];
       });
+
+      llenarEscalasCurvas();
 
       const s=$('cEscala');
 
@@ -5782,6 +6148,24 @@ function llenarProductosCompra(productos){
 
   window.PRODUCTOS_COMPRA=productos||[];
 
+  const hc=$('histCostoCodigo');
+  if(hc){
+    const prev=hc.value;
+    hc.innerHTML='<option value="">Seleccione un producto</option>';
+    (productos||[]).forEach(p=>{
+      hc.add(
+        new Option(
+          p.codigo+' · '+
+          [p.marca,p.modelo,p.color,p.talla]
+            .filter(Boolean)
+            .join(' · '),
+          p.codigo
+        )
+      );
+    });
+    if(prev) hc.value=prev;
+  }
+
   if(s){
     s.innerHTML='<option value="">Seleccione un producto</option>';
 
@@ -6320,7 +6704,7 @@ function cargarCompras(){
       acciones.appendChild(exportar);
       d.appendChild(acciones);
 
-      if(c.estado==='PENDIENTE'){
+      if(['PENDIENTE','PARCIAL'].includes(c.estado)){
         const b=document.createElement('button');
         b.className='btnVerde w100';
         b.style.marginTop='8px';
@@ -6369,55 +6753,157 @@ function recibirCompraUI(numero,boton){
     return;
   }
 
-  if(!confirm('¿Recibir toda la mercancía pendiente de '+numero+'?')){
+  api(
+    'detallecompra',
+    {numeroCompra:numero},
+    r=>{
+      if(!r||!r.ok){
+        return msg(
+          'mensajeCompras',
+          (r&&r.error)||'No se pudo cargar la compra.',
+          'error'
+        );
+      }
+
+      RECEPCION_COMPRA_ACTUAL=r;
+
+      $('recepcionCompraTitulo').innerHTML=
+        '<b>'+esc(r.numeroCompra)+'</b> · '+
+        esc(r.proveedor)+' · '+esc(r.sucursal);
+
+      let h=
+        '<table class="tabla">'+
+        '<thead><tr>'+
+          '<th>Producto / talla</th>'+
+          '<th>Pedido</th>'+
+          '<th>Recibido antes</th>'+
+          '<th>Pendiente</th>'+
+          '<th>Recibir ahora</th>'+
+        '</tr></thead><tbody>';
+
+      (r.items||[]).forEach(x=>{
+        const pedido=Number(x.cantidad)||0;
+        const antes=Number(x.cantidadRecibida)||0;
+        const pendiente=Math.max(0,pedido-antes);
+
+        h+=
+          '<tr>'+
+            '<td><b>'+esc(x.codigo)+'</b><br>'+
+              '<span class="sub">'+
+                esc([x.marca,x.modelo,x.color,'Talla '+x.talla].filter(Boolean).join(' · '))+
+              '</span>'+
+            '</td>'+
+            '<td>'+pedido+'</td>'+
+            '<td>'+antes+'</td>'+
+            '<td><b>'+pendiente+'</b></td>'+
+            '<td>'+
+              '<input class="recCompraCant" data-codigo="'+esc(x.codigo)+'" '+
+              'type="number" min="0" max="'+pendiente+'" step="1" value="'+pendiente+'">'+
+            '</td>'+
+          '</tr>';
+      });
+
+      h+='</tbody></table>';
+
+      $('recepcionCompraTabla').innerHTML=h;
+      $('recepcionCompraCard').classList.remove('oculto');
+
+      setTimeout(()=>{
+        $('recepcionCompraCard').scrollIntoView({
+          behavior:'smooth',
+          block:'start'
+        });
+      },50);
+    }
+  );
+}
+
+function confirmarRecepcionSelectiva(){
+  const r=RECEPCION_COMPRA_ACTUAL;
+
+  if(!r){
+    return msg(
+      'mensajeCompras',
+      'Seleccione una compra.',
+      'error'
+    );
+  }
+
+  const recepciones=[
+    ...document.querySelectorAll('.recCompraCant')
+  ].map(inp=>({
+    codigo:inp.dataset.codigo,
+    cantidad:Math.max(
+      0,
+      parseInt(inp.value||'0',10)||0
+    )
+  }));
+
+  const total=recepciones.reduce(
+    (s,x)=>s+x.cantidad,
+    0
+  );
+
+  if(total<=0){
+    return msg(
+      'mensajeCompras',
+      'Ingrese al menos una cantidad recibida.',
+      'error'
+    );
+  }
+
+  if(
+    !confirm(
+      '¿Registrar '+total+
+      ' pares/unidades recibidos de '+r.numeroCompra+'?'
+    )
+  ){
     return;
   }
 
-  COMPRAS_RECIBIENDO.add(numero);
+  COMPRAS_RECIBIENDO.add(r.numeroCompra);
 
-  if(boton){
-    boton.disabled=true;
-    boton.textContent='Recibiendo…';
-  }
+  api(
+    'recibircompra',
+    {
+      numeroCompra:r.numeroCompra,
+      recepciones:JSON.stringify(recepciones)
+    },
+    x=>{
+      COMPRAS_RECIBIENDO.delete(r.numeroCompra);
 
-  msg(
-    'mensajeCompras',
-    'Recibiendo '+numero+'… espere hasta que termine.',
-    'info'
-  );
-
-  api('recibircompra',{numeroCompra:numero},r=>{
-    COMPRAS_RECIBIENDO.delete(numero);
-
-    if(!r||!r.ok){
-      if(boton){
-        boton.disabled=false;
-        boton.textContent='Recibir mercancía';
+      if(!x||!x.ok){
+        return msg(
+          'mensajeCompras',
+          (x&&x.error)||'No se pudo registrar la recepción.',
+          'error'
+        );
       }
 
-      return msg(
+      $('recepcionCompraCard').classList.add('oculto');
+      RECEPCION_COMPRA_ACTUAL=null;
+
+      msg(
         'mensajeCompras',
-        (r&&r.error)||
-        'No se recibió respuesta. Actualice Compras antes de volver a presionar.',
-        'error'
+        x.mensaje+
+        ' · Recibidos: '+x.recibidos+
+        (
+          x.pendientes
+            ? ' · Pendientes: '+x.pendientes
+            : ''
+        ),
+        x.completa?'ok':'info'
       );
+
+      cargarCompras();
+      cargarCuentasPorPagar();
+      cargarResumen();
+
+      CATALOGO_POS=[];
+      CATALOGO_POS_TS=0;
+      precargarCatalogoPos(true);
     }
-
-    msg(
-      'mensajeCompras',
-      r.mensaje+
-      (
-        r.yaProcesada
-          ? ' · Protección contra duplicados activa.'
-          : ' · Recibidos: '+r.recibidos
-      ),
-      r.yaProcesada?'info':'ok'
-    );
-
-    cargarCompras();
-    cargarCuentasPorPagar();
-    cargarResumen();
-  });
+  );
 }
 
 
@@ -7059,6 +7545,439 @@ function abonarCreditoUI(id,monto){
   api('abonarcredito',{creditoId:id,monto:monto,metodo:'EFECTIVO'},r=>{msg('mensajeClientes',r.ok?r.mensaje:r.error,r.ok?'ok':'error');if(r.ok){cargarCreditos();cargarClientes();}});
 }
 
+
+function cargarHistorialCostos(){
+  const codigo=$('histCostoCodigo')?$('histCostoCodigo').value:'';
+
+  if(!codigo){
+    $('histCostoTabla').innerHTML=
+      '<div class="sub">Seleccione un producto.</div>';
+    return;
+  }
+
+  api(
+    'historialcostos',
+    {codigo},
+    r=>{
+      if(!r||!r.ok){
+        return msg(
+          'mensajeCompras',
+          (r&&r.error)||'No se pudo consultar costos.',
+          'error'
+        );
+      }
+
+      $('histCostoTabla').innerHTML=
+        tablaReporte(
+          ['Fecha','Proveedor','Compra','Sucursal','Cantidad','Costo'],
+          (r.registros||[]).map(x=>[
+            x.fecha,
+            x.proveedor,
+            x.numeroCompra,
+            x.sucursal,
+            x.cantidad,
+            Q(x.costo)
+          ])
+        )||
+        '<div class="sub">Sin historial de costos.</div>';
+    }
+  );
+}
+
+function cargarStockGlobal(forzar=false){
+  const vigente=
+    STOCK_GLOBAL_CACHE.length &&
+    (Date.now()-STOCK_GLOBAL_TS)<10000;
+
+  if(vigente&&!forzar){
+    filtrarStockGlobalLocal();
+    return;
+  }
+
+  $('stockGlobalTabla').innerHTML=
+    '<div class="mensaje info">Cargando stock de todas las sucursales…</div>';
+
+  api(
+    'stockglobal',
+    {q:''},
+    r=>{
+      if(!r||!r.ok){
+        $('stockGlobalTabla').innerHTML=
+          '<div class="mensaje error">'+
+          esc((r&&r.error)||'No se pudo cargar stock global.')+
+          '</div>';
+        return;
+      }
+
+      STOCK_GLOBAL_CACHE=r.productos||[];
+      STOCK_GLOBAL_SUCURSALES=r.sucursales||[];
+      STOCK_GLOBAL_TS=Date.now();
+
+      filtrarStockGlobalLocal();
+    }
+  );
+}
+
+function filtrarStockGlobalLocal(){
+  if(!$('stockGlobalTabla')) return;
+
+  const q=L(
+    $('stockGlobalQ')
+      ? $('stockGlobalQ').value
+      : ''
+  );
+
+  const lista=(STOCK_GLOBAL_CACHE||[]).filter(p=>{
+    if(!q) return true;
+
+    return [
+      p.codigo,
+      p.marca,
+      p.modelo,
+      p.categoria,
+      p.color,
+      p.talla
+    ].some(v=>L(v).includes(q));
+  }).slice(0,200);
+
+  let h=
+    '<table class="tabla">'+
+    '<thead><tr>'+
+      '<th>Producto</th>'+
+      '<th>Talla</th>';
+
+  (STOCK_GLOBAL_SUCURSALES||[]).forEach(s=>{
+    h+='<th>'+esc(s)+'</th>';
+  });
+
+  h+='<th>Total</th></tr></thead><tbody>';
+
+  lista.forEach(p=>{
+    h+=
+      '<tr>'+
+        '<td><b>'+esc(p.codigo)+'</b><br>'+
+          '<span class="sub">'+
+          esc([p.marca,p.modelo,p.color].filter(Boolean).join(' · '))+
+          '</span>'+
+        '</td>'+
+        '<td>'+esc(p.talla)+'</td>';
+
+    (STOCK_GLOBAL_SUCURSALES||[]).forEach(s=>{
+      const n=Number((p.porSucursal||{})[s])||0;
+      h+=
+        '<td>'+
+        (
+          n>0
+            ? '<b>'+n+'</b>'
+            : '0'
+        )+
+        '</td>';
+    });
+
+    h+='<td><b>'+Number(p.total||0)+'</b></td></tr>';
+  });
+
+  h+='</tbody></table>';
+
+  $('stockGlobalTabla').innerHTML=
+    lista.length
+      ? h
+      : '<div class="sub">Sin coincidencias.</div>';
+
+  $('stockGlobalResumen').textContent=
+    lista.length+
+    ' referencias mostradas · actualizado '+
+    new Date(STOCK_GLOBAL_TS||Date.now()).toLocaleTimeString();
+}
+
+function cargarCurvas(){
+  if(!TOKEN) return;
+
+  api(
+    'curvas',
+    {incluirInactivas:'NO'},
+    r=>{
+      if(!r||!r.ok) return;
+
+      CURVAS_TALLAS=r.curvas||[];
+      llenarSelectCurvas();
+      llenarEscalasCurvas();
+      actualizarCorridasCurvaUI();
+    }
+  );
+}
+
+function llenarEscalasCurvas(){
+  const s=$('curvaEscala');
+  if(!s) return;
+
+  const prev=s.value;
+  s.innerHTML='';
+
+  (ESCALAS||[])
+    .filter(e=>e.activa==='SI')
+    .forEach(e=>
+      s.add(
+        new Option(
+          e.nombre+' · '+(e.tallas||[]).join(', '),
+          e.nombre
+        )
+      )
+    );
+
+  if(prev&&[...s.options].some(o=>o.value===prev)){
+    s.value=prev;
+  }
+
+  dibujarCurvaEditor();
+}
+
+function dibujarCurvaEditor(){
+  const box=$('curvaEditor');
+  const escSel=$('curvaEscala');
+
+  if(!box||!escSel) return;
+
+  const tallas=ESCALAS_MAP[escSel.value]||[];
+
+  if(!tallas.length){
+    box.innerHTML=
+      '<div class="sub">Seleccione una escala activa.</div>';
+    return;
+  }
+
+  box.innerHTML=
+    '<table class="tabla">'+
+    '<thead><tr><th>Talla</th><th>Pares por caja</th></tr></thead>'+
+    '<tbody>'+
+    tallas.map(t=>
+      '<tr>'+
+        '<td><b>'+esc(t)+'</b></td>'+
+        '<td><input class="curvaCant" data-talla="'+esc(t)+'" type="number" min="0" step="1" value="0"></td>'+
+      '</tr>'
+    ).join('')+
+    '</tbody></table>';
+}
+
+function guardarCurvaUI(){
+  const composicion={};
+
+  document.querySelectorAll('.curvaCant').forEach(x=>{
+    composicion[x.dataset.talla]=
+      Math.max(
+        0,
+        parseInt(x.value||'0',10)||0
+      );
+  });
+
+  api(
+    'guardarcurva',
+    {
+      nombre:$('curvaNombre').value,
+      escala:$('curvaEscala').value,
+      composicion:JSON.stringify(composicion)
+    },
+    r=>{
+      if(!r||!r.ok){
+        return msg(
+          'mensajeCurvas',
+          (r&&r.error)||'No se pudo guardar la curva.',
+          'error'
+        );
+      }
+
+      msg(
+        'mensajeCurvas',
+        r.mensaje+' · '+r.totalPares+' pares por caja.',
+        'ok'
+      );
+
+      $('curvaNombre').value='';
+      cargarCurvas();
+    }
+  );
+}
+
+function llenarSelectCurvas(){
+  const s=$('invCurvaSelect');
+  if(!s) return;
+
+  s.innerHTML='<option value="">Seleccione una curva</option>';
+
+  (CURVAS_TALLAS||[]).forEach(c=>{
+    const total=Object.values(c.composicion||{})
+      .reduce((a,b)=>a+(Number(b)||0),0);
+
+    s.add(
+      new Option(
+        c.nombre+' · '+c.escala+' · '+total+' pares',
+        c.curvaId
+      )
+    );
+  });
+}
+
+function actualizarCorridasCurvaUI(){
+  const s=$('invCorridaCurva');
+
+  if(!s||!CATALOGO_POS.length){
+    return;
+  }
+
+  const grupos={};
+
+  CATALOGO_POS.forEach(p=>{
+    if(
+      String(p.tipoIngreso||'').toUpperCase()!=='CORRIDA' ||
+      !p.escala
+    ){
+      return;
+    }
+
+    const key=[
+      p.marca,
+      p.modelo,
+      p.color,
+      p.escala
+    ].join('||');
+
+    if(!grupos[key]){
+      grupos[key]={
+        key,
+        marca:p.marca||'',
+        modelo:p.modelo||'',
+        color:p.color||'',
+        escala:p.escala||'',
+        productos:[]
+      };
+    }
+
+    grupos[key].productos.push(p);
+  });
+
+  window.CORRIDAS_INVENTARIO=
+    Object.values(grupos);
+
+  s.innerHTML='<option value="">Seleccione modelo / corrida</option>';
+
+  window.CORRIDAS_INVENTARIO
+    .sort((a,b)=>
+      (a.marca+' '+a.modelo+' '+a.color)
+        .localeCompare(
+          b.marca+' '+b.modelo+' '+b.color,
+          undefined,
+          {numeric:true,sensitivity:'base'}
+        )
+    )
+    .forEach(g=>{
+      s.add(
+        new Option(
+          [
+            g.marca,
+            g.modelo,
+            g.color,
+            'Escala '+g.escala
+          ].filter(Boolean).join(' · '),
+          g.key
+        )
+      );
+    });
+}
+
+function moverCurvaUI(tipo){
+  const key=$('invCorridaCurva').value;
+  const curvaId=$('invCurvaSelect').value;
+  const g=(window.CORRIDAS_INVENTARIO||[])
+    .find(x=>x.key===key);
+  const curva=(CURVAS_TALLAS||[])
+    .find(x=>x.curvaId===curvaId);
+
+  if(!g||!curva){
+    return msg(
+      'mensajeCurvas',
+      'Seleccione una corrida y una curva.',
+      'error'
+    );
+  }
+
+  if(g.escala!==curva.escala){
+    return msg(
+      'mensajeCurvas',
+      'La curva seleccionada pertenece a la escala '+curva.escala+
+      ' y la corrida usa '+g.escala+'.',
+      'error'
+    );
+  }
+
+  const items=[];
+
+  Object.entries(curva.composicion||{}).forEach(([talla,cantidad])=>{
+    const p=g.productos.find(
+      x=>String(x.talla)===String(talla)
+    );
+
+    if(p&&Number(cantidad)>0){
+      items.push({
+        codigo:p.codigo,
+        cantidad:Number(cantidad)
+      });
+    }
+  });
+
+  if(!items.length){
+    return msg(
+      'mensajeCurvas',
+      'No hay tallas compatibles entre la curva y la corrida.',
+      'error'
+    );
+  }
+
+  const cajas=Math.max(
+    1,
+    parseInt($('invCurvaCajas').value||'1',10)||1
+  );
+
+  if(
+    !confirm(
+      '¿Registrar '+tipo+
+      ' de '+cajas+' caja(s) usando '+curva.nombre+'?'
+    )
+  ){
+    return;
+  }
+
+  api(
+    'movimientocurva',
+    {
+      tipo,
+      cajas,
+      nota:$('invCurvaNota').value,
+      items:JSON.stringify(items)
+    },
+    r=>{
+      if(!r||!r.ok){
+        return msg(
+          'mensajeCurvas',
+          (r&&r.error)||'No se pudo registrar la curva.',
+          'error'
+        );
+      }
+
+      msg(
+        'mensajeCurvas',
+        r.mensaje+' · Total: '+r.total,
+        'ok'
+      );
+
+      cargarResumen();
+      CATALOGO_POS=[];
+      CATALOGO_POS_TS=0;
+      precargarCatalogoPos(true);
+      setTimeout(actualizarCorridasCurvaUI,300);
+    }
+  );
+}
+
 function cargarReportes(){
   if(!SESION||SESION.rol!=='ADMIN') return;
 
@@ -7074,6 +7993,13 @@ function cargarReportes(){
       '<div class="dato"><b>'+Q(r.ventaNeta??r.total)+'</b><span>VENTA NETA</span></div>'+
       '<div class="dato"><b>'+r.numeroVentas+'</b><span>Ventas</span></div>'+
       '<div class="dato"><b>'+r.unidades+'</b><span>Unidades</span></div>';
+
+    $('repMargen').innerHTML=
+      '<div class="resumen">'+
+        '<div class="dato"><b>'+Q(r.costoVentas||0)+'</b><span>Costo FIFO de ventas</span></div>'+
+        '<div class="dato"><b>'+Q(r.margenBruto||0)+'</b><span>Margen bruto</span></div>'+
+        '<div class="dato"><b>'+Number(r.margenPorcentaje||0).toFixed(2)+'%</b><span>Margen sobre ventas</span></div>'+
+      '</div>';
 
     $('repTop').innerHTML=
       tablaReporte(
