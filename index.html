@@ -4,7 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Comercial Adelaida - POS</title>
-<script src="https://unpkg.com/html5-qrcode" type="text/javascript" defer></script>
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript" defer>
+document.addEventListener('DOMContentLoaded',()=>{
+  prepararBuscadorVentas();
+});
+
+</script>
 <style>
 *{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f4f4f6;color:#202124}.app{max-width:960px;margin:auto;padding:14px}.card,.header{background:#fff;border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 3px 14px rgba(0,0,0,.06)}h1{margin:0;font-size:24px}.sub{color:#666;margin-top:4px}.tabs{
   display:grid;
@@ -67,7 +72,11 @@
       <div class="fila"><div class="buscadorAuto"><input id="posCodigo" autocomplete="off" placeholder="Código, modelo, marca o color"><div id="sugerenciasPos" class="listaSugerencias oculto"></div></div><button class="btnNegro" onclick="agregar()">Agregar</button></div>
       <button id="btnCamPos" class="btnAzul w100" style="margin-top:9px" onclick="toggleCam()">📷 Abrir cámara continua</button>
       <div id="scanPosBox" class="oculto"><div id="readerPos" class="scanner"></div></div>
-      <div id="mensajePos"></div><div id="carritoLista"></div>
+      <div id="mensajePos"></div>
+      <div id="cajaPosAviso" class="mensaje info" style="margin-top:8px">
+        Verificando caja…
+      </div>
+      <div id="carritoLista"></div>
       <div class="totales"><div class="lineaTotal"><span>Pares</span><strong id="posPares">0</strong></div><div class="lineaTotal"><span>Subtotal</span><strong id="posSubtotal">Q0.00</strong></div><div class="lineaTotal"><span>Descuento</span><strong id="posDescuentoVista">Q0.00</strong></div><div class="lineaTotal"><span>Total</span><span class="totalGrande" id="posTotal">Q0.00</span></div></div>
       <div class="grid2"><div><label>Cliente</label><input id="posCliente" placeholder="Opcional"></div><div><label>NIT</label><input id="posNit" placeholder="CF o NIT"></div><div><label>Vendedor</label><select id="posVendedor"></select></div><div><label>Forma de pago</label><select id="posMetodo" onchange="actualizarPago()"><option>EFECTIVO</option><option>TRANSFERENCIA</option><option>TARJETA</option><option>CREDITO</option></select></div><div><label>Tipo de documento</label><select id="posTipoDocumento"><option value="TICKET">TICKET</option><option value="FACTURA_INTERNA">FACTURA INTERNA</option><option value="FEL">FEL (requiere integración)</option></select></div><div><label>Divisa de pago</label><select id="posMoneda" onchange="actualizarPago()"></select></div><div><label>Descuento Q</label><input id="posDescuento" type="number" min="0" step="0.01" value="0" oninput="renderCarrito()"></div><div id="efectivoBox"><label id="efectivoEtiqueta">Efectivo recibido</label><input id="posEfectivo" type="number" min="0" step="0.01" value="0" oninput="actualizarCambio()"></div><div id="cambioMonedaBox"><label>Dar cambio en</label><select id="posCambioMoneda" onchange="actualizarCambio()"><option value="GTQ">GTQ - Quetzal</option></select></div><div><label>Nota</label><input id="posNota"></div></div>
       <div id="divisaInfo" class="info mensaje">Total en divisa: —</div>
@@ -739,6 +748,8 @@ let CATALOGO_POS=[];
 let CATALOGO_POS_SUCURSAL='';
 let CATALOGO_POS_CARGANDO=false;
 let CATALOGO_POS_TS=0;
+let CAJA_POS_ABIERTA=null;
+let CAJA_POS_ID='';
 let CAMBIO_SUCURSAL_ID=0;
 let DEV_NUEVO_PRODUCTO=null;
 let DEV_CAMBIO_TIMER=null;
@@ -759,6 +770,10 @@ document.addEventListener('DOMContentLoaded',()=>{
     CATALOGO_POS_SUCURSAL='';
     CATALOGO_POS_TS=0;
     precargarCatalogoPos(true);
+
+    CAJA_POS_ABIERTA=null;
+    CAJA_POS_ID='';
+    verificarCajaPos();
 
     CAMBIO_SUCURSAL_ID++;
     const cambioId=CAMBIO_SUCURSAL_ID;
@@ -919,6 +934,10 @@ function vista(v){
 
   if(['pos','inventario','traslados'].includes(v)){
     precargarCatalogoPos(false);
+  }
+
+  if(v==='pos'){
+    verificarCajaPos();
   }
 }
 
@@ -1276,6 +1295,105 @@ function cargarResumenSeguro(cambioId,sucursalEsperada){
 }
 
 
+
+
+function pintarEstadoCajaPos(){
+  const aviso=$('cajaPosAviso');
+  const btn=$('btnCobrarVenta');
+
+  if(!aviso||!btn){
+    return;
+  }
+
+  if(!SESION){
+    btn.disabled=true;
+    return;
+  }
+
+  if(!['ADMIN','CAJERO'].includes(SESION.rol)){
+    CAJA_POS_ABIERTA=false;
+    CAJA_POS_ID='';
+
+    aviso.className='mensaje info';
+    aviso.textContent=
+      'Vendedor: puede preparar y guardar pedidos. El cobro lo realiza un cajero o administrador.';
+
+    btn.disabled=true;
+    btn.textContent='COBRO SOLO EN CAJA';
+    return;
+  }
+
+  if(CAJA_POS_ABIERTA===null){
+    aviso.className='mensaje info';
+    aviso.textContent='Verificando caja…';
+    btn.disabled=true;
+    btn.textContent='VERIFICANDO CAJA…';
+    return;
+  }
+
+  if(CAJA_POS_ABIERTA){
+    aviso.className='mensaje ok';
+    aviso.textContent=
+      '✅ Caja abierta'+
+      (CAJA_POS_ID?' · '+CAJA_POS_ID:'')+
+      ' · Puede registrar ventas.';
+
+    btn.disabled=false;
+    btn.textContent='COBRAR VENTA';
+  }else{
+    aviso.className='mensaje error';
+    aviso.innerHTML=
+      '⛔ No hay caja abierta para este usuario en <b>'+
+      esc(SUCURSAL)+
+      '</b>. Abra Caja antes de registrar una venta.';
+
+    btn.disabled=true;
+    btn.textContent='ABRA CAJA PARA COBRAR';
+  }
+}
+
+function verificarCajaPos(){
+  if(!SESION){
+    return;
+  }
+
+  if(!['ADMIN','CAJERO'].includes(SESION.rol)){
+    CAJA_POS_ABIERTA=false;
+    CAJA_POS_ID='';
+    pintarEstadoCajaPos();
+    return;
+  }
+
+  CAJA_POS_ABIERTA=null;
+  CAJA_POS_ID='';
+  pintarEstadoCajaPos();
+
+  api(
+    'cajaestado',
+    {sucursal:SUCURSAL},
+    r=>{
+      if(!r||!r.ok){
+        CAJA_POS_ABIERTA=false;
+        CAJA_POS_ID='';
+        pintarEstadoCajaPos();
+
+        return msg(
+          'mensajePos',
+          (r&&r.error)||'No se pudo verificar el estado de caja.',
+          'error'
+        );
+      }
+
+      CAJA_POS_ABIERTA=!!r.abierta;
+      CAJA_POS_ID=
+        r.abierta
+          ? String(r.cajaId||'')
+          : '';
+
+      pintarEstadoCajaPos();
+    }
+  );
+}
 
 function precargarCatalogoPos(forzar=false){
   if(!TOKEN){
@@ -2145,6 +2263,16 @@ function cobrar(){
     return msg(
       'mensajePos',
       'Los vendedores deben guardar el pedido. La venta la completa un cajero o administrador con caja abierta.',
+      'error'
+    );
+  }
+
+  if(CAJA_POS_ABIERTA!==true){
+    verificarCajaPos();
+
+    return msg(
+      'mensajePos',
+      'Debe abrir caja en '+SUCURSAL+' antes de registrar una venta.',
       'error'
     );
   }
@@ -3703,6 +3831,60 @@ function hacerTraslado(){
   );
 }
 
+
+let VENTAS_LISTA_CARGADA=false;
+
+function abrirListaVentas(){
+  const lista=$('listaVentas');
+  const detalle=$('ticketHistorialCard');
+
+  if(detalle){
+    detalle.classList.add('oculto');
+  }
+
+  if(lista){
+    lista.classList.remove('oculto');
+  }
+
+  if(
+    !VENTAS_LISTA_CARGADA &&
+    $('buscarVentaTexto')
+  ){
+    buscarVentas();
+  }
+}
+
+function prepararBuscadorVentas(){
+  const input=$('buscarVentaTexto');
+
+  if(!input || input.dataset.despliegueListo==='SI'){
+    return;
+  }
+
+  input.dataset.despliegueListo='SI';
+
+  input.addEventListener('focus',()=>{
+    abrirListaVentas();
+  });
+
+  input.addEventListener('click',()=>{
+    abrirListaVentas();
+  });
+
+  input.addEventListener('input',()=>{
+    const detalle=$('ticketHistorialCard');
+    const lista=$('listaVentas');
+
+    if(detalle){
+      detalle.classList.add('oculto');
+    }
+
+    if(lista){
+      lista.classList.remove('oculto');
+    }
+  });
+}
+
 function buscarVentas(){
   const q=
     $('buscarVentaTexto')
@@ -3731,6 +3913,9 @@ function buscarVentas(){
         r.ventas||
         [];
 
+      VENTAS_LISTA_CARGADA=true;
+
+      $('listaVentas').classList.remove('oculto');
       $('listaVentas').innerHTML='';
 
       if(!ventas.length){
@@ -3799,11 +3984,21 @@ function buscarVentas(){
 }
 
 function abrirVenta(numeroVenta,imprimir){
+  const lista=$('listaVentas');
+
+  if(lista){
+    lista.classList.add('oculto');
+  }
+
   api(
     'detalleventa',
     {numeroVenta},
     r=>{
       if(!r.ok){
+        if(lista){
+          lista.classList.remove('oculto');
+        }
+
         return msg(
           'mensajeVentas',
           r.error,
@@ -3816,12 +4011,19 @@ function abrirVenta(numeroVenta,imprimir){
         'ticketHistorial'
       );
 
-      $('ticketHistorialCard')
-        .classList.remove(
-          'oculto'
-        );
+      const detalle=$('ticketHistorialCard');
+
+      detalle.classList.remove('oculto');
 
       $('mensajeVentas').innerHTML='';
+
+      // La venta seleccionada aparece inmediatamente debajo.
+      setTimeout(()=>{
+        detalle.scrollIntoView({
+          behavior:'smooth',
+          block:'start'
+        });
+      },50);
 
       if(imprimir){
         setTimeout(
@@ -6373,16 +6575,52 @@ function cargarCaja(){
 }
 
 function abrirCajaUI(){
-  api('abrircaja',{montoInicial:$('cajaInicial').value},r=>{msg('mensajeCaja',r.ok?r.mensaje:r.error,r.ok?'ok':'error');if(r.ok)cargarCaja();});
+  api('abrircaja',{montoInicial:$('cajaInicial').value,sucursal:SUCURSAL},r=>{
+    msg('mensajeCaja',r.ok?r.mensaje:r.error,r.ok?'ok':'error');
+
+    if(r.ok){
+      cargarCaja();
+      verificarCajaPos();
+    }
+  });
 }
 function movimientoCajaUI(){
-  api('movimientocaja',{tipo:$('cajaMovTipo').value,monto:$('cajaMovMonto').value,nota:$('cajaMovNota').value},r=>{msg('mensajeCaja',r.ok?r.mensaje:r.error,r.ok?'ok':'error');if(r.ok)cargarCaja();});
+  api(
+    'movimientocaja',
+    {
+      tipo:$('cajaMovTipo').value,
+      monto:$('cajaMovMonto').value,
+      nota:$('cajaMovNota').value,
+      sucursal:SUCURSAL
+    },
+    r=>{
+      msg(
+        'mensajeCaja',
+        r.ok?r.mensaje:r.error,
+        r.ok?'ok':'error'
+      );
+
+      if(r.ok){
+        cargarCaja();
+        verificarCajaPos();
+      }
+    }
+  );
 }
 function cerrarCajaUI(){
   if(!confirm('¿Cerrar caja?')) return;
-  api('cerrarcaja',{declarado:$('cajaDeclarado').value,modoArqueo:$('cajaModo').value},r=>{
+  api('cerrarcaja',{declarado:$('cajaDeclarado').value,modoArqueo:$('cajaModo').value,sucursal:SUCURSAL},r=>{
     if(!r.ok) return msg('mensajeCaja',r.error,'error');
-    msg('mensajeCaja','Caja cerrada. Esperado '+Q(r.esperado)+' · Declarado '+Q(r.declarado)+' · Diferencia '+Q(r.diferencia),'ok'); cargarCaja();
+    msg(
+      'mensajeCaja',
+      'Caja cerrada. Esperado '+Q(r.esperado)+
+      ' · Declarado '+Q(r.declarado)+
+      ' · Diferencia '+Q(r.diferencia),
+      'ok'
+    );
+
+    cargarCaja();
+    verificarCajaPos();
   });
 }
 
