@@ -735,6 +735,10 @@ let t1=null;
 let t2=null;
 let t3=null;
 let SUGERENCIA_ID={pos:0,inv:0,tras:0};
+let CATALOGO_POS=[];
+let CATALOGO_POS_SUCURSAL='';
+let CATALOGO_POS_CARGANDO=false;
+let CATALOGO_POS_TS=0;
 let CAMBIO_SUCURSAL_ID=0;
 let DEV_NUEVO_PRODUCTO=null;
 let DEV_CAMBIO_TIMER=null;
@@ -750,6 +754,11 @@ document.addEventListener('DOMContentLoaded',()=>{
 
     SUCURSAL=nuevaSucursal;
     localStorage.setItem('adelaida_sucursal',SUCURSAL);
+
+    CATALOGO_POS=[];
+    CATALOGO_POS_SUCURSAL='';
+    CATALOGO_POS_TS=0;
+    precargarCatalogoPos(true);
 
     CAMBIO_SUCURSAL_ID++;
     const cambioId=CAMBIO_SUCURSAL_ID;
@@ -907,6 +916,10 @@ function vista(v){
     const b=$('tab'+n.charAt(0).toUpperCase()+n.slice(1));
     if(b) b.classList.toggle('activo',n===v);
   });
+
+  if(v==='pos'){
+    precargarCatalogoPos(false);
+  }
 }
 
 function guardarConfig(){
@@ -1263,6 +1276,111 @@ function cargarResumenSeguro(cambioId,sucursalEsperada){
 }
 
 
+
+function precargarCatalogoPos(forzar=false){
+  if(!TOKEN){
+    return;
+  }
+
+  const vigente=
+    CATALOGO_POS.length &&
+    CATALOGO_POS_SUCURSAL===SUCURSAL &&
+    (Date.now()-CATALOGO_POS_TS)<30000;
+
+  if(!forzar && vigente){
+    return;
+  }
+
+  if(CATALOGO_POS_CARGANDO){
+    return;
+  }
+
+  CATALOGO_POS_CARGANDO=true;
+
+  api(
+    'catalogopos',
+    {sucursal:SUCURSAL},
+    r=>{
+      CATALOGO_POS_CARGANDO=false;
+
+      if(!r||!r.ok){
+        return;
+      }
+
+      CATALOGO_POS=
+        Array.isArray(r.productos)
+          ? r.productos
+          : [];
+
+      CATALOGO_POS_SUCURSAL=SUCURSAL;
+      CATALOGO_POS_TS=Date.now();
+
+      const input=$('posCodigo');
+
+      if(
+        input &&
+        input.value.trim()
+      ){
+        sugerencias(
+          input.value.trim(),
+          'pos'
+        );
+      }
+    }
+  );
+}
+
+function sugerenciasPosLocales(q){
+  const buscado=L(q);
+
+  if(!buscado){
+    return [];
+  }
+
+  const resultados=[];
+
+  for(const p of CATALOGO_POS){
+    if(
+      CATALOGO_POS_SUCURSAL!==SUCURSAL
+    ){
+      break;
+    }
+
+    const campos=[
+      p.codigo,
+      p.marca,
+      p.modelo,
+      p.color,
+      p.talla
+    ].map(L);
+
+    if(
+      campos.some(x=>x.startsWith(buscado))
+    ){
+      resultados.push(p);
+
+      if(resultados.length>=20){
+        break;
+      }
+    }
+  }
+
+  return resultados;
+}
+
+function actualizarExistenciaCatalogoPos(codigo,nuevaExistencia){
+  const p=CATALOGO_POS.find(
+    x=>String(x.codigo).toUpperCase()===String(codigo).toUpperCase()
+  );
+
+  if(p){
+    p.existencia=Math.max(
+      0,
+      Number(nuevaExistencia)||0
+    );
+  }
+}
+
 function auto(
   id,
   modo,
@@ -1342,8 +1460,89 @@ document.addEventListener('keydown',e=>{
 
 });
 
-function sugerencias(q,modo){
+function pintarSugerencias(resultados,modo,q){
+  const idLista=
+    modo==='pos'
+      ? 'sugerenciasPos'
+      : modo==='inv'
+        ? 'sugerenciasInv'
+        : 'sugerenciasTras';
 
+  const lista=$(idLista);
+
+  if(!lista){
+    return;
+  }
+
+  lista.innerHTML='';
+
+  resultados.forEach(p=>{
+    const d=document.createElement('div');
+    d.className='itemSugerencia';
+
+    d.innerHTML=
+      '<div class="sugCodigo">'+
+      esc(p.codigo)+
+      '</div>'+
+      '<div class="sugDetalle">'+
+      esc(p.marca)+
+      ' · '+
+      esc(p.modelo)+
+      ' · '+
+      esc(p.color)+
+      ' · Talla '+
+      esc(p.talla)+
+      ' · '+
+      p.existencia+
+      ' '+
+      (
+        String(p.tipoIngreso||'INDIVIDUAL').toUpperCase()==='INDIVIDUAL'
+          ? (Number(p.existencia)===1?'unidad':'unidades')
+          : 'pares'
+      )+
+      ' · '+
+      Q(p.precio)+
+      '</div>';
+
+    d.onmousedown=e=>{
+      e.preventDefault();
+      e.stopPropagation();
+
+      if(modo==='pos'){
+        agregarDesdeSugerencia(p);
+        lista.classList.remove('oculto');
+
+      }else if(modo==='inv'){
+        lista.classList.add('oculto');
+        $('codigo').value=p.codigo;
+        consultar(p.codigo);
+
+      }else{
+        lista.classList.add('oculto');
+        $('trasCodigo').value=p.codigo;
+      }
+    };
+
+    d.onclick=e=>{
+      e.preventDefault();
+      e.stopPropagation();
+
+      if(modo==='pos'){
+        lista.classList.remove('oculto');
+      }
+    };
+
+    lista.appendChild(d);
+  });
+
+  if(resultados.length){
+    lista.classList.remove('oculto');
+  }else{
+    lista.classList.add('oculto');
+  }
+}
+
+function sugerencias(q,modo){
   const idLista=
     modo==='pos'
       ? 'sugerenciasPos'
@@ -1367,101 +1566,55 @@ function sugerencias(q,modo){
     return;
   }
 
+  // POS: búsqueda totalmente local después de una sola precarga.
+  if(modo==='pos'){
+    const catalogoListo=
+      CATALOGO_POS.length &&
+      CATALOGO_POS_SUCURSAL===SUCURSAL;
+
+    if(catalogoListo){
+      pintarSugerencias(
+        sugerenciasPosLocales(q),
+        'pos',
+        q
+      );
+      return;
+    }
+
+    lista.innerHTML=
+      '<div class="itemSugerencia">'+
+        '<div class="sugDetalle">Cargando productos…</div>'+
+      '</div>';
+
+    lista.classList.remove('oculto');
+    precargarCatalogoPos(false);
+    return;
+  }
+
   const solicitud=++SUGERENCIA_ID[modo];
 
   api(
     'sugerir',
     {q,sucursal:SUCURSAL},
     r=>{
-
-      // Ignorar respuestas anteriores que lleguen tarde.
       if(solicitud!==SUGERENCIA_ID[modo]){
         return;
       }
 
-      // Si el texto cambió, esta respuesta ya no corresponde.
       if(!input || input.value.trim()!==q){
         return;
       }
-
-      lista.innerHTML='';
 
       const resultados=
         r&&Array.isArray(r.sugerencias)
           ? r.sugerencias
           : [];
 
-      resultados.forEach(p=>{
-
-        const d=document.createElement('div');
-        d.className='itemSugerencia';
-
-        d.innerHTML=
-          '<div class="sugCodigo">'+
-          esc(p.codigo)+
-          '</div>'+
-          '<div class="sugDetalle">'+
-          esc(p.marca)+
-          ' · '+
-          esc(p.modelo)+
-          ' · '+
-          esc(p.color)+
-          ' · Talla '+
-          esc(p.talla)+
-          ' · '+
-          p.existencia+
-          ' '+
-          (
-            String(p.tipoIngreso||'INDIVIDUAL').toUpperCase()==='INDIVIDUAL'
-              ? (Number(p.existencia)===1?'unidad':'unidades')
-              : 'pares'
-          )+
-          ' · '+
-          Q(p.precio)+
-          '</div>';
-
-        d.onmousedown=e=>{
-          e.preventDefault();
-          e.stopPropagation();
-
-          if(modo==='pos'){
-            // Punto de venta:
-            // agregar sin cerrar la lista para seleccionar varias tallas.
-            agregarDesdeSugerencia(p);
-
-            // Forzar que la lista permanezca visible.
-            lista.classList.remove('oculto');
-
-          }else if(modo==='inv'){
-            lista.classList.add('oculto');
-            $('codigo').value=p.codigo;
-            consultar(p.codigo);
-
-          }else{
-            lista.classList.add('oculto');
-            $('trasCodigo').value=p.codigo;
-          }
-        };
-
-        // Evitar que el click posterior al mousedown llegue al
-        // manejador global que cierra la lista.
-        d.onclick=e=>{
-          e.preventDefault();
-          e.stopPropagation();
-
-          if(modo==='pos'){
-            lista.classList.remove('oculto');
-          }
-        };
-
-        lista.appendChild(d);
-      });
-
-      if(resultados.length){
-        lista.classList.remove('oculto');
-      }else{
-        lista.classList.add('oculto');
-      }
+      pintarSugerencias(
+        resultados,
+        modo,
+        q
+      );
     }
   );
 }
@@ -1525,37 +1678,6 @@ function agregarDesdeSugerencia(p){
     listaPos.classList.remove('oculto');
   }
 
-  // Completar en segundo plano datos de FIFO/lote sin retrasar la selección.
-  api(
-    'buscar',
-    {codigo:p.codigo,sucursal:SUCURSAL},
-    det=>{
-      if(!det || !det.ok || !det.encontrado){
-        return;
-      }
-
-      const actual=carrito.find(
-        z=>String(z.codigo).toUpperCase()===String(p.codigo).toUpperCase()
-      );
-
-      if(!actual){
-        return;
-      }
-
-      const cantidad=actual.cantidad;
-      const precioBase=actual.precioBase;
-      const precioVenta=actual.precioVenta;
-
-      Object.assign(actual,det,{cantidad,precioBase,precioVenta});
-      renderCarrito();
-
-      // La consulta de FIFO/lote no debe cerrar la lista de tallas.
-      const listaPos=$('sugerenciasPos');
-      if(listaPos && $('posCodigo').value.trim()){
-        listaPos.classList.remove('oculto');
-      }
-    }
-  );
 }
 
   function agregar(cod,intento=0){
@@ -2013,6 +2135,7 @@ function cobrar(){
     limpiarPosDespues();
     $('ticketCard').classList.remove('oculto');
     cargarResumen();
+    precargarCatalogoPos(true);
     msg('mensajePos','Venta registrada: '+r.numeroVenta,'ok');
   });
 }
