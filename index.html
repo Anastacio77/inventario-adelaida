@@ -455,6 +455,67 @@ document.addEventListener('DOMContentLoaded',()=>{
       <div id="mensajeUsuarios"></div>
     </div>
 
+    <div id="editarUsuarioCard" class="card oculto">
+      <h3 style="margin-top:0">Editar usuario</h3>
+
+      <input id="ueUsuario" type="hidden">
+
+      <div class="grid2">
+        <div>
+          <label>Usuario</label>
+          <input id="ueUsuarioVista" disabled>
+        </div>
+
+        <div>
+          <label>Nombre</label>
+          <input id="ueNombre">
+        </div>
+
+        <div>
+          <label>Rol</label>
+          <select id="ueRol" onchange="ajustarEditarUsuario()">
+            <option value="CAJERO">CAJERO</option>
+            <option value="BODEGA">BODEGA</option>
+            <option value="VENDEDOR">VENDEDOR</option>
+            <option value="ADMIN">ADMIN</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Sucursal base</label>
+          <select id="ueSucursal"></select>
+        </div>
+
+        <div>
+          <label>Nueva clave (opcional)</label>
+          <input id="ueClave" type="password" minlength="4" placeholder="Dejar vacío para conservar">
+        </div>
+
+        <div>
+          <label>Tipo de comisión</label>
+          <select id="ueTipoComision">
+            <option value="NINGUNA">NINGUNA</option>
+            <option value="PORCENTAJE">PORCENTAJE</option>
+            <option value="FIJO">MONTO FIJO</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Comisión</label>
+          <input id="ueComision" type="number" min="0" step="0.01" value="0">
+        </div>
+      </div>
+
+      <div class="fila" style="margin-top:12px">
+        <button class="btnAzul" style="flex:1" onclick="guardarEdicionUsuario()">Guardar cambios</button>
+        <button class="btnGris" style="flex:1" onclick="cerrarEditarUsuario()">Cancelar</button>
+      </div>
+
+      <div class="sub" style="margin-top:8px">
+        Los vendedores pueden cambiar de sucursal desde el selector superior. La sucursal aquí queda como sucursal base al iniciar sesión.
+      </div>
+    </div>
+
     <div class="card">
       <h3 style="margin-top:0">Usuarios</h3>
 
@@ -829,6 +890,14 @@ document.addEventListener('DOMContentLoaded',()=>{
 
       cargarResumenSeguro(cambioId,nuevaSucursal);
       cargarVendedores();
+
+      if(
+        SESION &&
+        SESION.rol==='VENDEDOR' &&
+        !$('vistaComisiones').classList.contains('oculto')
+      ){
+        cargarComisiones();
+      }
 
       if(DIVISAS.length) llenarSelectsDivisas();
 
@@ -1209,13 +1278,39 @@ function iniciarApp(u){
 function llenarSucursales(){
   const sel=$('sucursalActual');
   sel.innerHTML='';
+
   let permitidas=SUCURSALES.slice();
-  if(['CAJERO','VENDEDOR'].includes(SESION.rol)) permitidas=[SESION.sucursal];
-  if(!permitidas.includes(SUCURSAL)) SUCURSAL=permitidas[0]||'Adelaida La Paz';
-  permitidas.forEach(s=>sel.add(new Option(s,s)));
+
+  // CAJERO permanece fijo en su sucursal.
+  // VENDEDOR puede cambiar entre sucursales activas.
+  if(SESION.rol==='CAJERO'){
+    permitidas=[SESION.sucursal];
+  }
+
+  if(!permitidas.includes(SUCURSAL)){
+    SUCURSAL=
+      (
+        SESION.rol==='VENDEDOR' &&
+        permitidas.includes(SESION.sucursal)
+      )
+        ? SESION.sucursal
+        : (permitidas[0]||'Adelaida La Paz');
+  }
+
+  permitidas.forEach(
+    s=>sel.add(
+      new Option(s,s)
+    )
+  );
+
   sel.value=SUCURSAL;
-  sel.disabled=['CAJERO','VENDEDOR'].includes(SESION.rol);
-  localStorage.setItem('adelaida_sucursal',SUCURSAL);
+  sel.disabled=SESION.rol==='CAJERO';
+
+  localStorage.setItem(
+    'adelaida_sucursal',
+    SUCURSAL
+  );
+
   rellenarDestinos();
   rellenarUsuarioSucursales();
 }
@@ -4267,12 +4362,176 @@ function cargarUsuarios(){
     (r.usuarios||[]).forEach(u=>{
       const tr=document.createElement('tr');
       const com=u.tipoComision==='PORCENTAJE'?u.comision+'%':(u.tipoComision==='FIJO'?Q(u.comision):'—');
-      tr.innerHTML='<td>'+esc(u.usuario)+'</td><td>'+esc(u.nombre)+'</td><td>'+esc(u.rol)+'</td><td>'+esc(u.sucursal)+'</td><td><span class="badge">'+esc(u.activo)+'</span></td><td>'+esc(com)+'</td><td><button class="btnGris btnEstado">'+(u.activo==='SI'?'Desactivar':'Activar')+'</button> '+(u.rol==='VENDEDOR'?'<button class="btnAzul btnCom">Comisión</button>':'')+'</td>';
+      tr.innerHTML=
+        '<td>'+esc(u.usuario)+'</td>'+
+        '<td>'+esc(u.nombre)+'</td>'+
+        '<td>'+esc(u.rol)+'</td>'+
+        '<td>'+esc(u.sucursal)+'</td>'+
+        '<td><span class="badge">'+esc(u.activo)+'</span></td>'+
+        '<td>'+esc(com)+'</td>'+
+        '<td>'+
+          '<button class="btnAzul btnEditar">Editar</button> '+
+          '<button class="btnGris btnEstado">'+
+            (u.activo==='SI'?'Desactivar':'Activar')+
+          '</button> '+
+          (
+            u.rol==='VENDEDOR'
+              ? '<button class="btnAzul btnCom">Comisión</button>'
+              : ''
+          )+
+        '</td>';
+
+      tr.querySelector('.btnEditar').onclick=()=>abrirEditarUsuario(u);
       tr.querySelector('.btnEstado').onclick=()=>cambiarEstadoUsuario(u.usuario,u.activo!=='SI');
       const bc=tr.querySelector('.btnCom'); if(bc) bc.onclick=()=>editarComisionUsuario(u);
       tb.appendChild(tr);
     });
   });
+}
+
+
+function llenarSucursalesEditarUsuario(){
+  const s=$('ueSucursal');
+
+  if(!s){
+    return;
+  }
+
+  const anterior=s.value;
+  s.innerHTML='';
+
+  SUCURSALES.forEach(x=>
+    s.add(
+      new Option(x,x)
+    )
+  );
+
+  if(
+    anterior &&
+    SUCURSALES.includes(anterior)
+  ){
+    s.value=anterior;
+  }
+}
+
+function ajustarEditarUsuario(){
+  const rol=$('ueRol').value;
+  const suc=$('ueSucursal');
+  const tipo=$('ueTipoComision');
+  const valor=$('ueComision');
+
+  suc.disabled=rol==='ADMIN';
+
+  const esVendedor=rol==='VENDEDOR';
+
+  tipo.disabled=!esVendedor;
+  valor.disabled=!esVendedor;
+
+  if(!esVendedor){
+    tipo.value='NINGUNA';
+    valor.value=0;
+  }
+}
+
+function abrirEditarUsuario(u){
+  llenarSucursalesEditarUsuario();
+
+  $('ueUsuario').value=u.usuario;
+  $('ueUsuarioVista').value=u.usuario;
+  $('ueNombre').value=u.nombre||'';
+  $('ueRol').value=u.rol||'CAJERO';
+  $('ueClave').value='';
+  $('ueTipoComision').value=u.tipoComision||'NINGUNA';
+  $('ueComision').value=Number(u.comision)||0;
+
+  if(
+    u.sucursal &&
+    u.sucursal!=='TODAS' &&
+    SUCURSALES.includes(u.sucursal)
+  ){
+    $('ueSucursal').value=u.sucursal;
+  }else if(SUCURSALES.length){
+    $('ueSucursal').value=SUCURSALES[0];
+  }
+
+  ajustarEditarUsuario();
+
+  $('editarUsuarioCard').classList.remove('oculto');
+
+  setTimeout(()=>{
+    $('editarUsuarioCard').scrollIntoView({
+      behavior:'smooth',
+      block:'start'
+    });
+  },50);
+}
+
+function cerrarEditarUsuario(){
+  $('editarUsuarioCard').classList.add('oculto');
+  $('ueClave').value='';
+}
+
+function guardarEdicionUsuario(){
+  const usuario=$('ueUsuario').value;
+
+  if(!usuario){
+    return msg(
+      'mensajeUsuarios',
+      'Seleccione un usuario para editar.',
+      'error'
+    );
+  }
+
+  api(
+    'editarusuario',
+    {
+      usuario,
+      nombre:$('ueNombre').value,
+      rol:$('ueRol').value,
+      sucursalUsuario:$('ueSucursal').value,
+      claveNueva:$('ueClave').value,
+      tipoComision:$('ueTipoComision').value,
+      comision:$('ueComision').value
+    },
+    r=>{
+      if(!r.ok){
+        return msg(
+          'mensajeUsuarios',
+          r.error,
+          'error'
+        );
+      }
+
+      msg(
+        'mensajeUsuarios',
+        r.mensaje,
+        'ok'
+      );
+
+      cerrarEditarUsuario();
+      cargarUsuarios();
+      cargarVendedores();
+
+      // Si el ADMIN editó su propio usuario,
+      // refrescar sesión para aplicar nombre/rol/sucursal.
+      if(
+        SESION &&
+        String(SESION.usuario).toLowerCase()===
+        String(usuario).toLowerCase()
+      ){
+        api(
+          'sesion',
+          {},
+          rr=>{
+            if(rr&&rr.ok){
+              SESION=rr.usuario;
+              aplicarSesion();
+            }
+          }
+        );
+      }
+    }
+  );
 }
 
 function crearUsuario(){
