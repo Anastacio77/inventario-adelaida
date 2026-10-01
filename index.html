@@ -187,32 +187,19 @@ document.addEventListener('DOMContentLoaded',()=>{
       </div>
     </div>
     <div id="inventarioCurvasCard" class="card">
-      <h3 style="margin-top:0">Curvas de tallas</h3>
-      <div class="sub">Guarde composiciones de fábrica y aplíquelas como entrada o salida por cajas completas.</div>
-
-      <div class="grid2" style="margin-top:10px">
-        <div>
-          <label>Nombre de curva</label>
-          <input id="curvaNombre" placeholder="Ej. Caja dama 12 pares">
-        </div>
-        <div>
-          <label>Escala</label>
-          <select id="curvaEscala" onchange="dibujarCurvaEditor()"></select>
-        </div>
+      <h3 style="margin-top:0">Movimientos por paquete / curva</h3>
+      <div class="sub">
+        Los paquetes/curvas se crean ahora en <b>Producto</b>, igual que cualquier referencia.
+        Aquí puede ingresar o retirar cajas completas distribuyendo automáticamente sus tallas.
       </div>
 
-      <div id="curvaEditor" style="margin-top:10px"></div>
-      <button class="btnAzul w100" style="margin-top:8px" onclick="guardarCurvaUI()">Guardar curva</button>
-
-      <hr style="margin:18px 0">
-
-      <div class="grid2">
+      <div class="grid2" style="margin-top:12px">
         <div>
           <label>Modelo / corrida</label>
           <select id="invCorridaCurva"></select>
         </div>
         <div>
-          <label>Curva predefinida</label>
+          <label>Paquete / curva</label>
           <select id="invCurvaSelect"></select>
         </div>
         <div>
@@ -229,6 +216,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         <button class="btnVerde" style="flex:1" onclick="moverCurvaUI('ENTRADA')">+ Entrada por curva</button>
         <button class="btnRojo" style="flex:1" onclick="moverCurvaUI('SALIDA')">− Salida por curva</button>
       </div>
+
       <div id="mensajeCurvas"></div>
     </div>
 
@@ -242,6 +230,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       <select id="tipoIngreso" onchange="cambiarTipoIngreso()">
         <option value="INDIVIDUAL">Producto individual</option>
         <option value="CORRIDA">Corrida / Escala</option>
+        <option value="PAQUETE_CURVA">Paquete / Curva de tallas</option>
       </select>
 
       <div id="individualBox">
@@ -402,6 +391,79 @@ document.addEventListener('DOMContentLoaded',()=>{
         </div>
 
         <div id="mensajeCorrida"></div>
+      </div>
+
+      <div id="paqueteCurvaBox" class="oculto">
+        <div class="mensaje info" style="margin-bottom:12px">
+          Se crea como una referencia vendible. En el POS aparecerá como <b>PAQUETE / CURVA</b>,
+          pero al venderla el sistema descontará automáticamente las tallas que la componen.
+        </div>
+
+        <div class="grid2">
+          <div>
+            <label>Descripción del paquete / curva</label>
+            <input id="pcNombre" placeholder="Ej. Curva Hércules 37-43">
+          </div>
+
+          <div>
+            <label>Marca</label>
+            <input id="pcMarca">
+          </div>
+
+          <div>
+            <label>Modelo</label>
+            <input id="pcModelo">
+          </div>
+
+          <div>
+            <label>Categoría / Artículo</label>
+            <input id="pcCategoria" value="Paquete / Curva de tallas">
+          </div>
+
+          <div>
+            <label>Color</label>
+            <input id="pcColor">
+          </div>
+
+          <div>
+            <label>Escala</label>
+            <select id="pcEscala" onchange="dibujarCurvaEditor()"></select>
+          </div>
+
+          <div>
+            <label>Proveedor</label>
+            <select id="pcProveedor"></select>
+          </div>
+
+          <div>
+            <label>Ubicación</label>
+            <input id="pcUbicacion">
+          </div>
+
+          <div>
+            <label>Costo del paquete</label>
+            <input id="pcCosto" type="number" min="0" step="0.01">
+          </div>
+
+          <div>
+            <label>Precio de venta del paquete</label>
+            <input id="pcPrecio" type="number" min="0" step="0.01">
+          </div>
+
+          <div>
+            <label>Stock mínimo de paquetes</label>
+            <input id="pcStockMinimo" type="number" min="0" step="1" value="1">
+          </div>
+        </div>
+
+        <h3 style="margin-top:16px">Composición por talla</h3>
+        <div id="curvaEditor"></div>
+
+        <button class="btnMorado w100" style="margin-top:12px" onclick="guardarCurvaUI()">
+          Crear paquete / curva y mostrar en POS
+        </button>
+
+        <div id="mensajeCurvasCrear"></div>
       </div>
     </div>
 
@@ -1895,8 +1957,11 @@ function pintarSugerencias(resultados,modo,q){
       esc(p.modelo)+
       ' · '+
       esc(p.color)+
-      ' · Talla '+
-      esc(p.talla)+
+      (
+        String(p.tipoIngreso||'').toUpperCase()==='PAQUETE_CURVA'
+          ? ' · PAQUETE / CURVA'
+          : ' · Talla '+esc(p.talla)
+      )+
       ' · '+
       p.existencia+
       ' '+
@@ -2483,8 +2548,11 @@ function renderCarrito(){
           '</b>'+
           '<div class="cartMeta">'+
           esc(x.color)+
-          ' · Talla '+
-          esc(x.talla)+
+          (
+            String(x.tipoIngreso||'').toUpperCase()==='PAQUETE_CURVA'
+              ? ' · PAQUETE / CURVA'
+              : ' · Talla '+esc(x.talla)
+          )+
           ' · '+
           esc(x.codigo)+
           '</div>'+
@@ -2837,12 +2905,19 @@ function ticketHTML(v,id){
     const precio=Number(x.precio)||0;
 
     const descripcion=
-      descripcionTicket(x)||
       (
-        (x.modelo||'')+
-        ' '+
-        (x.color||'')
-      ).trim();
+        tipo==='PAQUETE_CURVA'
+          ? 'PAQUETE / CURVA · '
+          : ''
+      )+
+      (
+        descripcionTicket(x)||
+        (
+          (x.modelo||'')+
+          ' '+
+          (x.color||'')
+        ).trim()
+      );
 
     const clave=
       descripcion+
@@ -4001,25 +4076,32 @@ function estadoEscala(n,a){
 }
 
 function cambiarTipoIngreso(){
-  const corrida=
-    $('tipoIngreso').value===
-    'CORRIDA';
+  const tipo=$('tipoIngreso').value;
 
-  $('individualBox')
-    .classList.toggle(
-      'oculto',
-      corrida
-    );
+  $('individualBox').classList.toggle(
+    'oculto',
+    tipo!=='INDIVIDUAL'
+  );
 
-  $('corridaBox')
-    .classList.toggle(
-      'oculto',
-      !corrida
-    );
+  $('corridaBox').classList.toggle(
+    'oculto',
+    tipo!=='CORRIDA'
+  );
 
-  if(corrida){
+  $('paqueteCurvaBox').classList.toggle(
+    'oculto',
+    tipo!=='PAQUETE_CURVA'
+  );
+
+  if(tipo==='CORRIDA'){
     cargarEscalas();
     dibujarCorrida();
+  }
+
+  if(tipo==='PAQUETE_CURVA'){
+    cargarEscalas();
+    llenarEscalasCurvas();
+    dibujarCurvaEditor();
   }
 }
 
@@ -7708,7 +7790,7 @@ function cargarCurvas(){
 }
 
 function llenarEscalasCurvas(){
-  const s=$('curvaEscala');
+  const s=$('pcEscala');
   if(!s) return;
 
   const prev=s.value;
@@ -7725,7 +7807,10 @@ function llenarEscalasCurvas(){
       )
     );
 
-  if(prev&&[...s.options].some(o=>o.value===prev)){
+  if(
+    prev &&
+    [...s.options].some(o=>o.value===prev)
+  ){
     s.value=prev;
   }
 
@@ -7734,7 +7819,7 @@ function llenarEscalasCurvas(){
 
 function dibujarCurvaEditor(){
   const box=$('curvaEditor');
-  const escSel=$('curvaEscala');
+  const escSel=$('pcEscala');
 
   if(!box||!escSel) return;
 
@@ -7748,12 +7833,19 @@ function dibujarCurvaEditor(){
 
   box.innerHTML=
     '<table class="tabla">'+
-    '<thead><tr><th>Talla</th><th>Pares por caja</th></tr></thead>'+
+    '<thead><tr>'+
+      '<th>Talla</th>'+
+      '<th>Pares dentro del paquete</th>'+
+    '</tr></thead>'+
     '<tbody>'+
     tallas.map(t=>
       '<tr>'+
         '<td><b>'+esc(t)+'</b></td>'+
-        '<td><input class="curvaCant" data-talla="'+esc(t)+'" type="number" min="0" step="1" value="0"></td>'+
+        '<td>'+
+          '<input class="curvaCant" '+
+          'data-talla="'+esc(t)+'" '+
+          'type="number" min="0" step="1" value="0">'+
+        '</td>'+
       '</tr>'
     ).join('')+
     '</tbody></table>';
@@ -7773,27 +7865,58 @@ function guardarCurvaUI(){
   api(
     'guardarcurva',
     {
-      nombre:$('curvaNombre').value,
-      escala:$('curvaEscala').value,
+      nombre:$('pcNombre').value,
+      marca:$('pcMarca').value,
+      modelo:$('pcModelo').value,
+      categoria:$('pcCategoria').value,
+      color:$('pcColor').value,
+      escala:$('pcEscala').value,
+      proveedorId:$('pcProveedor').value,
+      ubicacion:$('pcUbicacion').value,
+      costo:$('pcCosto').value,
+      precio:$('pcPrecio').value,
+      stockMinimo:$('pcStockMinimo').value,
       composicion:JSON.stringify(composicion)
     },
     r=>{
       if(!r||!r.ok){
         return msg(
-          'mensajeCurvas',
-          (r&&r.error)||'No se pudo guardar la curva.',
+          'mensajeCurvasCrear',
+          (r&&r.error)||
+          'No se pudo crear el paquete/curva.',
           'error'
         );
       }
 
       msg(
-        'mensajeCurvas',
-        r.mensaje+' · '+r.totalPares+' pares por caja.',
+        'mensajeCurvasCrear',
+        '✅ '+r.mensaje+
+        ' · Código '+r.codigo+
+        ' · '+r.totalPares+
+        ' pares por paquete · Precio '+Q(r.precio),
         'ok'
       );
 
-      $('curvaNombre').value='';
+      $('pcNombre').value='';
+      $('pcMarca').value='';
+      $('pcModelo').value='';
+      $('pcColor').value='';
+      $('pcCosto').value='';
+      $('pcPrecio').value='';
+      $('pcUbicacion').value='';
+      $('pcStockMinimo').value=1;
+
+      document.querySelectorAll('.curvaCant').forEach(
+        x=>x.value=0
+      );
+
+      CATALOGO_POS=[];
+      CATALOGO_POS_SUCURSAL='';
+      CATALOGO_POS_TS=0;
+
       cargarCurvas();
+      precargarCatalogoPos(true);
+      cargarProductosCompra(true);
     }
   );
 }
@@ -7810,7 +7933,14 @@ function llenarSelectCurvas(){
 
     s.add(
       new Option(
-        c.nombre+' · '+c.escala+' · '+total+' pares',
+        [
+          c.nombre,
+          c.marca,
+          c.modelo,
+          c.color,
+          'Escala '+c.escala,
+          total+' pares'
+        ].filter(Boolean).join(' · '),
         c.curvaId
       )
     );
