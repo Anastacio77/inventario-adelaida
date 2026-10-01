@@ -3122,26 +3122,38 @@ function ticketHTML(v,id){
     ).toUpperCase();
 
     const escala=
-      tipo==='CORRIDA'
+      (
+        tipo==='CORRIDA' ||
+        tipo==='PAQUETE_CURVA'
+      )
         ? String(x.escala||'')
         : '';
 
     const precio=Number(x.precio)||0;
 
     const descripcion=
-      (
-        tipo==='PAQUETE_CURVA'
-          ? 'PAQUETE / CURVA · '
-          : ''
-      )+
-      (
-        descripcionTicket(x)||
-        (
-          (x.modelo||'')+
-          ' '+
-          (x.color||'')
-        ).trim()
-      );
+      tipo==='PAQUETE_CURVA'
+        ? (
+            'PAQUETE / CURVA · '+
+            (
+              x.nombreCurva||
+              x.codigo||
+              descripcionTicket(x)||
+              (
+                (x.modelo||'')+
+                ' '+
+                (x.color||'')
+              ).trim()
+            )
+          )
+        : (
+            descripcionTicket(x)||
+            (
+              (x.modelo||'')+
+              ' '+
+              (x.color||'')
+            ).trim()
+          );
 
     const clave=
       descripcion+
@@ -3159,6 +3171,9 @@ function ticketHTML(v,id){
         escala,
         precio,
         cantidades:{},
+        composicionCurva:
+          x.composicionCurva||
+          {},
         cantidad:0,
         total:0
       };
@@ -3167,12 +3182,41 @@ function ticketHTML(v,id){
     const g=grupos[clave];
     const cant=Number(x.cantidad)||0;
 
-    g.cantidades[String(x.talla)]=
-      (
-        g.cantidades[String(x.talla)]||
-        0
-      )+
-      cant;
+    if(
+      tipo==='PAQUETE_CURVA' &&
+      x.composicionCurva &&
+      typeof x.composicionCurva==='object'
+    ){
+      Object.entries(
+        x.composicionCurva
+      ).forEach(([talla,cantPorPaquete])=>{
+        const n=
+          Math.max(
+            0,
+            Number(cantPorPaquete)||0
+          )*
+          cant;
+
+        if(n<=0){
+          return;
+        }
+
+        g.cantidades[String(talla)]=
+          (
+            g.cantidades[String(talla)]||
+            0
+          )+
+          n;
+      });
+
+    }else{
+      g.cantidades[String(x.talla)]=
+        (
+          g.cantidades[String(x.talla)]||
+          0
+        )+
+        cant;
+    }
 
     g.cantidad+=cant;
 
@@ -3186,7 +3230,10 @@ function ticketHTML(v,id){
 
   Object.values(grupos).forEach(g=>{
     if(
-      g.tipo==='CORRIDA' &&
+      (
+        g.tipo==='CORRIDA' ||
+        g.tipo==='PAQUETE_CURVA'
+      ) &&
       g.escala &&
       !escalasUsadas.includes(g.escala)
     ){
@@ -3263,7 +3310,10 @@ function ticketHTML(v,id){
     let nums='';
 
     if(
-      g.tipo==='CORRIDA' &&
+      (
+        g.tipo==='CORRIDA' ||
+        g.tipo==='PAQUETE_CURVA'
+      ) &&
       g.escala
     ){
       const tallas=
@@ -3470,19 +3520,38 @@ function pedidoHTML(v,id){
     ).toUpperCase();
 
     const escala=
-      tipo==='CORRIDA'
+      (
+        tipo==='CORRIDA' ||
+        tipo==='PAQUETE_CURVA'
+      )
         ? String(x.escala||'')
         : '';
 
     const precio=Number(x.precio)||0;
 
     const descripcion=
-      descripcionTicket(x)||
-      (
-        (x.modelo||'')+
-        ' '+
-        (x.color||'')
-      ).trim();
+      tipo==='PAQUETE_CURVA'
+        ? (
+            'PAQUETE / CURVA · '+
+            (
+              x.nombreCurva||
+              x.codigo||
+              descripcionTicket(x)||
+              (
+                (x.modelo||'')+
+                ' '+
+                (x.color||'')
+              ).trim()
+            )
+          )
+        : (
+            descripcionTicket(x)||
+            (
+              (x.modelo||'')+
+              ' '+
+              (x.color||'')
+            ).trim()
+          );
 
     const clave=
       descripcion+
@@ -3500,6 +3569,9 @@ function pedidoHTML(v,id){
         escala,
         precio,
         cantidades:{},
+        composicionCurva:
+          x.composicionCurva||
+          {},
         cantidad:0,
         total:0
       };
@@ -3508,10 +3580,41 @@ function pedidoHTML(v,id){
     const g=grupos[clave];
     const cant=Number(x.cantidad)||0;
 
-    g.cantidades[String(x.talla)]=
-      (
-        g.cantidades[String(x.talla)]||0
-      )+cant;
+    if(
+      tipo==='PAQUETE_CURVA' &&
+      x.composicionCurva &&
+      typeof x.composicionCurva==='object'
+    ){
+      Object.entries(
+        x.composicionCurva
+      ).forEach(([talla,cantPorPaquete])=>{
+        const n=
+          Math.max(
+            0,
+            Number(cantPorPaquete)||0
+          )*
+          cant;
+
+        if(n<=0){
+          return;
+        }
+
+        g.cantidades[String(talla)]=
+          (
+            g.cantidades[String(talla)]||
+            0
+          )+
+          n;
+      });
+
+    }else{
+      g.cantidades[String(x.talla)]=
+        (
+          g.cantidades[String(x.talla)]||
+          0
+        )+
+        cant;
+    }
 
     g.cantidad+=cant;
     g.total+=Number(x.subtotal)||precio*cant;
@@ -3521,7 +3624,10 @@ function pedidoHTML(v,id){
 
   Object.values(grupos).forEach(g=>{
     if(
-      g.tipo==='CORRIDA' &&
+      (
+        g.tipo==='CORRIDA' ||
+        g.tipo==='PAQUETE_CURVA'
+      ) &&
       g.escala &&
       !escalasUsadas.includes(g.escala)
     ){
@@ -3570,7 +3676,10 @@ function pedidoHTML(v,id){
     let nums='';
 
     if(
-      g.tipo==='CORRIDA' &&
+      (
+        g.tipo==='CORRIDA' ||
+        g.tipo==='PAQUETE_CURVA'
+      ) &&
       g.escala
     ){
       const tallas=
