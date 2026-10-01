@@ -435,7 +435,17 @@ document.addEventListener('click',e=>{
           </div>
 
           <div>
-            <label>Costo del paquete</label>
+            <label>Costo base por par del modelo</label>
+            <input id="pcCostoBase" type="number" step="0.01" readonly>
+          </div>
+
+          <div>
+            <label>Precio base por par del modelo</label>
+            <input id="pcPrecioBase" type="number" step="0.01" readonly>
+          </div>
+
+          <div>
+            <label>Costo calculado del paquete</label>
             <input id="pcCosto" type="number" min="0" step="0.01">
           </div>
 
@@ -6261,7 +6271,7 @@ function cargarProveedores(){
     const proveedores=r.proveedores||[];
     window.PROVEEDORES=proveedores;
 
-    ['compProveedor','nProveedor','cProveedor','aProveedorPreferido'].forEach(id=>{
+    ['compProveedor','nProveedor','cProveedor','pcProveedor','aProveedorPreferido'].forEach(id=>{
       const s=$(id);
       if(!s) return;
 
@@ -6287,6 +6297,13 @@ function cargarProveedores(){
     });
 
     actualizarDiasCreditoProveedor();
+
+    if(MODELO_CURVA_SELECCIONADO){
+      aplicarDatosComercialesModeloCurva(
+        MODELO_CURVA_SELECCIONADO
+      );
+    }
+
     cargarProductosCompra();
   });
 }
@@ -8181,6 +8198,87 @@ function buscarModeloCurva(){
   }
 }
 
+
+function aplicarDatosComercialesModeloCurva(m){
+  if(!m){
+    return;
+  }
+
+  const productos=
+    Array.isArray(m.productos)
+      ? m.productos
+      : [];
+
+  const conCosto=
+    productos.filter(
+      p=>Number(p.costo)>0
+    );
+
+  const conPrecio=
+    productos.filter(
+      p=>Number(p.precio)>0
+    );
+
+  const costoBase=
+    conCosto.length
+      ? Number(conCosto[0].costo)||0
+      : 0;
+
+  const precioBase=
+    conPrecio.length
+      ? Number(conPrecio[0].precio)||0
+      : 0;
+
+  if($('pcCostoBase')){
+    $('pcCostoBase').value=
+      costoBase>0
+        ? costoBase.toFixed(2)
+        : '';
+  }
+
+  if($('pcPrecioBase')){
+    $('pcPrecioBase').value=
+      precioBase>0
+        ? precioBase.toFixed(2)
+        : '';
+  }
+
+  const aplicarProveedor=()=>{
+    const s=$('pcProveedor');
+
+    if(
+      !s ||
+      !m.proveedorId
+    ){
+      return false;
+    }
+
+    const existe=
+      [...s.options]
+        .some(
+          o=>o.value===m.proveedorId
+        );
+
+    if(existe){
+      s.value=m.proveedorId;
+      return true;
+    }
+
+    return false;
+  };
+
+  if(
+    m.proveedorId &&
+    !aplicarProveedor()
+  ){
+    cargarProveedores();
+
+    setTimeout(()=>{
+      aplicarProveedor();
+    },250);
+  }
+}
+
 function seleccionarModeloCurva(m){
   MODELO_CURVA_SELECCIONADO=m;
 
@@ -8209,14 +8307,7 @@ function seleccionarModeloCurva(m){
       m.escala;
   }
 
-  if(
-    m.proveedorId &&
-    [...$('pcProveedor').options]
-      .some(o=>o.value===m.proveedorId)
-  ){
-    $('pcProveedor').value=
-      m.proveedorId;
-  }
+  aplicarDatosComercialesModeloCurva(m);
 
   if(
     Number(m.stockMinimo)>0
@@ -8301,6 +8392,15 @@ function actualizarCostosCurvaDesdeModelo(){
       $('pcPrecio').value=
         precio.toFixed(2);
     }
+
+  }else{
+    $('pcCosto').value='';
+
+    if(
+      !$('pcPrecio').dataset.editadoManual
+    ){
+      $('pcPrecio').value='';
+    }
   }
 }
 
@@ -8366,6 +8466,8 @@ function guardarCurvaUI(){
       $('pcColor').value='';
       $('pcCosto').value='';
       $('pcPrecio').value='';
+      if($('pcCostoBase')) $('pcCostoBase').value='';
+      if($('pcPrecioBase')) $('pcPrecioBase').value='';
       delete $('pcPrecio').dataset.editadoManual;
       $('pcUbicacion').value='';
       $('pcStockMinimo').value=1;
