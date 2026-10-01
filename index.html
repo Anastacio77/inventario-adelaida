@@ -75,7 +75,7 @@ document.addEventListener('click',e=>{
     <button id="tabCaja" onclick="vista('caja');cargarCaja()">💵 Caja</button>
     <button id="tabReportes" onclick="vista('reportes');cargarReportes()">📊 Reportes</button>
     <button id="tabClientes" onclick="vista('clientes');cargarClientes();cargarCreditos()">👤 Clientes</button>
-    <button id="tabConfig" onclick="vista('config')">⚙ Configuración</button>
+    <button id="tabConfig" onclick="vista('config');cargarConfigReservaPedido()">⚙ Configuración</button>
   </div>
 
   <div id="vistaPos" class="vistaApp oculto">
@@ -99,8 +99,14 @@ document.addEventListener('click',e=>{
   </div>
 
   <div id="vistaPedidos" class="vistaApp oculto">
-    <div id="pedidoListaCard" class="card"><h3 style="margin-top:0">Pedidos</h3><div class="fila"><select id="filtroEstadoPedido" onchange="mostrarListaPedidos();cargarPedidos()"><option value="PENDIENTE">Pendientes</option><option value="">Todos</option><option value="COMPLETADO">Completados</option><option value="CANCELADO">Cancelados</option></select><button class="btnNegro" onclick="mostrarListaPedidos();cargarPedidos()">Actualizar</button></div><div id="mensajePedidos"></div><div id="listaPedidos"></div></div>
-    <div id="pedidoDetalleCard" class="card oculto"><div id="pedidoDetalle"></div><div id="pedidoCobroBox"><div class="grid2"><div><label>Forma de pago</label><select id="pedMetodo" onchange="actualizarCobroPedido()">
+    <div id="pedidoListaCard" class="card"><h3 style="margin-top:0">Pedidos</h3><div class="fila"><select id="filtroEstadoPedido" onchange="mostrarListaPedidos();cargarPedidos()"><option value="PENDIENTE">Pendientes</option><option value="">Todos</option><option value="COMPLETADO">Completados</option><option value="CANCELADO">Cancelados</option><option value="VENCIDO">Vencidos</option></select><button class="btnNegro" onclick="mostrarListaPedidos();cargarPedidos()">Actualizar</button></div><div id="mensajePedidos"></div><div id="listaPedidos"></div></div>
+    <div id="pedidoDetalleCard" class="card oculto">
+      <div id="pedidoDetalle"></div>
+      <div id="pedidoReservaInfo" style="margin-top:10px"></div>
+      <div id="pedidoReactivarBox" class="oculto" style="margin-top:10px">
+        <button class="btnAzul w100" onclick="reactivarPedidoUI()">♻️ Reactivar pedido y reservar nuevamente</button>
+      </div>
+      <div id="pedidoCobroBox"><div class="grid2"><div><label>Forma de pago</label><select id="pedMetodo" onchange="actualizarCobroPedido()">
   <option>EFECTIVO</option>
   <option>TRANSFERENCIA</option>
   <option>TARJETA</option>
@@ -1033,6 +1039,29 @@ document.addEventListener('click',e=>{
       <div id="mensajeConfig"></div>
     </div>
 
+    <div id="reservaPedidosAdmin" class="card">
+      <h3 style="margin-top:0">Reserva de pedidos</h3>
+      <div class="mensaje info">
+        Los pedidos pendientes apartan existencias durante el tiempo configurado. Al vencer, la reserva se libera automáticamente.
+      </div>
+      <div class="grid2" style="margin-top:10px">
+        <div>
+          <label>Tiempo de reserva</label>
+          <input id="reservaPedidoValor" type="number" min="1" step="1" value="8">
+        </div>
+        <div>
+          <label>Unidad</label>
+          <select id="reservaPedidoUnidad">
+            <option value="HORAS">Horas</option>
+            <option value="DIAS">Días</option>
+          </select>
+        </div>
+      </div>
+      <div class="sub" style="margin-top:6px">Predeterminado: 8 horas. Puede configurarse en horas o hasta 30 días.</div>
+      <button class="btnAzul w100" style="margin-top:10px" onclick="guardarConfigReservaPedidoUI()">Guardar tiempo de reserva</button>
+      <div id="mensajeReservaPedido"></div>
+    </div>
+
     <div id="promocionesAdmin" class="card">
       <h3 style="margin-top:0">Promociones POS</h3>
       <div class="grid2">
@@ -1510,6 +1539,7 @@ function iniciarApp(u){
   $('btnCobrarVenta').classList.toggle('oculto',!['ADMIN','CAJERO'].includes(u.rol));
   if($('divisasAdmin')) $('divisasAdmin').classList.toggle('oculto',u.rol!=='ADMIN');
   if($('promocionesAdmin')) $('promocionesAdmin').classList.toggle('oculto',u.rol!=='ADMIN');
+  if($('reservaPedidosAdmin')) $('reservaPedidosAdmin').classList.toggle('oculto',u.rol!=='ADMIN');
 
   api('sucursales',{},r=>{
     if(!r.ok) return;
@@ -5569,7 +5599,21 @@ function guardarPedido(){
   },r=>{
     if(!r.ok) return msg('mensajePos',r.error,'error');
     limpiarPosDespues();
-    msg('mensajePos','Pedido guardado: '+r.numeroPedido,'ok');
+    msg(
+      'mensajePos',
+      'Pedido guardado: '+
+      r.numeroPedido+
+      (
+        r.fechaVencimientoReserva
+          ? ' · Reserva hasta: '+
+            r.fechaVencimientoReserva
+          : ''
+      ),
+      'ok'
+    );
+
+    CATALOGO_POS=[];
+    CATALOGO_POS_TS=0;
   });
 }
 
@@ -5599,18 +5643,129 @@ function mostrarListaPedidos(){
 }
 
 function cargarPedidos(){
-  if(!SESION||!['ADMIN','CAJERO','VENDEDOR'].includes(SESION.rol)) return;
-  api('pedidos',{estado:$('filtroEstadoPedido').value},r=>{
-    if(!r.ok) return msg('mensajePedidos',r.error,'error');
-    const box=$('listaPedidos'); box.innerHTML='';
-    (r.pedidos||[]).forEach(p=>{
-      const d=document.createElement('div'); d.className='pedidoCard';
-      const cls=p.estado==='COMPLETADO'?'badgeCompleto':(p.estado==='CANCELADO'?'badgeCancelado':'badgePendiente');
-      d.innerHTML='<div class="cartTop"><div><b>'+esc(p.numeroPedido)+'</b><div class="mini">'+esc(p.fecha)+' · '+esc(p.cliente||'Sin cliente')+' · Vendedor: '+esc(p.vendedor||'—')+'</div></div><div><span class="badge '+cls+'">'+esc(p.estado)+'</span><br><b>'+Q(p.total)+'</b></div></div><button class="btnGris w100" style="margin-top:8px">Ver pedido</button>';
-      d.querySelector('button').onclick=()=>verPedido(p.numeroPedido); box.appendChild(d);
-    });
-    if(!(r.pedidos||[]).length) box.innerHTML='<div class="sub">No hay pedidos para este filtro.</div>';
-  });
+  if(
+    !SESION||
+    ![
+      'ADMIN',
+      'CAJERO',
+      'VENDEDOR'
+    ].includes(
+      SESION.rol
+    )
+  ){
+    return;
+  }
+
+  api(
+    'pedidos',
+    {
+      estado:
+        $('filtroEstadoPedido').value
+    },
+    r=>{
+      if(!r.ok){
+        return msg(
+          'mensajePedidos',
+          r.error,
+          'error'
+        );
+      }
+
+      const box=$('listaPedidos');
+      box.innerHTML='';
+
+      (r.pedidos||[]).forEach(p=>{
+        const d=document.createElement('div');
+        d.className='pedidoCard';
+
+        const cls=
+          p.estado==='COMPLETADO'
+            ? 'badgeCompleto'
+            : (
+                p.estado==='CANCELADO' ||
+                p.estado==='VENCIDO'
+              )
+              ? 'badgeCancelado'
+              : 'badgePendiente';
+
+        let reservaTxt='';
+
+        if(
+          p.estado==='PENDIENTE' &&
+          p.fechaVencimientoReserva
+        ){
+          reservaTxt=
+            '<div class="mini">🔒 Reserva hasta: '+
+            esc(
+              p.fechaVencimientoReserva
+            )+
+            '</div>';
+
+        }else if(
+          p.estado==='VENCIDO'
+        ){
+          reservaTxt=
+            '<div class="mini">⏱ Reserva vencida'+
+            (
+              p.fechaVencimientoReserva
+                ? ': '+
+                  esc(
+                    p.fechaVencimientoReserva
+                  )
+                : ''
+            )+
+            '</div>';
+        }
+
+        d.innerHTML=
+          '<div class="cartTop">'+
+            '<div>'+
+              '<b>'+
+                esc(p.numeroPedido)+
+              '</b>'+
+              '<div class="mini">'+
+                esc(p.fecha)+
+                ' · '+
+                esc(
+                  p.cliente||
+                  'Sin cliente'
+                )+
+                ' · Vendedor: '+
+                esc(
+                  p.vendedor||
+                  '—'
+                )+
+              '</div>'+
+              reservaTxt+
+            '</div>'+
+            '<div>'+
+              '<span class="badge '+cls+'">'+
+                esc(p.estado)+
+              '</span>'+
+              '<br>'+
+              '<b>'+
+                Q(p.total)+
+              '</b>'+
+            '</div>'+
+          '</div>'+
+          '<button class="btnGris w100" style="margin-top:8px">Ver pedido</button>';
+
+        d.querySelector('button').onclick=
+          ()=>verPedido(
+            p.numeroPedido
+          );
+
+        box.appendChild(d);
+      });
+
+      if(
+        !(r.pedidos||[]).length
+      ){
+        box.innerHTML=
+          '<div class="sub">No hay pedidos para este filtro.</div>';
+      }
+    }
+  );
 }
 
 function verPedido(numero){
@@ -5652,6 +5807,40 @@ function verPedido(numero){
       );
 
       $('pedidoDetalleCard').classList.remove('oculto');
+
+      const info=$('pedidoReservaInfo');
+      const reactivar=$('pedidoReactivarBox');
+
+      if(info){
+        if(
+          r.estado==='PENDIENTE' &&
+          r.fechaVencimientoReserva
+        ){
+          info.className='mensaje info';
+          info.innerHTML=
+            '🔒 Existencia reservada hasta <b>'+
+            esc(r.fechaVencimientoReserva)+
+            '</b>.';
+
+        }else if(
+          r.estado==='VENCIDO'
+        ){
+          info.className='mensaje error';
+          info.innerHTML=
+            '⏱ La reserva de este pedido venció y la existencia fue liberada.';
+
+        }else{
+          info.className='';
+          info.innerHTML='';
+        }
+      }
+
+      if(reactivar){
+        reactivar.classList.toggle(
+          'oculto',
+          r.estado!=='VENCIDO'
+        );
+      }
 
       $('pedidoCobroBox').classList.toggle(
         'oculto',
@@ -5705,6 +5894,117 @@ function cancelarPedidoUI(){
     if(!r.ok) return msg('mensajePedidos',r.error,'error');
     $('pedidoCobroBox').classList.add('oculto'); msg('mensajePedidos',r.mensaje,'ok'); cargarPedidos();
   });
+}
+
+
+function cargarConfigReservaPedido(){
+  if(
+    !SESION ||
+    SESION.rol!=='ADMIN'
+  ){
+    return;
+  }
+
+  api(
+    'configreservapedido',
+    {},
+    r=>{
+      if(!r.ok){
+        return msg(
+          'mensajeReservaPedido',
+          r.error,
+          'error'
+        );
+      }
+
+      $('reservaPedidoValor').value=
+        r.valor||
+        8;
+
+      $('reservaPedidoUnidad').value=
+        r.unidad||
+        'HORAS';
+    }
+  );
+}
+
+function guardarConfigReservaPedidoUI(){
+  api(
+    'guardarconfigreservapedido',
+    {
+      valor:
+        $('reservaPedidoValor').value,
+      unidad:
+        $('reservaPedidoUnidad').value
+    },
+    r=>{
+      if(!r.ok){
+        return msg(
+          'mensajeReservaPedido',
+          r.error,
+          'error'
+        );
+      }
+
+      msg(
+        'mensajeReservaPedido',
+        r.mensaje,
+        'ok'
+      );
+    }
+  );
+}
+
+function reactivarPedidoUI(){
+  if(
+    !PEDIDO_ACTUAL ||
+    PEDIDO_ACTUAL.estado!=='VENCIDO'
+  ){
+    return;
+  }
+
+  if(
+    !confirm(
+      '¿Reactivar '+
+      PEDIDO_ACTUAL.numeroPedido+
+      ' y reservar nuevamente la existencia?'
+    )
+  ){
+    return;
+  }
+
+  api(
+    'reactivarpedido',
+    {
+      numeroPedido:
+        PEDIDO_ACTUAL.numeroPedido
+    },
+    r=>{
+      if(!r.ok){
+        return msg(
+          'mensajePedidos',
+          r.error,
+          'error'
+        );
+      }
+
+      msg(
+        'mensajePedidos',
+        r.mensaje+
+        ' Vence: '+
+        r.fechaVencimientoReserva,
+        'ok'
+      );
+
+      cargarPedidos();
+      verPedido(
+        PEDIDO_ACTUAL.numeroPedido
+      );
+
+      CATALOGO_POS=[];
+      CATALOGO_POS_TS=0;
+    }
+  );
 }
 
 function cargarComisiones(){
