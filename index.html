@@ -114,6 +114,7 @@
         <div class="campo"><span>Precio</span><b id="pPrecio"></b></div>
         <div class="campo"><span>Ubicación</span><b id="pUbicacion"></b></div>
         <div class="campo"><span>Sucursal</span><b id="pSucursal"></b></div>
+        <div class="campo"><span>Inventariable</span><b id="pInventariable"></b></div>
       </div>
 
       <button class="btnAzul w100" style="margin-top:12px" onclick="abrirTrazabilidadProducto()">🔎 Ver trazabilidad y lotes</button>
@@ -185,14 +186,23 @@
 
   <div id="vistaNuevo" class="vistaApp oculto">
     <div class="card">
-      <h3 style="margin-top:0">Catálogo maestro de productos</h3><div class="mensaje info" style="margin-bottom:12px">Crear aquí las referencias desde <b>Bodega Principal</b>. Este paso no suma existencias; las cantidades entran únicamente al recibir una compra.</div>
+      <h3 style="margin-top:0">Catálogo maestro de productos</h3>
+      <div class="mensaje info" style="margin-bottom:12px">
+        Cree aquí las referencias desde <b>Bodega Principal</b>.
+        Los productos <b>INVENTARIABLES</b> tienen stock propio y suman/restan inventario.
+        El <b>PAQUETE / CURVA</b> es <b>NO INVENTARIABLE</b>: no suma stock por sí mismo; su disponibilidad se calcula según las tallas que contiene.
+      </div>
 
-      <label>Tipo de ingreso</label>
+      <label>Tipo de producto</label>
       <select id="tipoIngreso" onchange="cambiarTipoIngreso()">
-        <option value="INDIVIDUAL">Producto individual</option>
-        <option value="CORRIDA">Corrida / Escala</option>
-        <option value="PAQUETE_CURVA">Paquete / Curva de tallas</option>
+        <option value="INDIVIDUAL">Producto individual — INVENTARIABLE</option>
+        <option value="CORRIDA">Corrida / Escala — INVENTARIABLE</option>
+        <option value="PAQUETE_CURVA">Paquete / Curva de tallas — NO INVENTARIABLE</option>
       </select>
+
+      <div id="tipoInventariableAviso" class="mensaje ok" style="margin-bottom:12px">
+        ✅ INVENTARIABLE · Esta referencia maneja existencia propia.
+      </div>
 
       <div id="individualBox">
         <div class="grid2">
@@ -356,8 +366,9 @@
 
       <div id="paqueteCurvaBox" class="oculto">
         <div class="mensaje info" style="margin-bottom:12px">
-          Se crea como una referencia vendible. En el POS aparecerá como <b>PAQUETE / CURVA</b>,
-          pero al venderla el sistema descontará automáticamente las tallas que la componen.
+          <b>NO INVENTARIABLE.</b> Se crea como una referencia vendible y visible en el POS,
+          pero <b>no suma inventario propio</b>. Al venderla, el sistema descuenta automáticamente
+          las tallas inventariables que la componen.
         </div>
 
         <div class="grid2">
@@ -412,7 +423,7 @@
           </div>
 
           <div>
-            <label>Stock mínimo de paquetes</label>
+            <label>Mínimo de paquetes disponibles (alerta)</label>
             <input id="pcStockMinimo" type="number" min="0" step="1" value="1">
           </div>
         </div>
@@ -1072,6 +1083,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   );
 
   activarDesplieguesBusqueda();
+  cambiarTipoIngreso();
 
   $('posCodigo').addEventListener('keydown',e=>{
     if(e.key==='Enter'){
@@ -1971,16 +1983,20 @@ function pintarSugerencias(resultados,modo,q){
       esc(p.color)+
       (
         String(p.tipoIngreso||'').toUpperCase()==='PAQUETE_CURVA'
-          ? ' · PAQUETE / CURVA'
+          ? ' · PAQUETE / CURVA · NO INVENTARIABLE'
           : ' · Talla '+esc(p.talla)
       )+
       ' · '+
       p.existencia+
       ' '+
       (
-        String(p.tipoIngreso||'INDIVIDUAL').toUpperCase()==='INDIVIDUAL'
-          ? (Number(p.existencia)===1?'unidad':'unidades')
-          : 'pares'
+        String(p.tipoIngreso||'INDIVIDUAL').toUpperCase()==='PAQUETE_CURVA'
+          ? (Number(p.existencia)===1?'paquete':'paquetes')
+          : (
+              String(p.tipoIngreso||'INDIVIDUAL').toUpperCase()==='INDIVIDUAL'
+                ? (Number(p.existencia)===1?'unidad':'unidades')
+                : 'pares'
+            )
       )+
       ' · '+
       Q(p.precio)+
@@ -3778,9 +3794,6 @@ function consultar(cod){
       $('pExistencia').textContent=
         p.existencia;
 
-      $('pExistenciaTotal').textContent=
-        p.existenciaTotal;
-
       $('pPrecio').textContent=
         Q(p.precio);
 
@@ -3790,6 +3803,35 @@ function consultar(cod){
 
       $('pSucursal').textContent=
         p.sucursal;
+
+      const inventariable=
+        String(
+          p.inventariable||
+          (
+            String(p.tipoIngreso||'').toUpperCase()==='PAQUETE_CURVA'
+              ? 'NO'
+              : 'SI'
+          )
+        ).toUpperCase();
+
+      $('pInventariable').textContent=
+        inventariable==='NO'
+          ? 'NO · Paquete/curva virtual'
+          : 'SÍ';
+
+      $('pExistenciaTotal').textContent=
+        inventariable==='NO'
+          ? 'No aplica'
+          : p.existenciaTotal;
+
+      const movBox=$('movimientoBox');
+
+      if(movBox){
+        movBox.classList.toggle(
+          'oculto',
+          inventariable==='NO'
+        );
+      }
 
       $('productoCard')
         .classList.remove('oculto');
@@ -4191,6 +4233,21 @@ function cambiarTipoIngreso(){
     'oculto',
     tipo!=='PAQUETE_CURVA'
   );
+
+  const aviso=$('tipoInventariableAviso');
+
+  if(aviso){
+    if(tipo==='PAQUETE_CURVA'){
+      aviso.className='mensaje info';
+      aviso.innerHTML=
+        '🔗 <b>NO INVENTARIABLE</b> · Visible en POS, pero no tiene existencia propia. '+
+        'Su disponibilidad depende de las tallas inventariables que forman la curva.';
+    }else{
+      aviso.className='mensaje ok';
+      aviso.innerHTML=
+        '✅ <b>INVENTARIABLE</b> · Esta referencia tiene existencia propia y suma/resta inventario.';
+    }
+  }
 
   if(tipo==='CORRIDA'){
     cargarEscalas();
@@ -7991,6 +8048,7 @@ function guardarCurvaUI(){
         'mensajeCurvasCrear',
         '✅ '+r.mensaje+
         ' · Código '+r.codigo+
+        ' · NO INVENTARIABLE'+
         ' · '+r.totalPares+
         ' pares por paquete · Precio '+Q(r.precio),
         'ok'
