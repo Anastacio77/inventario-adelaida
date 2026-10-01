@@ -4,46 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Comercial Adelaida - POS</title>
-<script src="https://unpkg.com/html5-qrcode" type="text/javascript" defer>
-document.addEventListener('DOMContentLoaded',()=>{
-  prepararBuscadorVentas();
-  prepararSelectorDevoluciones();
-
-  const inv=$('codigo');
-  if(inv){
-    ['focus','click'].forEach(ev=>{
-      inv.addEventListener(ev,()=>{
-        const card=$('productoCard');
-        if(card){
-          card.classList.add('oculto');
-        }
-
-        if(inv.value.trim()){
-          sugerencias(
-            inv.value.trim(),
-            'inv'
-          );
-        }
-      });
-    });
-  }
-
-  const tras=$('trasCodigo');
-  if(tras){
-    ['focus','click'].forEach(ev=>{
-      tras.addEventListener(ev,()=>{
-        if(tras.value.trim()){
-          sugerencias(
-            tras.value.trim(),
-            'tras'
-          );
-        }
-      });
-    });
-  }
-});
-
-</script>
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript" defer></script>
 <style>
 *{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f4f4f6;color:#202124}.app{max-width:960px;margin:auto;padding:14px}.card,.header{background:#fff;border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 3px 14px rgba(0,0,0,.06)}h1{margin:0;font-size:24px}.sub{color:#666;margin-top:4px}.tabs{
   display:grid;
@@ -1110,6 +1071,8 @@ document.addEventListener('DOMContentLoaded',()=>{
     v=>t3=v
   );
 
+  activarDesplieguesBusqueda();
+
   $('posCodigo').addEventListener('keydown',e=>{
     if(e.key==='Enter'){
       agregar();
@@ -1759,17 +1722,32 @@ function precargarCatalogoPos(forzar=false){
 
       actualizarCorridasCurvaUI();
 
-      const input=$('posCodigo');
+      [
+        {id:'posCodigo',modo:'pos'},
+        {id:'codigo',modo:'inv'},
+        {id:'trasCodigo',modo:'tras'}
+      ].forEach(x=>{
+        const input=$(x.id);
 
-      if(
-        input &&
-        input.value.trim()
-      ){
-        sugerencias(
-          input.value.trim(),
-          'pos'
-        );
-      }
+        if(
+          input &&
+          input.value.trim() &&
+          (
+            document.activeElement===input ||
+            !$(x.modo==='pos'
+              ? 'sugerenciasPos'
+              : x.modo==='inv'
+                ? 'sugerenciasInv'
+                : 'sugerenciasTras'
+            ).classList.contains('oculto')
+          )
+        ){
+          sugerencias(
+            input.value.trim(),
+            x.modo
+          );
+        }
+      });
     }
   );
 }
@@ -1846,6 +1824,40 @@ function actualizarExistenciaCatalogoPos(codigo,nuevaExistencia){
       Number(nuevaExistencia)||0
     );
   }
+}
+
+
+function activarDesplieguesBusqueda(){
+  [
+    {id:'posCodigo',modo:'pos'},
+    {id:'codigo',modo:'inv'},
+    {id:'trasCodigo',modo:'tras'}
+  ].forEach(x=>{
+    const input=$(x.id);
+
+    if(!input || input.dataset.despliegueActivo==='SI'){
+      return;
+    }
+
+    input.dataset.despliegueActivo='SI';
+
+    ['focus','click'].forEach(ev=>{
+      input.addEventListener(ev,()=>{
+        const q=input.value.trim();
+
+        if(x.modo==='inv'){
+          const card=$('productoCard');
+          if(card){
+            card.classList.add('oculto');
+          }
+        }
+
+        if(q){
+          sugerencias(q,x.modo);
+        }
+      });
+    });
+  });
 }
 
 function auto(
@@ -1974,9 +1986,35 @@ function pintarSugerencias(resultados,modo,q){
       Q(p.precio)+
       '</div>';
 
+    const sinExistencia=
+      Number(p.existencia||0)<=0;
+
+    if(
+      sinExistencia &&
+      ['pos','tras'].includes(modo)
+    ){
+      d.style.opacity='.55';
+      d.style.cursor='not-allowed';
+
+      const detalle=d.querySelector('.sugDetalle');
+
+      if(detalle){
+        detalle.innerHTML+=
+          ' · <b>AGOTADO</b>';
+      }
+    }
+
     d.onmousedown=e=>{
       e.preventDefault();
       e.stopPropagation();
+
+      if(
+        sinExistencia &&
+        ['pos','tras'].includes(modo)
+      ){
+        lista.classList.remove('oculto');
+        return;
+      }
 
       if(modo==='pos'){
         agregarDesdeSugerencia(p);
@@ -2030,72 +2068,104 @@ function sugerencias(q,modo){
   const lista=$(idLista);
   const input=$(idInput);
 
+  if(!lista || !input){
+    return;
+  }
+
+  q=String(q||'').trim();
+
   if(!q){
     lista.classList.add('oculto');
     lista.innerHTML='';
     return;
   }
 
-  // POS, Inventario y Traslados comparten el mismo catálogo local.
+  const solicitud=++SUGERENCIA_ID[modo];
+
   const catalogoListo=
-    CATALOGO_POS.length &&
-    CATALOGO_POS_SUCURSAL===SUCURSAL;
+    CATALOGO_POS_SUCURSAL===SUCURSAL &&
+    Array.isArray(CATALOGO_POS) &&
+    CATALOGO_POS.length>0;
 
   if(catalogoListo){
-    pintarSugerencias(
-      sugerenciasLocales(q,modo),
-      modo,
-      q
-    );
-    return;
+    const locales=sugerenciasLocales(q,modo);
+
+    if(locales.length){
+      pintarSugerencias(
+        locales,
+        modo,
+        q
+      );
+      return;
+    }
   }
 
+  // Mostrar algo inmediatamente para que el usuario vea que el despliegue está activo.
   lista.innerHTML=
     '<div class="itemSugerencia">'+
-      '<div class="sugDetalle">Cargando productos…</div>'+
+      '<div class="sugDetalle">Buscando…</div>'+
     '</div>';
-
   lista.classList.remove('oculto');
 
-  precargarCatalogoPos(false);
+  // Si aún no hay catálogo local, intentar cargarlo.
+  if(!catalogoListo){
+    precargarCatalogoPos(false);
+  }
 
-  // Respaldo: si por alguna razón la precarga no responde,
-  // Inventario/Traslados conservan la consulta anterior.
-  if(modo!=='pos'){
-    const solicitud=++SUGERENCIA_ID[modo];
-
-    setTimeout(()=>{
-      const sigueSinCatalogo=
-        !CATALOGO_POS.length ||
-        CATALOGO_POS_SUCURSAL!==SUCURSAL;
-
-      if(!sigueSinCatalogo){
+  // Respaldo directo a Apps Script.
+  // Esto evita que POS / Inventario / Traslados queden sin desplegar
+  // aunque falle o tarde la precarga del catálogo local.
+  api(
+    'sugerir',
+    {
+      q,
+      sucursal:SUCURSAL
+    },
+    r=>{
+      if(solicitud!==SUGERENCIA_ID[modo]){
         return;
       }
 
-      api(
-        'sugerir',
-        {q,sucursal:SUCURSAL},
-        r=>{
-          if(solicitud!==SUGERENCIA_ID[modo]){
-            return;
-          }
+      if(
+        !input ||
+        input.value.trim()!==q
+      ){
+        return;
+      }
 
-          if(!input || input.value.trim()!==q){
-            return;
-          }
+      let resultados=
+        r&&Array.isArray(r.sugerencias)
+          ? r.sugerencias
+          : [];
 
-          pintarSugerencias(
-            r&&Array.isArray(r.sugerencias)
-              ? r.sugerencias
-              : [],
-            modo,
-            q
-          );
+      // En POS y traslados, primero mostrar disponibles.
+      // Si no hay ninguno disponible, mostrar agotados como referencia,
+      // pero no permitir agregarlos.
+      if(['pos','tras'].includes(modo)){
+        const disponibles=resultados.filter(
+          p=>Number(p.existencia||0)>0
+        );
+
+        if(disponibles.length){
+          resultados=disponibles;
         }
+      }
+
+      pintarSugerencias(
+        resultados,
+        modo,
+        q
       );
-    },700);
-  }
+
+      if(!resultados.length){
+        lista.innerHTML=
+          '<div class="itemSugerencia">'+
+            '<div class="sugDetalle">Sin coincidencias en '+esc(SUCURSAL)+'.</div>'+
+          '</div>';
+        lista.classList.remove('oculto');
+      }
+    }
+  );
 }
 
 function agregarDesdeSugerencia(p){
