@@ -380,7 +380,7 @@ document.addEventListener('click',e=>{
         <label>Nota</label>
         <textarea id="cNota"></textarea>
 
-        <button class="btnMorado w100" style="margin-top:12px" onclick="prepararCorrida()">👁 Preparar composición final</button>
+        <button class="btnMorado w100" style="margin-top:12px" onclick="prepararCorrida()">👁 Preparar y revisar corrida</button>
 
         <div id="previewCorrida" class="oculto" style="margin-top:15px">
           <h3>Vista previa antes de guardar</h3>
@@ -439,7 +439,7 @@ document.addEventListener('click',e=>{
 
           <div>
             <label>Escala</label>
-            <select id="pcEscala" onchange="dibujarCurvaEditor();actualizarCostosCurvaDesdeModelo()"></select>
+            <select id="pcEscala" onchange="dibujarCurvaEditor();actualizarCostosCurvaDesdeModelo();invalidarComposicionFinalCurva()"></select>
           </div>
 
           <div>
@@ -479,6 +479,25 @@ document.addEventListener('click',e=>{
         </div>
 
         <h3 style="margin-top:16px">Composición por talla</h3>
+
+        <div class="fila" style="margin-bottom:10px">
+          <div style="flex:1">
+            <label>Cantidad de pares para toda la curva</label>
+            <input id="pcCantidadTodas"
+                   type="number"
+                   min="0"
+                   step="1"
+                   value="1">
+          </div>
+
+          <button class="btnGris"
+                  type="button"
+                  style="align-self:end;min-width:160px"
+                  onclick="aplicarCantidadATodaCurva()">
+            Aplicar a todas
+          </button>
+        </div>
+
         <div id="curvaEditor"></div>
 
         <div class="totales" style="margin-top:10px">
@@ -488,7 +507,18 @@ document.addEventListener('click',e=>{
           </div>
         </div>
 
-        <button class="btnMorado w100" style="margin-top:12px" onclick="guardarCurvaUI()">
+        <button class="btnAzul w100"
+                style="margin-top:12px"
+                onclick="prepararComposicionCurva()">
+          👁 Preparar composición final
+        </button>
+
+        <div id="pcComposicionFinal" class="oculto" style="margin-top:12px"></div>
+
+        <button id="pcGuardarCurvaBtn"
+                class="btnMorado w100 oculto"
+                style="margin-top:12px"
+                onclick="guardarCurvaUI()">
           Crear paquete / curva y mostrar en POS
         </button>
 
@@ -4344,36 +4374,18 @@ function dibujarCorrida(){
       )||0
     );
 
-  const costoGeneral=
-    Number($('cCosto').value)||0;
-
-  const modelo=
-    $('cModelo').value.trim();
-
-  const color=
-    $('cColor').value.trim();
-
   let h=
-    '<table class="tabla">'+
+    '<table class="corridaTabla">'+
     '<thead><tr>'+
       '<th>Talla</th>'+
-      '<th>Código</th>'+
-      '<th>Cantidad</th>'+
-      '<th>Costo unit.</th>'+
+      '<th>Cantidad de pares</th>'+
+      '<th>Referencia</th>'+
     '</tr></thead><tbody>';
 
-  tallas.forEach(t=>{
-    const codigo=
-      L(modelo)+
-      '-'+
-      L(color).substring(0,2)+
-      '-'+
-      L(t);
-
+  tallas.forEach((t,i)=>{
     h+=
       '<tr>'+
         '<td><b>'+esc(t)+'</b></td>'+
-        '<td>'+esc(codigo)+'</td>'+
         '<td>'+
           '<input class="cCantidadTalla" '+
                  'data-talla="'+esc(t)+'" '+
@@ -4381,12 +4393,7 @@ function dibujarCorrida(){
                  'value="'+cantidadGeneral+'" '+
                  'oninput="totalizarCorrida()">'+
         '</td>'+
-        '<td>'+
-          '<input class="cCostoTalla" '+
-                 'data-talla="'+esc(t)+'" '+
-                 'type="number" min="0" step="0.01" '+
-                 'value="'+costoGeneral.toFixed(2)+'">'+
-        '</td>'+
+        '<td>Se creará en el catálogo con existencia 0</td>'+
       '</tr>';
   });
 
@@ -4409,29 +4416,22 @@ function aplicarCantidadCorrida(forzar=true){
       )||0
     );
 
-  const cantidades=
+  const inputs=
     document.querySelectorAll(
       '.cCantidadTalla'
     );
 
-  if(!cantidades.length){
+  if(
+    !inputs.length
+  ){
     dibujarCorrida();
     return;
   }
 
   if(forzar){
-    cantidades.forEach(x=>{
+    inputs.forEach(x=>{
       x.value=general;
     });
-
-    const costo=
-      Number($('cCosto').value)||0;
-
-    document
-      .querySelectorAll('.cCostoTalla')
-      .forEach(x=>{
-        x.value=costo.toFixed(2);
-      });
   }
 
   totalizarCorrida();
@@ -4481,25 +4481,16 @@ function totalizarCorrida(){
   }
 
   const cantidades={};
-  const costos={};
 
   document
-    .querySelectorAll('.cCantidadTalla')
+    .querySelectorAll(
+      '.cCantidadTalla'
+    )
     .forEach(x=>{
       cantidades[String(x.dataset.talla||'')]=
         Math.max(
           0,
           parseInt(x.value||'0',10)||0
-        );
-    });
-
-  document
-    .querySelectorAll('.cCostoTalla')
-    .forEach(x=>{
-      costos[String(x.dataset.talla||'')]=
-        Math.max(
-          0,
-          Number(x.value)||0
         );
     });
 
@@ -4510,10 +4501,7 @@ function totalizarCorrida(){
         ? cantidades[String(t)]
         : 0,
     color,
-    costo:
-      costos[String(t)]!=null
-        ? costos[String(t)]
-        : (Number($('cCosto').value)||0),
+    costo:Number($('cCosto').value)||0,
     precio:Number($('cPrecio').value)||0,
     ubicacion:$('cUbicacion').value.trim(),
     stockMinimo:Math.max(
@@ -4521,20 +4509,6 @@ function totalizarCorrida(){
       parseInt($('cStockMinimo').value||'0',10)||0
     )
   }));
-
-  const totalPares=
-    corridaBorrador.reduce(
-      (s,x)=>s+(Number(x.cantidad)||0),
-      0
-    );
-
-  if(totalPares<=0){
-    return msg(
-      'mensajeCorrida',
-      'Ingrese cantidad en al menos una talla.',
-      'error'
-    );
-  }
 
   renderPreviewCorrida();
   $('previewCorrida').classList.remove('oculto');
@@ -8216,8 +8190,28 @@ function dibujarCurvaEditor(){
       $('pcTotalPares').textContent='0';
     }
 
+    if($('pcComposicionFinal')){
+      $('pcComposicionFinal').classList.add('oculto');
+      $('pcComposicionFinal').innerHTML='';
+    }
+
+    if($('pcGuardarCurvaBtn')){
+      $('pcGuardarCurvaBtn').classList.add('oculto');
+    }
+
     return;
   }
+
+  const general=
+    Math.max(
+      0,
+      parseInt(
+        $('pcCantidadTodas')
+          ? $('pcCantidadTodas').value||'0'
+          : '0',
+        10
+      )||0
+    );
 
   box.innerHTML=
     '<table class="tabla">'+
@@ -8232,14 +8226,15 @@ function dibujarCurvaEditor(){
         '<td>'+
           '<input class="curvaCant" '+
           'data-talla="'+esc(t)+'" '+
-          'type="number" min="0" step="1" value="0" '+
-          'oninput="actualizarResumenCurva()">'+
+          'type="number" min="0" step="1" value="'+general+'" '+
+          'oninput="actualizarResumenCurva();invalidarComposicionFinalCurva()">'+
         '</td>'+
       '</tr>'
     ).join('')+
     '</tbody></table>';
 
   actualizarResumenCurva();
+  invalidarComposicionFinalCurva();
 }
 
 
@@ -8585,6 +8580,123 @@ function seleccionarModeloCurva(m){
 }
 
 
+
+function aplicarCantidadATodaCurva(){
+  const n=
+    Math.max(
+      0,
+      parseInt(
+        $('pcCantidadTodas')
+          ? $('pcCantidadTodas').value||'0'
+          : '0',
+        10
+      )||0
+    );
+
+  const inputs=
+    document.querySelectorAll('.curvaCant');
+
+  if(!inputs.length){
+    dibujarCurvaEditor();
+    return;
+  }
+
+  inputs.forEach(x=>{
+    x.value=n;
+  });
+
+  actualizarResumenCurva();
+  invalidarComposicionFinalCurva();
+}
+
+function invalidarComposicionFinalCurva(){
+  if($('pcComposicionFinal')){
+    $('pcComposicionFinal').classList.add('oculto');
+    $('pcComposicionFinal').innerHTML='';
+  }
+
+  if($('pcGuardarCurvaBtn')){
+    $('pcGuardarCurvaBtn').classList.add('oculto');
+  }
+}
+
+function prepararComposicionCurva(){
+  const filas=
+    [...document.querySelectorAll('.curvaCant')]
+      .map(x=>({
+        talla:String(x.dataset.talla||''),
+        cantidad:
+          Math.max(
+            0,
+            parseInt(x.value||'0',10)||0
+          )
+      }));
+
+  const total=
+    filas.reduce(
+      (s,x)=>s+x.cantidad,
+      0
+    );
+
+  if(total<=0){
+    return msg(
+      'mensajeCurvasCrear',
+      'Ingrese cantidad en al menos una talla.',
+      'error'
+    );
+  }
+
+  const activas=
+    filas.filter(x=>x.cantidad>0);
+
+  $('pcComposicionFinal').innerHTML=
+    '<h4 style="margin:0 0 8px">Composición final de la curva</h4>'+
+    '<table class="tabla">'+
+      '<thead><tr>'+
+        '<th>Talla</th>'+
+        '<th>Cantidad de pares</th>'+
+      '</tr></thead>'+
+      '<tbody>'+
+        activas.map(x=>
+          '<tr>'+
+            '<td><b>'+esc(x.talla)+'</b></td>'+
+            '<td>'+x.cantidad+'</td>'+
+          '</tr>'
+        ).join('')+
+      '</tbody>'+
+    '</table>'+
+    '<div class="totales" style="margin-top:8px">'+
+      '<div class="lineaTotal">'+
+        '<span>Total pares</span>'+
+        '<b>'+total+'</b>'+
+      '</div>'+
+    '</div>'+
+    '<button class="btnGris w100" '+
+            'style="margin-top:8px" '+
+            'onclick="volverEditarComposicionCurva()">'+
+      '✏️ Volver a editar cantidades'+
+    '</button>';
+
+  $('pcComposicionFinal').classList.remove('oculto');
+  $('pcGuardarCurvaBtn').classList.remove('oculto');
+
+  actualizarCostosCurvaDesdeModelo();
+
+  $('pcComposicionFinal').scrollIntoView({
+    behavior:'smooth',
+    block:'start'
+  });
+}
+
+function volverEditarComposicionCurva(){
+  invalidarComposicionFinalCurva();
+
+  $('curvaEditor').scrollIntoView({
+    behavior:'smooth',
+    block:'start'
+  });
+}
+
 function actualizarResumenCurva(){
   let total=0;
 
@@ -8758,6 +8870,12 @@ function guardarCurvaUI(){
       if($('pcTotalPares')){
         $('pcTotalPares').textContent='0';
       }
+
+      if($('pcCantidadTodas')){
+        $('pcCantidadTodas').value=1;
+      }
+
+      invalidarComposicionFinalCurva();
 
       CATALOGO_POS=[];
       CATALOGO_POS_SUCURSAL='';
