@@ -4,7 +4,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Comercial Adelaida - POS</title>
-<script src="https://unpkg.com/html5-qrcode" type="text/javascript" defer></script>
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript" defer>
+document.addEventListener('click',e=>{
+  const input=$('pcModelo');
+  const lista=$('pcModeloSugerencias');
+
+  if(
+    input &&
+    lista &&
+    !input.contains(e.target) &&
+    !lista.contains(e.target)
+  ){
+    lista.classList.add('oculto');
+  }
+});
+
+</script>
 <style>
 *{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f4f4f6;color:#202124}.app{max-width:960px;margin:auto;padding:14px}.card,.header{background:#fff;border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 3px 14px rgba(0,0,0,.06)}h1{margin:0;font-size:24px}.sub{color:#666;margin-top:4px}.tabs{
   display:grid;
@@ -382,9 +397,16 @@
             <input id="pcMarca">
           </div>
 
-          <div>
+          <div style="position:relative">
             <label>Modelo</label>
-            <input id="pcModelo">
+            <input id="pcModelo"
+                   autocomplete="off"
+                   placeholder="Escriba modelo, ej. 2323"
+                   oninput="buscarModeloCurva()"
+                   onfocus="buscarModeloCurva()">
+            <div id="pcModeloSugerencias"
+                 class="sugerencias oculto"
+                 style="max-height:260px;overflow:auto"></div>
           </div>
 
           <div>
@@ -419,7 +441,7 @@
 
           <div>
             <label>Precio de venta del paquete</label>
-            <input id="pcPrecio" type="number" min="0" step="0.01">
+            <input id="pcPrecio" type="number" min="0" step="0.01" oninput="this.dataset.editadoManual='SI'">
           </div>
 
           <div>
@@ -4257,6 +4279,8 @@ function cambiarTipoIngreso(){
   if(tipo==='PAQUETE_CURVA'){
     cargarEscalas();
     llenarEscalasCurvas();
+    cargarProductosCompra(false);
+    prepararModelosCurva();
     dibujarCurvaEditor();
   }
 }
@@ -5591,6 +5615,8 @@ let COMPRA_ITEMS=[];
 let CATALOGO_COMPRA=[];
 let CATALOGO_COMPRA_TS=0;
 let CATALOGO_COMPRA_CARGANDO=false;
+let MODELOS_CURVA=[];
+let MODELO_CURVA_SELECCIONADO=null;
 const COMPRAS_RECIBIENDO=new Set();
 
 function cargarAtributosProducto(){
@@ -6296,6 +6322,7 @@ function cargarProductosCompra(forzar=false){
 
   if(!forzar && vigente){
     mostrarProductosCompraProveedor();
+    prepararModelosCurva();
     return;
   }
 
@@ -6333,6 +6360,7 @@ function cargarProductosCompra(forzar=false){
       CATALOGO_COMPRA_TS=Date.now();
 
       mostrarProductosCompraProveedor();
+      prepararModelosCurva();
     }
   );
 }
@@ -8000,14 +8028,291 @@ function dibujarCurvaEditor(){
         '<td>'+
           '<input class="curvaCant" '+
           'data-talla="'+esc(t)+'" '+
-          'type="number" min="0" step="1" value="0">'+
+          'type="number" min="0" step="1" value="0" '+
+          'oninput="actualizarCostosCurvaDesdeModelo()">'+
         '</td>'+
       '</tr>'
     ).join('')+
     '</tbody></table>';
 }
 
+
+function prepararModelosCurva(){
+  const mapa={};
+
+  (CATALOGO_COMPRA||[])
+    .filter(p=>
+      String(p.tipoIngreso||'').toUpperCase()!=='PAQUETE_CURVA'
+    )
+    .forEach(p=>{
+      const key=[
+        p.marca||'',
+        p.modelo||'',
+        p.categoria||'',
+        p.color||'',
+        p.escala||'',
+        p.proveedorId||''
+      ].join('||');
+
+      if(!mapa[key]){
+        mapa[key]={
+          key,
+          marca:p.marca||'',
+          modelo:p.modelo||'',
+          categoria:p.categoria||'',
+          color:p.color||'',
+          escala:p.escala||'',
+          proveedorId:p.proveedorId||'',
+          ubicacion:p.ubicacion||'',
+          stockMinimo:Number(p.stockMinimo)||0,
+          productos:[]
+        };
+      }
+
+      mapa[key].productos.push(p);
+    });
+
+  MODELOS_CURVA=
+    Object.values(mapa)
+      .sort((a,b)=>{
+        const aa=[
+          a.marca,
+          a.modelo,
+          a.color,
+          a.escala
+        ].join(' ');
+
+        const bb=[
+          b.marca,
+          b.modelo,
+          b.color,
+          b.escala
+        ].join(' ');
+
+        return aa.localeCompare(
+          bb,
+          undefined,
+          {
+            numeric:true,
+            sensitivity:'base'
+          }
+        );
+      });
+}
+
+function buscarModeloCurva(){
+  const input=$('pcModelo');
+  const lista=$('pcModeloSugerencias');
+
+  if(!input||!lista){
+    return;
+  }
+
+  if(!CATALOGO_COMPRA.length){
+    cargarProductosCompra(false);
+  }
+
+  prepararModelosCurva();
+
+  const q=L(input.value);
+
+  if(!q){
+    lista.classList.add('oculto');
+    lista.innerHTML='';
+    return;
+  }
+
+  const resultados=
+    MODELOS_CURVA
+      .filter(m=>
+        [
+          m.modelo,
+          m.marca,
+          m.color,
+          m.categoria,
+          m.escala
+        ]
+          .map(L)
+          .some(x=>x.startsWith(q)||x.includes(q))
+      )
+      .slice(0,20);
+
+  lista.innerHTML='';
+
+  resultados.forEach(m=>{
+    const d=document.createElement('div');
+    d.className='itemSugerencia';
+
+    d.innerHTML=
+      '<div class="sugCodigo">'+
+        esc(m.modelo)+
+      '</div>'+
+      '<div class="sugDetalle">'+
+        [
+          m.marca,
+          m.color,
+          m.categoria,
+          m.escala
+            ? 'Escala '+m.escala
+            : ''
+        ]
+          .filter(Boolean)
+          .map(esc)
+          .join(' · ')+
+      '</div>';
+
+    d.onmousedown=e=>{
+      e.preventDefault();
+      e.stopPropagation();
+      seleccionarModeloCurva(m);
+    };
+
+    lista.appendChild(d);
+  });
+
+  if(resultados.length){
+    lista.classList.remove('oculto');
+  }else{
+    lista.innerHTML=
+      '<div class="itemSugerencia">'+
+        '<div class="sugDetalle">Sin coincidencias.</div>'+
+      '</div>';
+    lista.classList.remove('oculto');
+  }
+}
+
+function seleccionarModeloCurva(m){
+  MODELO_CURVA_SELECCIONADO=m;
+
+  $('pcModelo').value=
+    m.modelo||'';
+
+  $('pcMarca').value=
+    m.marca||'';
+
+  $('pcCategoria').value=
+    m.categoria||
+    'Paquete / Curva de tallas';
+
+  $('pcColor').value=
+    m.color||'';
+
+  $('pcUbicacion').value=
+    m.ubicacion||'';
+
+  if(
+    m.escala &&
+    [...$('pcEscala').options]
+      .some(o=>o.value===m.escala)
+  ){
+    $('pcEscala').value=
+      m.escala;
+  }
+
+  if(
+    m.proveedorId &&
+    [...$('pcProveedor').options]
+      .some(o=>o.value===m.proveedorId)
+  ){
+    $('pcProveedor').value=
+      m.proveedorId;
+  }
+
+  if(
+    Number(m.stockMinimo)>0
+  ){
+    $('pcStockMinimo').value=
+      Math.max(
+        1,
+        Number(m.stockMinimo)||1
+      );
+  }
+
+  if(!$('pcNombre').value.trim()){
+    $('pcNombre').value=
+      [
+        m.marca,
+        m.modelo,
+        m.color
+      ]
+        .filter(Boolean)
+        .join(' ');
+  }
+
+  $('pcModeloSugerencias')
+    .classList.add('oculto');
+
+  dibujarCurvaEditor();
+  actualizarCostosCurvaDesdeModelo();
+}
+
+function actualizarCostosCurvaDesdeModelo(){
+  const m=MODELO_CURVA_SELECCIONADO;
+
+  if(!m){
+    return;
+  }
+
+  const porTalla={};
+
+  (m.productos||[]).forEach(p=>{
+    porTalla[String(p.talla||'')]=p;
+  });
+
+  let costo=0;
+  let precio=0;
+  let total=0;
+
+  document
+    .querySelectorAll('.curvaCant')
+    .forEach(x=>{
+      const talla=String(
+        x.dataset.talla||''
+      );
+
+      const cantidad=
+        Math.max(
+          0,
+          parseInt(x.value||'0',10)||0
+        );
+
+      const p=porTalla[talla];
+
+      if(p && cantidad>0){
+        costo+=
+          (Number(p.costo)||0)*
+          cantidad;
+
+        precio+=
+          (Number(p.precio)||0)*
+          cantidad;
+
+        total+=cantidad;
+      }
+    });
+
+  if(total>0){
+    $('pcCosto').value=
+      costo.toFixed(2);
+
+    if(
+      !$('pcPrecio').dataset.editadoManual
+    ){
+      $('pcPrecio').value=
+        precio.toFixed(2);
+    }
+  }
+}
+
 function guardarCurvaUI(){
+  if(!MODELO_CURVA_SELECCIONADO){
+    return msg(
+      'mensajeCurvasCrear',
+      'Seleccione un modelo existente de la lista.',
+      'error'
+    );
+  }
+
   const composicion={};
 
   document.querySelectorAll('.curvaCant').forEach(x=>{
@@ -8023,7 +8328,7 @@ function guardarCurvaUI(){
     {
       nombre:$('pcNombre').value,
       marca:$('pcMarca').value,
-      modelo:$('pcModelo').value,
+      modelo:MODELO_CURVA_SELECCIONADO.modelo,
       categoria:$('pcCategoria').value,
       color:$('pcColor').value,
       escala:$('pcEscala').value,
@@ -8057,9 +8362,11 @@ function guardarCurvaUI(){
       $('pcNombre').value='';
       $('pcMarca').value='';
       $('pcModelo').value='';
+      MODELO_CURVA_SELECCIONADO=null;
       $('pcColor').value='';
       $('pcCosto').value='';
       $('pcPrecio').value='';
+      delete $('pcPrecio').dataset.editadoManual;
       $('pcUbicacion').value='';
       $('pcStockMinimo').value=1;
 
