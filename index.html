@@ -380,7 +380,7 @@ document.addEventListener('click',e=>{
         <label>Nota</label>
         <textarea id="cNota"></textarea>
 
-        <button class="btnMorado w100" style="margin-top:12px" onclick="prepararCorrida()">👁 Preparar y revisar corrida</button>
+        <button class="btnMorado w100" style="margin-top:12px" onclick="prepararCorrida()">👁 Preparar composición final</button>
 
         <div id="previewCorrida" class="oculto" style="margin-top:15px">
           <h3>Vista previa antes de guardar</h3>
@@ -4344,18 +4344,36 @@ function dibujarCorrida(){
       )||0
     );
 
+  const costoGeneral=
+    Number($('cCosto').value)||0;
+
+  const modelo=
+    $('cModelo').value.trim();
+
+  const color=
+    $('cColor').value.trim();
+
   let h=
-    '<table class="corridaTabla">'+
+    '<table class="tabla">'+
     '<thead><tr>'+
       '<th>Talla</th>'+
-      '<th>Cantidad de pares</th>'+
-      '<th>Referencia</th>'+
+      '<th>Código</th>'+
+      '<th>Cantidad</th>'+
+      '<th>Costo unit.</th>'+
     '</tr></thead><tbody>';
 
-  tallas.forEach((t,i)=>{
+  tallas.forEach(t=>{
+    const codigo=
+      L(modelo)+
+      '-'+
+      L(color).substring(0,2)+
+      '-'+
+      L(t);
+
     h+=
       '<tr>'+
         '<td><b>'+esc(t)+'</b></td>'+
+        '<td>'+esc(codigo)+'</td>'+
         '<td>'+
           '<input class="cCantidadTalla" '+
                  'data-talla="'+esc(t)+'" '+
@@ -4363,7 +4381,12 @@ function dibujarCorrida(){
                  'value="'+cantidadGeneral+'" '+
                  'oninput="totalizarCorrida()">'+
         '</td>'+
-        '<td>Se creará en el catálogo con existencia 0</td>'+
+        '<td>'+
+          '<input class="cCostoTalla" '+
+                 'data-talla="'+esc(t)+'" '+
+                 'type="number" min="0" step="0.01" '+
+                 'value="'+costoGeneral.toFixed(2)+'">'+
+        '</td>'+
       '</tr>';
   });
 
@@ -4386,22 +4409,29 @@ function aplicarCantidadCorrida(forzar=true){
       )||0
     );
 
-  const inputs=
+  const cantidades=
     document.querySelectorAll(
       '.cCantidadTalla'
     );
 
-  if(
-    !inputs.length
-  ){
+  if(!cantidades.length){
     dibujarCorrida();
     return;
   }
 
   if(forzar){
-    inputs.forEach(x=>{
+    cantidades.forEach(x=>{
       x.value=general;
     });
+
+    const costo=
+      Number($('cCosto').value)||0;
+
+    document
+      .querySelectorAll('.cCostoTalla')
+      .forEach(x=>{
+        x.value=costo.toFixed(2);
+      });
   }
 
   totalizarCorrida();
@@ -4451,16 +4481,25 @@ function totalizarCorrida(){
   }
 
   const cantidades={};
+  const costos={};
 
   document
-    .querySelectorAll(
-      '.cCantidadTalla'
-    )
+    .querySelectorAll('.cCantidadTalla')
     .forEach(x=>{
       cantidades[String(x.dataset.talla||'')]=
         Math.max(
           0,
           parseInt(x.value||'0',10)||0
+        );
+    });
+
+  document
+    .querySelectorAll('.cCostoTalla')
+    .forEach(x=>{
+      costos[String(x.dataset.talla||'')]=
+        Math.max(
+          0,
+          Number(x.value)||0
         );
     });
 
@@ -4471,7 +4510,10 @@ function totalizarCorrida(){
         ? cantidades[String(t)]
         : 0,
     color,
-    costo:Number($('cCosto').value)||0,
+    costo:
+      costos[String(t)]!=null
+        ? costos[String(t)]
+        : (Number($('cCosto').value)||0),
     precio:Number($('cPrecio').value)||0,
     ubicacion:$('cUbicacion').value.trim(),
     stockMinimo:Math.max(
@@ -4479,6 +4521,20 @@ function totalizarCorrida(){
       parseInt($('cStockMinimo').value||'0',10)||0
     )
   }));
+
+  const totalPares=
+    corridaBorrador.reduce(
+      (s,x)=>s+(Number(x.cantidad)||0),
+      0
+    );
+
+  if(totalPares<=0){
+    return msg(
+      'mensajeCorrida',
+      'Ingrese cantidad en al menos una talla.',
+      'error'
+    );
+  }
 
   renderPreviewCorrida();
   $('previewCorrida').classList.remove('oculto');
