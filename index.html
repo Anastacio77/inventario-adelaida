@@ -60,7 +60,7 @@ document.addEventListener('click',e=>{
   </div>
 
   <div id="tabs" class="tabs oculto">
-    <button id="tabPos" class="activo" onclick="vista('pos')">🛒 Punto de venta</button>
+    <button id="tabPos" class="activo" onclick="vista('pos');refrescarCatalogoVenta()">🛒 Punto de venta</button>
     <button id="tabPedidos" onclick="vista('pedidos');mostrarListaPedidos();cargarPedidos()">📋 Pedidos</button>
     <button id="tabVentas" onclick="vista('ventas');buscarVentas()">🧾 Ventas</button>
     <button id="tabInventario" onclick="vista('inventario')">📦 Inventario</button>
@@ -478,7 +478,11 @@ document.addEventListener('click',e=>{
           </div>
         </div>
 
-        <h3 style="margin-top:16px">Composición por talla</h3>
+        <div class="mensaje ok" style="margin-top:14px">
+  ✅ VERSIÓN CURVA 2 · Debe aparecer debajo el campo <b>Cantidad para toda la curva</b>.
+</div>
+
+<h3 style="margin-top:16px">Composición por talla</h3>
 
         <div class="fila" style="margin-bottom:10px">
           <div style="flex:1">
@@ -1779,6 +1783,24 @@ function verificarCajaPos(){
       pintarEstadoCajaPos();
     }
   );
+}
+
+
+function refrescarCatalogoVenta(){
+  if(!TOKEN){
+    return;
+  }
+
+  const desactualizado=
+    CATALOGO_POS_SUCURSAL!==SUCURSAL ||
+    !CATALOGO_POS_TS ||
+    (Date.now()-CATALOGO_POS_TS)>10000;
+
+  if(!desactualizado){
+    return;
+  }
+
+  precargarCatalogoPos(true);
 }
 
 function precargarCatalogoPos(forzar=false){
