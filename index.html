@@ -1690,7 +1690,7 @@ function precargarCatalogoPos(forzar=false){
   const vigente=
     CATALOGO_POS.length &&
     CATALOGO_POS_SUCURSAL===SUCURSAL &&
-    (Date.now()-CATALOGO_POS_TS)<90000;
+    (Date.now()-CATALOGO_POS_TS)<180000;
 
   if(!forzar && vigente){
     return;
@@ -1766,14 +1766,6 @@ function sugerenciasLocales(q,modo){
       break;
     }
 
-    // En POS y Traslados no mostrar agotados.
-    if(
-      ['pos','tras'].includes(modo) &&
-      Number(p.existencia||0)<=0
-    ){
-      continue;
-    }
-
     const campos=[
       p.codigo,
       p.marca,
@@ -1788,8 +1780,6 @@ function sugerenciasLocales(q,modo){
     }
   }
 
-  // Primero coincidencia exacta de código/modelo,
-  // luego mayor existencia y finalmente talla.
   resultados.sort((a,b)=>{
     const axCodigo=L(a.codigo)===buscado ? 0 : 1;
     const bxCodigo=L(b.codigo)===buscado ? 0 : 1;
@@ -1799,9 +1789,19 @@ function sugerenciasLocales(q,modo){
     const bxModelo=L(b.modelo)===buscado ? 0 : 1;
     if(axModelo!==bxModelo) return axModelo-bxModelo;
 
+    if(['pos','tras'].includes(modo)){
+      const aAgotado=Number(a.existencia||0)<=0 ? 1 : 0;
+      const bAgotado=Number(b.existencia||0)<=0 ? 1 : 0;
+      if(aAgotado!==bAgotado){
+        return aAgotado-bAgotado;
+      }
+    }
+
     const ea=Number(a.existencia)||0;
     const eb=Number(b.existencia)||0;
-    if(eb!==ea) return eb-ea;
+    if(eb!==ea){
+      return eb-ea;
+    }
 
     return String(a.talla||'').localeCompare(
       String(b.talla||''),
@@ -1880,7 +1880,7 @@ function auto(
       setT(
         setTimeout(
           ()=>sugerencias(q,modo),
-          35
+          20
         )
       );
     }
@@ -2088,68 +2088,53 @@ function sugerencias(q,modo){
     CATALOGO_POS.length>0;
 
   if(catalogoListo){
-    const locales=sugerenciasLocales(q,modo);
+    const resultados=sugerenciasLocales(q,modo);
 
-    if(locales.length){
-      pintarSugerencias(
-        locales,
-        modo,
-        q
-      );
-      return;
+    pintarSugerencias(
+      resultados,
+      modo,
+      q
+    );
+
+    if(!resultados.length){
+      lista.innerHTML=
+        '<div class="itemSugerencia">'+
+          '<div class="sugDetalle">'+
+            'Sin coincidencias en '+esc(SUCURSAL)+'.'+
+          '</div>'+
+        '</div>';
+
+      lista.classList.remove('oculto');
     }
+
+    return;
   }
 
-  // Mostrar algo inmediatamente para que el usuario vea que el despliegue está activo.
   lista.innerHTML=
     '<div class="itemSugerencia">'+
-      '<div class="sugDetalle">Buscando…</div>'+
+      '<div class="sugDetalle">Cargando productos…</div>'+
     '</div>';
+
   lista.classList.remove('oculto');
 
-  // Si aún no hay catálogo local, intentar cargarlo.
-  if(!catalogoListo){
-    precargarCatalogoPos(false);
-  }
+  precargarCatalogoPos(false);
 
-  // Respaldo directo a Apps Script.
-  // Esto evita que POS / Inventario / Traslados queden sin desplegar
-  // aunque falle o tarde la precarga del catálogo local.
-  api(
-    'sugerir',
-    {
-      q,
-      sucursal:SUCURSAL
-    },
-    r=>{
-      if(solicitud!==SUGERENCIA_ID[modo]){
-        return;
-      }
+  setTimeout(()=>{
+    if(solicitud!==SUGERENCIA_ID[modo]){
+      return;
+    }
 
-      if(
-        !input ||
-        input.value.trim()!==q
-      ){
-        return;
-      }
+    if(!input || input.value.trim()!==q){
+      return;
+    }
 
-      let resultados=
-        r&&Array.isArray(r.sugerencias)
-          ? r.sugerencias
-          : [];
+    const yaListo=
+      CATALOGO_POS_SUCURSAL===SUCURSAL &&
+      Array.isArray(CATALOGO_POS) &&
+      CATALOGO_POS.length>0;
 
-      // En POS y traslados, primero mostrar disponibles.
-      // Si no hay ninguno disponible, mostrar agotados como referencia,
-      // pero no permitir agregarlos.
-      if(['pos','tras'].includes(modo)){
-        const disponibles=resultados.filter(
-          p=>Number(p.existencia||0)>0
-        );
-
-        if(disponibles.length){
-          resultados=disponibles;
-        }
-      }
+    if(yaListo){
+      const resultados=sugerenciasLocales(q,modo);
 
       pintarSugerencias(
         resultados,
@@ -2160,12 +2145,56 @@ function sugerencias(q,modo){
       if(!resultados.length){
         lista.innerHTML=
           '<div class="itemSugerencia">'+
-            '<div class="sugDetalle">Sin coincidencias en '+esc(SUCURSAL)+'.</div>'+
+            '<div class="sugDetalle">'+
+              'Sin coincidencias en '+esc(SUCURSAL)+'.'+
+            '</div>'+
           '</div>';
+
         lista.classList.remove('oculto');
       }
+
+      return;
     }
-  );
+
+    api(
+      'sugerir',
+      {
+        q,
+        sucursal:SUCURSAL
+      },
+      r=>{
+        if(solicitud!==SUGERENCIA_ID[modo]){
+          return;
+        }
+
+        if(!input || input.value.trim()!==q){
+          return;
+        }
+
+        const resultados=
+          r&&Array.isArray(r.sugerencias)
+            ? r.sugerencias
+            : [];
+
+        pintarSugerencias(
+          resultados,
+          modo,
+          q
+        );
+
+        if(!resultados.length){
+          lista.innerHTML=
+            '<div class="itemSugerencia">'+
+              '<div class="sugDetalle">'+
+                'Sin coincidencias en '+esc(SUCURSAL)+'.'+
+              '</div>'+
+            '</div>';
+
+          lista.classList.remove('oculto');
+        }
+      }
+    );
+  },650);
 }
 
 function agregarDesdeSugerencia(p){
