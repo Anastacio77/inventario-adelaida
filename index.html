@@ -352,10 +352,28 @@ document.addEventListener('click',e=>{
 
         </div>
 
+        <div class="fila" style="margin-top:12px">
+          <div style="flex:1">
+            <label>Cantidad de pares para toda la corrida</label>
+            <input id="cCantidadTodas"
+                   type="number"
+                   min="0"
+                   step="1"
+                   value="1"
+                   oninput="aplicarCantidadCorrida(false)">
+          </div>
+
+          <button class="btnGris"
+                  style="align-self:end;min-width:160px"
+                  onclick="aplicarCantidadCorrida(true)">
+            Aplicar a todas
+          </button>
+        </div>
+
         <div id="tablaCorrida" style="margin-top:12px"></div>
 
         <div class="dato" style="margin-top:8px">
-          <span>Total corrida</span>
+          <span>Total pares de la corrida</span>
           <b id="totalCorrida">0</b>
         </div>
 
@@ -421,7 +439,7 @@ document.addEventListener('click',e=>{
 
           <div>
             <label>Escala</label>
-            <select id="pcEscala" onchange="dibujarCurvaEditor()"></select>
+            <select id="pcEscala" onchange="dibujarCurvaEditor();actualizarCostosCurvaDesdeModelo()"></select>
           </div>
 
           <div>
@@ -462,6 +480,13 @@ document.addEventListener('click',e=>{
 
         <h3 style="margin-top:16px">Composición por talla</h3>
         <div id="curvaEditor"></div>
+
+        <div class="totales" style="margin-top:10px">
+          <div class="lineaTotal">
+            <span>Total pares de la curva</span>
+            <b id="pcTotalPares">0</b>
+          </div>
+        </div>
 
         <button class="btnMorado w100" style="margin-top:12px" onclick="guardarCurvaUI()">
           Crear paquete / curva y mostrar en POS
@@ -4308,33 +4333,98 @@ function dibujarCorrida(){
   const escala=$('cEscala').value;
   const tallas=ESCALAS_MAP[escala]||[];
 
+  const cantidadGeneral=
+    Math.max(
+      0,
+      parseInt(
+        $('cCantidadTodas')
+          ? $('cCantidadTodas').value||'0'
+          : '0',
+        10
+      )||0
+    );
+
   let h=
     '<table class="corridaTabla">'+
     '<thead><tr>'+
       '<th>Talla</th>'+
+      '<th>Cantidad de pares</th>'+
       '<th>Referencia</th>'+
     '</tr></thead><tbody>';
 
-  tallas.forEach(t=>{
+  tallas.forEach((t,i)=>{
     h+=
       '<tr>'+
         '<td><b>'+esc(t)+'</b></td>'+
+        '<td>'+
+          '<input class="cCantidadTalla" '+
+                 'data-talla="'+esc(t)+'" '+
+                 'type="number" min="0" step="1" '+
+                 'value="'+cantidadGeneral+'" '+
+                 'oninput="totalizarCorrida()">'+
+        '</td>'+
         '<td>Se creará en el catálogo con existencia 0</td>'+
       '</tr>';
   });
 
-  cont.innerHTML=h+'</tbody></table>';
+  cont.innerHTML=
+    h+
+    '</tbody></table>';
 
-  if($('totalCorrida')){
-    $('totalCorrida').textContent=tallas.length;
+  totalizarCorrida();
+}
+
+function aplicarCantidadCorrida(forzar=true){
+  const general=
+    Math.max(
+      0,
+      parseInt(
+        $('cCantidadTodas')
+          ? $('cCantidadTodas').value||'0'
+          : '0',
+        10
+      )||0
+    );
+
+  const inputs=
+    document.querySelectorAll(
+      '.cCantidadTalla'
+    );
+
+  if(
+    !inputs.length
+  ){
+    dibujarCorrida();
+    return;
   }
+
+  if(forzar){
+    inputs.forEach(x=>{
+      x.value=general;
+    });
+  }
+
+  totalizarCorrida();
 }
 
 function totalizarCorrida(){
-  const escala=$('cEscala').value;
-  const tallas=ESCALAS_MAP[escala]||[];
+  let total=0;
+
+  document
+    .querySelectorAll(
+      '.cCantidadTalla'
+    )
+    .forEach(x=>{
+      total+=
+        Math.max(
+          0,
+          parseInt(x.value||'0',10)||0
+        );
+    });
+
   if($('totalCorrida')){
-    $('totalCorrida').textContent=tallas.length;
+    $('totalCorrida').textContent=
+      total;
   }
 }function prepararCorrida(){
   const marca=$('cMarca').value.trim();
@@ -4360,9 +4450,26 @@ function totalizarCorrida(){
     );
   }
 
+  const cantidades={};
+
+  document
+    .querySelectorAll(
+      '.cCantidadTalla'
+    )
+    .forEach(x=>{
+      cantidades[String(x.dataset.talla||'')]=
+        Math.max(
+          0,
+          parseInt(x.value||'0',10)||0
+        );
+    });
+
   corridaBorrador=tallas.map(t=>({
     talla:String(t),
-    cantidad:0,
+    cantidad:
+      cantidades[String(t)]!=null
+        ? cantidades[String(t)]
+        : 0,
     color,
     costo:Number($('cCosto').value)||0,
     precio:Number($('cPrecio').value)||0,
@@ -4400,6 +4507,7 @@ function renderPreviewCorrida(){
     '<thead><tr>'+
       '<th>Código</th>'+
       '<th>Talla</th>'+
+      '<th>Cantidad</th>'+
       '<th>Color</th>'+
       '<th>Costo</th>'+
       '<th>Precio</th>'+
@@ -4412,6 +4520,7 @@ function renderPreviewCorrida(){
       '<tr>'+
         '<td><b>'+esc(codigoPreviewCorrida(x))+'</b></td>'+
         '<td><input value="'+esc(x.talla)+'" onchange="editarFilaCorrida('+i+',\'talla\',this.value)"></td>'+
+        '<td><input type="number" min="0" step="1" value="'+x.cantidad+'" onchange="editarFilaCorrida('+i+',\'cantidad\',this.value)"></td>'+
         '<td><input value="'+esc(x.color)+'" onchange="editarFilaCorrida('+i+',\'color\',this.value)"></td>'+
         '<td><input type="number" step="0.01" value="'+x.costo+'" onchange="editarFilaCorrida('+i+',\'costo\',this.value)"></td>'+
         '<td><input type="number" step="0.01" value="'+x.precio+'" onchange="editarFilaCorrida('+i+',\'precio\',this.value)"></td>'+
@@ -4420,6 +4529,17 @@ function renderPreviewCorrida(){
       '</tr>';
   });
 
+  const totalPares=
+    corridaBorrador.reduce(
+      (s,x)=>
+        s+
+        Math.max(
+          0,
+          Number(x.cantidad)||0
+        ),
+      0
+    );
+
   $('tablaPreviewCorrida').innerHTML=
     h+
     '</tbody></table>'+
@@ -4427,6 +4547,10 @@ function renderPreviewCorrida(){
       '<div class="lineaTotal">'+
         '<span>Referencias a crear</span>'+
         '<b>'+corridaBorrador.length+'</b>'+
+      '</div>'+
+      '<div class="lineaTotal">'+
+        '<span>Total pares de la corrida</span>'+
+        '<b>'+totalPares+'</b>'+
       '</div>'+
       '<div class="lineaTotal">'+
         '<span>Existencia inicial</span>'+
@@ -8024,11 +8148,18 @@ function dibujarCurvaEditor(){
 
   if(!box||!escSel) return;
 
-  const tallas=ESCALAS_MAP[escSel.value]||[];
+  const tallas=
+    ESCALAS_MAP[escSel.value]||
+    [];
 
   if(!tallas.length){
     box.innerHTML=
-      '<div class="sub">Seleccione una escala activa.</div>';
+      '<div class="sub">El modelo seleccionado no tiene tallas asociadas a esta escala.</div>';
+
+    if($('pcTotalPares')){
+      $('pcTotalPares').textContent='0';
+    }
+
     return;
   }
 
@@ -8036,7 +8167,7 @@ function dibujarCurvaEditor(){
     '<table class="tabla">'+
     '<thead><tr>'+
       '<th>Talla</th>'+
-      '<th>Pares dentro del paquete</th>'+
+      '<th>Cantidad de pares</th>'+
     '</tr></thead>'+
     '<tbody>'+
     tallas.map(t=>
@@ -8046,11 +8177,13 @@ function dibujarCurvaEditor(){
           '<input class="curvaCant" '+
           'data-talla="'+esc(t)+'" '+
           'type="number" min="0" step="1" value="0" '+
-          'oninput="actualizarCostosCurvaDesdeModelo()">'+
+          'oninput="actualizarResumenCurva()">'+
         '</td>'+
       '</tr>'
     ).join('')+
     '</tbody></table>';
+
+  actualizarResumenCurva();
 }
 
 
@@ -8067,7 +8200,6 @@ function prepararModelosCurva(){
         p.modelo||'',
         p.categoria||'',
         p.color||'',
-        p.escala||'',
         p.proveedorId||''
       ].join('||');
 
@@ -8078,12 +8210,21 @@ function prepararModelosCurva(){
           modelo:p.modelo||'',
           categoria:p.categoria||'',
           color:p.color||'',
-          escala:p.escala||'',
           proveedorId:p.proveedorId||'',
           ubicacion:p.ubicacion||'',
           stockMinimo:Number(p.stockMinimo)||0,
+          escalas:[],
           productos:[]
         };
+      }
+
+      const escala=String(p.escala||'').trim();
+
+      if(
+        escala &&
+        !mapa[key].escalas.includes(escala)
+      ){
+        mapa[key].escalas.push(escala);
       }
 
       mapa[key].productos.push(p);
@@ -8091,19 +8232,28 @@ function prepararModelosCurva(){
 
   MODELOS_CURVA=
     Object.values(mapa)
+      .map(m=>{
+        m.escalas.sort((a,b)=>
+          String(a).localeCompare(
+            String(b),
+            undefined,
+            {numeric:true,sensitivity:'base'}
+          )
+        );
+
+        return m;
+      })
       .sort((a,b)=>{
         const aa=[
           a.marca,
           a.modelo,
-          a.color,
-          a.escala
+          a.color
         ].join(' ');
 
         const bb=[
           b.marca,
           b.modelo,
-          b.color,
-          b.escala
+          b.color
         ].join(' ');
 
         return aa.localeCompare(
@@ -8169,8 +8319,8 @@ function buscarModeloCurva(){
           m.marca,
           m.color,
           m.categoria,
-          m.escala
-            ? 'Escala '+m.escala
+          (m.escalas||[]).length
+            ? 'Escalas '+m.escalas.join(', ')
             : ''
         ]
           .filter(Boolean)
@@ -8279,6 +8429,54 @@ function aplicarDatosComercialesModeloCurva(m){
   }
 }
 
+
+function llenarEscalasRelacionadasModeloCurva(m){
+  const s=$('pcEscala');
+
+  if(!s){
+    return;
+  }
+
+  const relacionadas=
+    (m&&Array.isArray(m.escalas))
+      ? m.escalas
+      : [];
+
+  s.innerHTML='';
+
+  relacionadas.forEach(nombre=>{
+    const tallas=
+      ESCALAS_MAP[nombre]||
+      [];
+
+    s.add(
+      new Option(
+        nombre+
+        (
+          tallas.length
+            ? ' · '+tallas.join(', ')
+            : ''
+        ),
+        nombre
+      )
+    );
+  });
+
+  if(
+    !s.options.length
+  ){
+    s.add(
+      new Option(
+        'Sin escala relacionada',
+        ''
+      )
+    );
+  }
+
+  dibujarCurvaEditor();
+  actualizarCostosCurvaDesdeModelo();
+}
+
 function seleccionarModeloCurva(m){
   MODELO_CURVA_SELECCIONADO=m;
 
@@ -8298,14 +8496,7 @@ function seleccionarModeloCurva(m){
   $('pcUbicacion').value=
     m.ubicacion||'';
 
-  if(
-    m.escala &&
-    [...$('pcEscala').options]
-      .some(o=>o.value===m.escala)
-  ){
-    $('pcEscala').value=
-      m.escala;
-  }
+  llenarEscalasRelacionadasModeloCurva(m);
 
   aplicarDatosComercialesModeloCurva(m);
 
@@ -8337,6 +8528,28 @@ function seleccionarModeloCurva(m){
   actualizarCostosCurvaDesdeModelo();
 }
 
+
+function actualizarResumenCurva(){
+  let total=0;
+
+  document
+    .querySelectorAll('.curvaCant')
+    .forEach(x=>{
+      total+=
+        Math.max(
+          0,
+          parseInt(x.value||'0',10)||0
+        );
+    });
+
+  if($('pcTotalPares')){
+    $('pcTotalPares').textContent=
+      total;
+  }
+
+  actualizarCostosCurvaDesdeModelo();
+}
+
 function actualizarCostosCurvaDesdeModelo(){
   const m=MODELO_CURVA_SELECCIONADO;
 
@@ -8346,9 +8559,19 @@ function actualizarCostosCurvaDesdeModelo(){
 
   const porTalla={};
 
-  (m.productos||[]).forEach(p=>{
-    porTalla[String(p.talla||'')]=p;
-  });
+  const escalaActual=
+    $('pcEscala')
+      ? $('pcEscala').value
+      : '';
+
+  (m.productos||[])
+    .filter(p=>
+      !escalaActual ||
+      String(p.escala||'')===escalaActual
+    )
+    .forEach(p=>{
+      porTalla[String(p.talla||'')]=p;
+    });
 
   let costo=0;
   let precio=0;
@@ -8475,6 +8698,10 @@ function guardarCurvaUI(){
       document.querySelectorAll('.curvaCant').forEach(
         x=>x.value=0
       );
+
+      if($('pcTotalPares')){
+        $('pcTotalPares').textContent='0';
+      }
 
       CATALOGO_POS=[];
       CATALOGO_POS_SUCURSAL='';
