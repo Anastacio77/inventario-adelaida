@@ -89,105 +89,92 @@ document.addEventListener('click',e=>{
       </div>
       <div id="carritoLista"></div>
       <div class="totales"><div class="lineaTotal"><span>Pares</span><strong id="posPares">0</strong></div><div class="lineaTotal"><span>Subtotal</span><strong id="posSubtotal">Q0.00</strong></div><div class="lineaTotal"><span>Promoción</span><strong id="posPromocionVista">Q0.00</strong></div><div class="lineaTotal"><span>Descuento manual</span><strong id="posDescuentoVista">Q0.00</strong></div><div class="lineaTotal"><span>Total</span><span class="totalGrande" id="posTotal">Q0.00</span></div></div><div id="posPromoNombre" class="sub" style="margin-top:6px"></div>
-      <div class="grid2"><div><label>Cliente</label><input id="posCliente" placeholder="Opcional"></div><div><label>NIT</label><input id="posNit" placeholder="CF o NIT"></div><div><label>Vendedor</label><select id="posVendedor"></select></div><div><label>Forma de pago</label><select id="posMetodo" onchange="actualizarPago()"><option>EFECTIVO</option><option>TRANSFERENCIA</option><option>TARJETA</option><option>CREDITO</option></select></div><div><label>Tipo de documento</label><select id="posTipoDocumento"><option value="TICKET">TICKET</option><option value="FACTURA_INTERNA">FACTURA INTERNA</option><option value="FEL">FEL (requiere integración)</option></select></div><div><label>Divisa de pago</label><select id="posMoneda" onchange="actualizarPago()"></select></div><div><label>Descuento Q</label><input id="posDescuento" type="number" min="0" step="0.01" value="0" oninput="renderCarrito()"></div><div id="efectivoBox"><label id="efectivoEtiqueta">Efectivo recibido</label><input id="posEfectivo" type="number" min="0" step="0.01" value="0" oninput="actualizarCambio()"></div><div id="cambioMonedaBox"><label>Dar cambio en</label><select id="posCambioMoneda" onchange="actualizarCambio()"><option value="GTQ">GTQ - Quetzal</option></select></div><div><label>Nota</label><input id="posNota"></div></div>
+      <div class="grid2">
+        <div><label>Cliente guardado</label><select id="posClienteSelect" onchange="seleccionarClientePos()"><option value="">Cliente ocasional / escribir manualmente</option></select></div>
+        <div><label>Cliente</label><input id="posCliente" placeholder="Nombre del cliente" oninput="CLIENTE_POS_ID=''"></div>
+        <div><label>NIT</label><input id="posNit" placeholder="CF o NIT"></div>
+        <div><label>Teléfono</label><input id="posTelefono" placeholder="Opcional"></div>
+        <div><label>WhatsApp</label><input id="posWhatsapp" placeholder="Opcional"></div>
+        <div><label>Dirección</label><input id="posDireccion" placeholder="Opcional"></div>
+        <div><label>Vendedor</label><select id="posVendedor"></select></div><div><label>Forma de pago</label><select id="posMetodo" onchange="actualizarPago()"><option>EFECTIVO</option><option>TRANSFERENCIA</option><option>TARJETA</option><option>CREDITO</option></select></div><div><label>Tipo de documento</label><select id="posTipoDocumento"><option value="TICKET">TICKET</option><option value="FACTURA_INTERNA">FACTURA INTERNA</option><option value="FEL">FEL (requiere integración)</option></select></div><div><label>Divisa de pago</label><select id="posMoneda" onchange="actualizarPago()"></select></div><div><label>Descuento Q</label><input id="posDescuento" type="number" min="0" step="0.01" value="0" oninput="renderCarrito()"></div><div id="efectivoBox"><label id="efectivoEtiqueta">Efectivo recibido</label><input id="posEfectivo" type="number" min="0" step="0.01" value="0" oninput="actualizarCambio()"></div><div id="cambioMonedaBox"><label>Dar cambio en</label><select id="posCambioMoneda" onchange="actualizarCambio()"><option value="GTQ">GTQ - Quetzal</option></select></div><div><label>Nota</label><input id="posNota"></div></div>
+      <div class="fila" style="margin-top:8px">
+        <button class="btnGris" type="button" onclick="toggleNuevoClientePos()">+ Crear nuevo cliente</button>
+        <button class="btnGris" type="button" onclick="cargarClientesPos(true)">↻ Actualizar clientes</button>
+      </div>
+      <div id="nuevoClientePosBox" class="card oculto" style="margin-top:10px">
+        <h4 style="margin-top:0">Nuevo cliente</h4>
+        <div class="grid2">
+          <div><label>Nombre</label><input id="posCliNombre"></div>
+          <div><label>NIT</label><input id="posCliNit"></div>
+          <div><label>Teléfono</label><input id="posCliTelefono"></div>
+          <div><label>WhatsApp</label><input id="posCliWhatsapp"></div>
+          <div><label>Dirección</label><input id="posCliDireccion"></div>
+          <div><label>Límite de crédito Q</label><input id="posCliLimite" type="number" min="0" step="0.01" value="0"></div>
+        </div>
+        <div class="fila" style="margin-top:8px">
+          <button class="btnAzul" style="flex:1" onclick="guardarClienteDesdePos()">Guardar y seleccionar</button>
+          <button class="btnGris" style="flex:1" onclick="toggleNuevoClientePos(false)">Cancelar</button>
+        </div>
+      </div>
       <div id="divisaInfo" class="info mensaje">Total en divisa: —</div>
       <div id="cambioBox" class="cambio">Cambio: <b id="posCambio">Q0.00</b></div>
       <div class="fila" style="margin-top:12px">
         <button id="btnGuardarPedido" class="btnAzul" style="flex:1" onclick="guardarPedido()">GUARDAR PEDIDO</button>
-        <button id="btnReservarPedido" class="btnMorado" style="flex:1" onclick="abrirReservaPos()">🔒 RESERVAR PEDIDO</button>
+        <button id="btnReservarPedido" class="btnMorado" style="flex:1" onclick="abrirReservaPos()">RESERVAR PEDIDO</button>
         <button id="btnCobrarVenta" class="btnVerde" style="flex:1;font-size:18px" onclick="cobrar()">COBRAR VENTA</button>
       </div>
-
-      <div id="reservaPosBox" class="card oculto" style="margin-top:12px;background:#fafafa">
-        <h3 style="margin-top:0">Reserva de pedido</h3>
-        <div class="mensaje info">
-          La reserva aparta existencias sin descontarlas físicamente. Predeterminado: <b>8 horas</b>.
-        </div>
+      <div id="reservaPosBox" class="card oculto" style="margin-top:12px">
+        <h3 style="margin-top:0">Reservar pedido</h3>
+        <div class="mensaje info">Reserva individual por pedido. Predeterminado: <b>8 horas</b>. Puede cambiarlo para esta reserva.</div>
         <div class="grid2">
-          <div>
-            <label>Tiempo de reserva</label>
-            <input id="resTiempoValor" type="number" min="1" step="1" value="8" oninput="actualizarReservaPosVista()">
-          </div>
-          <div>
-            <label>Unidad</label>
-            <select id="resTiempoUnidad" onchange="actualizarReservaPosVista()">
-              <option value="HORAS">Horas</option>
-              <option value="DIAS">Días</option>
-            </select>
-          </div>
-          <div>
-            <label>Anticipo Q</label>
-            <input id="resAnticipo" type="number" min="0" step="0.01" value="0" oninput="actualizarReservaPosVista()">
-          </div>
-          <div>
-            <label>Forma de pago del anticipo</label>
-            <select id="resMetodoAnticipo">
-              <option>EFECTIVO</option>
-              <option>TRANSFERENCIA</option>
-              <option>TARJETA</option>
-            </select>
-          </div>
+          <div><label>Duración</label><input id="resDuracion" type="number" min="1" value="8"></div>
+          <div><label>Unidad</label><select id="resUnidad"><option value="HORAS">Horas</option><option value="DIAS">Días</option></select></div>
+          <div><label>Anticipo Q (opcional)</label><input id="resAnticipo" type="number" min="0" step="0.01" value="0"></div>
+          <div><label>Forma de anticipo</label><select id="resMetodo"><option>EFECTIVO</option><option>TRANSFERENCIA</option><option>TARJETA</option></select></div>
         </div>
-        <div id="reservaPosResumen" class="mensaje info" style="margin-top:10px"></div>
+        <div class="sub" style="margin-top:6px">Si registra anticipo, debe hacerlo un cajero o administrador con caja abierta.</div>
         <div class="fila" style="margin-top:10px">
-          <button class="btnMorado" style="flex:1" onclick="confirmarReservaPos()">CONFIRMAR RESERVA</button>
-          <button class="btnGris" style="flex:1" onclick="$('reservaPosBox').classList.add('oculto')">Cerrar</button>
+          <button class="btnMorado" style="flex:1" onclick="guardarReservaPos()">CONFIRMAR RESERVA</button>
+          <button class="btnGris" style="flex:1" onclick="cerrarReservaPos()">Cancelar</button>
         </div>
       </div>
-
       <button class="btnGris w100" style="margin-top:8px" onclick="vaciar()">Vaciar carrito</button>
     </div>
-
-    <div id="ticketAnticipoCard" class="card oculto">
-      <div id="ticketAnticipo" class="ticket"></div>
+    <div id="ticketReservaPosCard" class="card oculto">
+      <div id="ticketReservaPos" class="ticket"></div>
       <div class="fila noPrint" style="margin-top:10px">
-        <button class="btnNegro" style="flex:1" onclick="imprimirTicket('ticketAnticipo','MEDIA')">🖨 Media carta horizontal</button>
-        <button class="btnGris" style="flex:1" onclick="imprimirTicket('ticketAnticipo','CARTA')">🖨 Carta vertical</button>
+        <button class="btnNegro" style="flex:1" onclick="imprimirTicket('ticketReservaPos','MEDIA')">🖨 Media carta horizontal</button>
+        <button class="btnGris" style="flex:1" onclick="imprimirTicket('ticketReservaPos','CARTA')">🖨 Carta vertical</button>
       </div>
-      <button class="btnGris noPrint w100" style="margin-top:8px" onclick="$('ticketAnticipoCard').classList.add('oculto')">Cerrar comprobante</button>
+      <button class="btnGris noPrint w100" style="margin-top:8px" onclick="$('ticketReservaPosCard').classList.add('oculto')">Cerrar comprobante</button>
     </div>
-
     <div id="ticketCard" class="card oculto"><div id="ticket" class="ticket"></div><div class="fila noPrint" style="margin-top:10px"><button class="btnNegro" style="flex:1" onclick="imprimirTicket('ticket','MEDIA')">🖨 Media carta horizontal</button><button class="btnGris" style="flex:1" onclick="imprimirTicket('ticket','CARTA')">🖨 Carta vertical</button></div><button class="btnGris noPrint w100" style="margin-top:8px" onclick="$('ticketCard').classList.add('oculto')">Nueva venta</button></div>
   </div>
 
   <div id="vistaPedidos" class="vistaApp oculto">
     <div id="pedidoListaCard" class="card"><h3 style="margin-top:0">Pedidos</h3><div class="fila"><select id="filtroEstadoPedido" onchange="mostrarListaPedidos();cargarPedidos()">
-<option value="PENDIENTE">Pendientes</option>
-<option value="RESERVADO">Reservados</option>
-<option value="VENCIDO">Reservas vencidas</option>
-<option value="">Todos</option>
-<option value="COMPLETADO">Completados</option>
-<option value="CANCELADO">Cancelados</option>
-</select><button class="btnNegro" onclick="mostrarListaPedidos();cargarPedidos()">Actualizar</button></div><div id="mensajePedidos"></div><div id="listaPedidos"></div></div>
-    <div id="pedidoDetalleCard" class="card oculto">
-      <div id="pedidoDetalle"></div>
-      <div id="pedidoReservaInfo" class="mensaje info oculto" style="margin-top:10px"></div>
-
-      <div id="pedidoReactivarBox" class="oculto" style="margin-top:12px">
-        <h3>Reactivar reserva vencida</h3>
-        <div class="grid2">
-          <div>
-            <label>Nuevo tiempo</label>
-            <input id="pedReactivarValor" type="number" min="1" step="1" value="8">
-          </div>
-          <div>
-            <label>Unidad</label>
-            <select id="pedReactivarUnidad">
-              <option value="HORAS">Horas</option>
-              <option value="DIAS">Días</option>
-            </select>
-          </div>
-        </div>
-        <button class="btnMorado w100" style="margin-top:10px" onclick="reactivarReservaUI()">♻️ REACTIVAR RESERVA</button>
-      </div>
-
-      <div id="pedidoCobroBox"><div class="grid2"><div><label>Forma de pago</label><select id="pedMetodo" onchange="actualizarCobroPedido()">
+      <option value="PENDIENTE">Pendientes</option>
+      <option value="RESERVADO">Reservados</option>
+      <option value="VENCIDO">Reservas vencidas</option>
+      <option value="">Todos</option>
+      <option value="COMPLETADO">Completados</option>
+      <option value="CANCELADO">Cancelados</option>
+    </select><button class="btnNegro" onclick="mostrarListaPedidos();cargarPedidos()">Actualizar</button></div><div id="mensajePedidos"></div><div id="listaPedidos"></div></div>
+    <div id="pedidoDetalleCard" class="card oculto"><div id="pedidoDetalle"></div><div id="pedidoReservaInfo"></div><div id="pedidoCobroBox"><div class="grid2"><div><label>Forma de pago</label><select id="pedMetodo" onchange="actualizarCobroPedido()">
   <option>EFECTIVO</option>
   <option>TRANSFERENCIA</option>
   <option>TARJETA</option>
   <option>CREDITO</option>
 </select></div><div><label>Divisa</label><select id="pedMoneda" onchange="actualizarCobroPedido()"></select></div><div id="pedEfectivoBox"><label>Efectivo recibido</label><input id="pedEfectivo" type="number" min="0" step="0.01" value="0" oninput="actualizarCobroPedido()"></div><div><label>Dar cambio en</label><select id="pedCambioMoneda" onchange="actualizarCobroPedido()"><option value="GTQ">GTQ - Quetzal</option></select></div></div><div id="pedCambio" class="cambio">Cambio: <b>Q0.00</b></div><div class="fila" style="margin-top:12px"><button class="btnVerde" style="flex:1" onclick="completarPedidoUI()">✅ COMPLETAR PEDIDO</button><button class="btnRojo" style="flex:1" onclick="cancelarPedidoUI()">Cancelar pedido</button></div></div>
       <button class="btnGris noPrint w100" style="margin-top:8px" onclick="mostrarListaPedidos()">Volver a pedidos</button>
+    </div>
+    <div id="ticketAnticipoPedidoCard" class="card oculto">
+      <div id="ticketAnticipoPedido" class="ticket"></div>
+      <div class="fila noPrint" style="margin-top:10px">
+        <button class="btnNegro" style="flex:1" onclick="imprimirTicket('ticketAnticipoPedido','MEDIA')">🖨 Media carta horizontal</button>
+        <button class="btnGris" style="flex:1" onclick="imprimirTicket('ticketAnticipoPedido','CARTA')">🖨 Carta vertical</button>
+      </div>
+      <button class="btnGris noPrint w100" style="margin-top:8px" onclick="$('ticketAnticipoPedidoCard').classList.add('oculto')">Cerrar comprobante</button>
     </div>
     <div id="ticketPedidoCard" class="card oculto"><div id="ticketPedido" class="ticket"></div><div class="fila noPrint" style="margin-top:10px"><button class="btnNegro" style="flex:1" onclick="imprimirTicket('ticketPedido','MEDIA')">🖨 Media carta horizontal</button><button class="btnGris" style="flex:1" onclick="imprimirTicket('ticketPedido','CARTA')">🖨 Carta vertical</button></div><button class="btnGris noPrint w100" style="margin-top:8px" onclick="mostrarListaPedidos()">Volver a pedidos</button></div>
   </div>
@@ -1173,6 +1160,8 @@ let STOCK_GLOBAL_CACHE=[];
 let STOCK_GLOBAL_SUCURSALES=[];
 let STOCK_GLOBAL_TS=0;
 let RECEPCION_COMPRA_ACTUAL=null;
+let CLIENTES_POS=[];
+let CLIENTE_POS_ID='';
 
 const $=id=>document.getElementById(id);
 
@@ -1588,7 +1577,6 @@ function iniciarApp(u){
   if($('inventarioCurvasCard')) $('inventarioCurvasCard').classList.toggle('oculto',!['ADMIN','BODEGA'].includes(u.rol));
   $('movimientoBox').classList.toggle('oculto',['CAJERO','VENDEDOR'].includes(u.rol));
   $('btnGuardarPedido').classList.toggle('oculto',!['ADMIN','CAJERO','VENDEDOR'].includes(u.rol));
-  $('btnReservarPedido').classList.toggle('oculto',!['ADMIN','CAJERO','VENDEDOR'].includes(u.rol));
   $('btnCobrarVenta').classList.toggle('oculto',!['ADMIN','CAJERO'].includes(u.rol));
   if($('divisasAdmin')) $('divisasAdmin').classList.toggle('oculto',u.rol!=='ADMIN');
   if($('promocionesAdmin')) $('promocionesAdmin').classList.toggle('oculto',u.rol!=='ADMIN');
@@ -1600,6 +1588,7 @@ function iniciarApp(u){
     cargarEscalas();
     cargarDivisas();
     cargarVendedores();
+    cargarClientesPos();
     cargarPromocionesPOS();
     cargarCurvas();
 
@@ -3578,6 +3567,13 @@ function ticketHTML(v,id){
       Q(v.total)+
       '</b>'+
     '</div>'+
+
+    (
+      Number(v.anticipoAplicado||0)>0
+        ? '<div class="lineaTotal"><span>Anticipo aplicado</span><b>- '+Q(v.anticipoAplicado)+'</b></div>'+
+          '<div class="lineaTotal"><span>Saldo cobrado</span><b>'+Q(v.saldoCobrado||0)+'</b></div>'
+        : ''
+    )+
 
     '<div><b>'+esc(etiquetaPago)+':</b> '+
     esc(v.metodoPago||'')+
@@ -5638,286 +5634,139 @@ function guardarDivisa(){
 }
 
 function limpiarPosDespues(){
-  carrito=[];
-  renderCarrito();
-
-  $('posCliente').value='';
-  $('posNit').value='';
-  $('posNota').value='';
+  carrito=[]; renderCarrito();
+  CLIENTE_POS_ID='';
+  if($('posClienteSelect')) $('posClienteSelect').value='';
+  ['posCliente','posNit','posTelefono','posWhatsapp','posDireccion','posNota'].forEach(id=>{if($(id)) $(id).value='';});
   $('posDescuento').value=0;
   $('posEfectivo').value=0;
-
-  if($('reservaPosBox')){
-    $('reservaPosBox').classList.add('oculto');
-  }
-
-  if($('resAnticipo')){
-    $('resAnticipo').value=0;
-  }
-
-  if($('resTiempoValor')){
-    $('resTiempoValor').value=8;
-  }
-
-  if($('resTiempoUnidad')){
-    $('resTiempoUnidad').value='HORAS';
-  }
+  cerrarReservaPos();
 }
 
 
-function abrirReservaPos(){
-  if(!carrito.length){
-    return msg(
-      'mensajePos',
-      'Carrito vacío.',
-      'error'
-    );
-  }
-
-  if(!$('posCliente').value.trim()){
-    return msg(
-      'mensajePos',
-      'Ingrese el nombre del cliente antes de reservar.',
-      'error'
-    );
-  }
-
-  $('reservaPosBox').classList.remove('oculto');
-  actualizarReservaPosVista();
-
-  $('reservaPosBox').scrollIntoView({
-    behavior:'smooth',
-    block:'start'
+function cargarClientesPos(forzar=false,seleccionarId=''){
+  if(!SESION||!['ADMIN','CAJERO','VENDEDOR'].includes(SESION.rol)) return;
+  api('clientes',{q:''},r=>{
+    if(!r||!r.ok) return;
+    CLIENTES_POS=Array.isArray(r.clientes)?r.clientes:[];
+    const s=$('posClienteSelect');
+    if(!s) return;
+    const actual=seleccionarId||CLIENTE_POS_ID||s.value;
+    s.innerHTML='<option value="">Cliente ocasional / escribir manualmente</option>';
+    CLIENTES_POS.sort((a,b)=>String(a.nombre||'').localeCompare(String(b.nombre||''),undefined,{numeric:true,sensitivity:'base'}))
+      .forEach(c=>s.add(new Option([c.nombre,c.nit?'NIT '+c.nit:'',c.whatsapp||c.telefono||''].filter(Boolean).join(' · '),c.clienteId)));
+    if(actual&&[...s.options].some(o=>o.value===actual)){s.value=actual;seleccionarClientePos();}
   });
 }
 
-function actualizarReservaPosVista(){
-  const t=total();
-
-  const valor=Math.max(
-    1,
-    parseInt(
-      $('resTiempoValor')
-        ? $('resTiempoValor').value||'8'
-        : '8',
-      10
-    )||8
-  );
-
-  const unidad=
-    $('resTiempoUnidad')
-      ? $('resTiempoUnidad').value
-      : 'HORAS';
-
-  const anticipo=Math.max(
-    0,
-    Number(
-      $('resAnticipo')
-        ? $('resAnticipo').value||0
-        : 0
-    )||0
-  );
-
-  const saldo=Math.max(
-    0,
-    Number(t.total||0)-anticipo
-  );
-
-  const ahora=new Date();
-  const ms=
-    unidad==='DIAS'
-      ? valor*24*60*60*1000
-      : valor*60*60*1000;
-
-  const hasta=new Date(
-    ahora.getTime()+ms
-  );
-
-  $('reservaPosResumen').innerHTML=
-    'Total: <b>'+Q(t.total)+'</b>'+
-    ' · Anticipo: <b>'+Q(anticipo)+'</b>'+
-    ' · Saldo: <b>'+Q(saldo)+'</b>'+
-    '<br>Caduca aproximadamente: <b>'+
-    hasta.toLocaleString()+
-    '</b>';
+function seleccionarClientePos(){
+  const id=$('posClienteSelect')?$('posClienteSelect').value:'';
+  CLIENTE_POS_ID=id;
+  if(!id) return;
+  const c=CLIENTES_POS.find(x=>x.clienteId===id);
+  if(!c) return;
+  $('posCliente').value=c.nombre||'';
+  $('posNit').value=c.nit||'';
+  $('posTelefono').value=c.telefono||'';
+  $('posWhatsapp').value=c.whatsapp||'';
+  $('posDireccion').value=c.direccion||'';
 }
 
-function comprobanteAnticipoHTML(r,id){
-  ticketHTML({
-    tituloComprobante:'Comprobante de anticipo',
-    etiquetaNumero:'Reserva',
-    numeroVenta:r.numeroPedido,
-    fecha:r.fecha,
-    cliente:r.cliente||'',
-    nit:r.nit||'',
-    sucursal:r.sucursal||SUCURSAL,
-    usuario:
-      SESION
-        ? SESION.nombre
-        : '',
-    motivo:
-      'ANTICIPO DE RESERVA'+
-      (
-        r.anticipoId
-          ? ' · '+r.anticipoId
-          : ''
-      )+
-      (
-        r.reservaHasta
-          ? ' · Reserva hasta '+r.reservaHasta
-          : ''
-      ),
-    items:[{
-      codigo:r.numeroPedido,
-      categoria:'ANTICIPO DE RESERVA',
-      marca:'',
-      modelo:r.numeroPedido,
-      color:'',
-      talla:'',
-      cantidad:1,
-      precio:Number(r.anticipo)||0,
-      subtotal:Number(r.anticipo)||0,
-      tipoIngreso:'INDIVIDUAL',
-      escala:''
-    }],
-    subtotal:Number(r.anticipo)||0,
-    descuento:0,
-    total:Number(r.anticipo)||0,
-    etiquetaSubtotal:'Anticipo',
-    etiquetaDescuento:'Descuento',
-    etiquetaTotal:'TOTAL RECIBIDO',
-    etiquetaPago:'Forma de pago',
-    metodoPago:r.metodoAnticipo||'',
-    etiquetaCliente:'Cliente',
-    etiquetaUsuario:'Recibió',
-    textoFinal:
-      'Concepto: anticipo de reserva · Saldo pendiente '+Q(r.saldo||0)
-  },id);
-}
-
-function confirmarReservaPos(){
-  if(!carrito.length){
-    return msg(
-      'mensajePos',
-      'Carrito vacío.',
-      'error'
-    );
+function toggleNuevoClientePos(forzar){
+  const box=$('nuevoClientePosBox');
+  if(!box) return;
+  const mostrar=typeof forzar==='boolean'?forzar:box.classList.contains('oculto');
+  box.classList.toggle('oculto',!mostrar);
+  if(mostrar){
+    $('posCliNombre').value=$('posCliente').value||'';
+    $('posCliNit').value=$('posNit').value||'';
+    $('posCliTelefono').value=$('posTelefono').value||'';
+    $('posCliWhatsapp').value=$('posWhatsapp').value||'';
+    $('posCliDireccion').value=$('posDireccion').value||'';
+    $('posCliNombre').focus();
   }
+}
 
+function guardarClienteDesdePos(){
+  const nombre=$('posCliNombre').value.trim();
+  if(!nombre) return msg('mensajePos','Ingrese el nombre del cliente.','error');
+  api('guardarcliente',{
+    nombre,nit:$('posCliNit').value,telefono:$('posCliTelefono').value,
+    whatsapp:$('posCliWhatsapp').value,direccion:$('posCliDireccion').value,
+    limiteCredito:$('posCliLimite').value
+  },r=>{
+    if(!r||!r.ok) return msg('mensajePos',(r&&r.error)||'No se pudo guardar el cliente.','error');
+    toggleNuevoClientePos(false);
+    cargarClientesPos(true,r.clienteId);
+    msg('mensajePos','Cliente creado y seleccionado.','ok');
+  });
+}
+
+function abrirReservaPos(){
+  if(!carrito.length) return msg('mensajePos','Carrito vacío.','error');
+  if(!$('posCliente').value.trim()) return msg('mensajePos','Seleccione o ingrese un cliente antes de reservar.','error');
+  $('resDuracion').value=8;$('resUnidad').value='HORAS';$('resAnticipo').value=0;$('resMetodo').value='EFECTIVO';
+  $('reservaPosBox').classList.remove('oculto');
+  $('reservaPosBox').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function cerrarReservaPos(){
+  if($('reservaPosBox')) $('reservaPosBox').classList.add('oculto');
+}
+
+function comprobanteAnticipoHTML(p,id){
+  const el=$(id); if(!el||!p) return;
+  el.innerHTML=
+    '<div class="centro"><h2 style="margin:0">Comercial Adelaida</h2><div><b>COMPROBANTE DE ANTICIPO</b></div></div>'+
+    '<hr>'+
+    '<div><b>Comprobante:</b> '+esc(p.comprobante||'')+'</div>'+
+    '<div><b>Fecha:</b> '+esc(p.fecha||'')+'</div>'+
+    '<div><b>Pedido / Reserva:</b> '+esc(p.numeroPedido||'')+'</div>'+
+    '<div><b>Cliente:</b> '+esc(p.cliente||'')+'</div>'+
+    '<div><b>NIT:</b> '+esc(p.nit||'CF')+'</div>'+
+    '<div><b>Sucursal:</b> '+esc(p.sucursal||'')+'</div>'+
+    '<div><b>Forma de pago:</b> '+esc(p.metodo||'')+'</div>'+
+    '<hr>'+
+    '<div class="lineaTotal"><span>Concepto</span><b>Anticipo de reserva</b></div>'+
+    '<div class="lineaTotal" style="font-size:18px"><span><b>ANTICIPO PAGADO</b></span><b>'+Q(p.monto||0)+'</b></div>'+
+    '<div class="lineaTotal"><span>Total del pedido</span><b>'+Q(p.totalPedido||0)+'</b></div>'+
+    '<div class="lineaTotal"><span>Saldo pendiente</span><b>'+Q(p.saldoPendiente||0)+'</b></div>'+
+    '<div><b>Reserva vigente hasta:</b> '+esc(p.fechaVencimiento||'')+'</div>'+
+    '<hr><div class="centro">Pago recibido en concepto de anticipo para reserva de pedido.</div>';
+}
+
+function guardarReservaPos(){
+  if(!carrito.length) return msg('mensajePos','Carrito vacío.','error');
   const cliente=$('posCliente').value.trim();
-
-  if(!cliente){
-    return msg(
-      'mensajePos',
-      'Ingrese el nombre del cliente.',
-      'error'
-    );
-  }
-
+  if(!cliente) return msg('mensajePos','Debe indicar el cliente.','error');
+  const duracion=Math.max(1,parseInt($('resDuracion').value||'8',10)||8);
+  const anticipo=Math.max(0,Number($('resAnticipo').value)||0);
   const t=total();
-  const anticipo=Math.max(
-    0,
-    Number($('resAnticipo').value)||0
-  );
-
-  if(anticipo>t.total+0.0001){
-    return msg(
-      'mensajePos',
-      'El anticipo no puede superar el total.',
-      'error'
-    );
+  if(anticipo>t.total) return msg('mensajePos','El anticipo no puede ser mayor al total.','error');
+  if(anticipo>0&&(!SESION||!['ADMIN','CAJERO'].includes(SESION.rol))){
+    return msg('mensajePos','El vendedor puede reservar, pero el anticipo debe registrarlo un cajero o administrador.','error');
+  }
+  if(anticipo>0&&CAJA_POS_ABIERTA!==true){
+    verificarCajaPos();
+    return msg('mensajePos','Para recibir anticipo debe existir caja abierta.','error');
   }
 
-  if(
-    anticipo>0 &&
-    (
-      !SESION ||
-      !['ADMIN','CAJERO'].includes(SESION.rol)
-    )
-  ){
-    return msg(
-      'mensajePos',
-      'Para recibir un anticipo debe ingresar un cajero o administrador.',
-      'error'
-    );
-  }
-
-  if(
-    !confirm(
-      '¿Reservar este pedido por '+Q(t.total)+
-      (
-        anticipo>0
-          ? ' con anticipo de '+Q(anticipo)
-          : ' sin anticipo'
-      )+
-      '?'
-    )
-  ){
-    return;
-  }
-
-  api(
-    'reservarpedido',
-    {
-      items:JSON.stringify(
-        carrito.map(x=>({
-          codigo:x.codigo,
-          cantidad:x.cantidad,
-          precioVenta:Number(
-            x.precioVenta??x.precio
-          )||0
-        }))
-      ),
-      cliente,
-      nit:$('posNit').value,
-      descuento:t.desc,
-      nota:$('posNota').value,
-      vendedor:$('posVendedor').value,
-      tiempoValor:$('resTiempoValor').value,
-      tiempoUnidad:$('resTiempoUnidad').value,
-      anticipo,
-      metodoAnticipo:$('resMetodoAnticipo').value
-    },
-    r=>{
-      if(!r||!r.ok){
-        return msg(
-          'mensajePos',
-          (r&&r.error)||
-          'No se pudo crear la reserva.',
-          'error'
-        );
-      }
-
-      if(Number(r.anticipo)>0){
-        comprobanteAnticipoHTML(
-          r,
-          'ticketAnticipo'
-        );
-
-        $('ticketAnticipoCard')
-          .classList.remove('oculto');
-      }
-
-      limpiarPosDespues();
-
-      CATALOGO_POS=[];
-      CATALOGO_POS_SUCURSAL='';
-      CATALOGO_POS_TS=0;
-      precargarCatalogoPos(true);
-
-      msg(
-        'mensajePos',
-        'Reserva creada: '+r.numeroPedido+
-        ' · Vence: '+r.reservaHasta+
-        (
-          Number(r.anticipo)>0
-            ? ' · Anticipo '+Q(r.anticipo)
-            : ''
-        ),
-        'ok'
-      );
+  api('reservarpedido',{
+    items:JSON.stringify(carrito.map(x=>({codigo:x.codigo,cantidad:x.cantidad,precioVenta:Number(x.precioVenta??x.precio)||0}))),
+    cliente,nit:$('posNit').value,descuento:t.desc,nota:$('posNota').value,
+    vendedor:$('posVendedor').value,duracion,unidadDuracion:$('resUnidad').value,
+    anticipo,metodoAnticipo:$('resMetodo').value
+  },r=>{
+    if(!r||!r.ok) return msg('mensajePos',(r&&r.error)||'No se pudo registrar la reserva.','error');
+    if(r.pago){
+      comprobanteAnticipoHTML(r.pago,'ticketReservaPos');
+      $('ticketReservaPosCard').classList.remove('oculto');
     }
-  );
+    const numero=r.numeroPedido,vence=r.fechaVencimiento;
+    limpiarPosDespues();
+    CATALOGO_POS=[];CATALOGO_POS_TS=0;precargarCatalogoPos(true);
+    msg('mensajePos','Reserva '+numero+' registrada hasta '+vence+(r.anticipo>0?' · Anticipo '+Q(r.anticipo):''),'ok');
+  });
 }
 
 function guardarPedido(){
@@ -5959,110 +5808,45 @@ function mostrarListaPedidos(){
 }
 
 function cargarPedidos(){
-  if(
-    !SESION ||
-    !['ADMIN','CAJERO','VENDEDOR'].includes(SESION.rol)
-  ){
-    return;
-  }
-
-  api(
-    'pedidos',
-    {
-      estado:$('filtroEstadoPedido').value
-    },
-    r=>{
-      if(!r.ok){
-        return msg(
-          'mensajePedidos',
-          r.error,
-          'error'
-        );
-      }
-
-      const box=$('listaPedidos');
-      box.innerHTML='';
-
-      (r.pedidos||[]).forEach(p=>{
-        const d=document.createElement('div');
-        d.className='pedidoCard';
-
-        let cls='badgePendiente';
-
-        if(p.estado==='COMPLETADO'){
-          cls='badgeCompleto';
-        }else if(
-          p.estado==='CANCELADO' ||
-          p.estado==='VENCIDO'
-        ){
-          cls='badgeCancelado';
-        }
-
-        const extra=
-          p.tipoRegistro==='RESERVA'
-            ? (
-                '<div class="mini">'+
-                  'Reserva hasta: '+esc(p.reservaHasta||'—')+
-                  ' · Anticipo '+Q(p.anticipo||0)+
-                  ' · Saldo '+Q(p.saldoReserva||p.total||0)+
-                '</div>'
-              )
-            : '';
-
-        d.innerHTML=
-          '<div class="cartTop">'+
-            '<div>'+
-              '<b>'+esc(p.numeroPedido)+'</b>'+
-              '<div class="mini">'+
-                esc(p.fecha)+
-                ' · '+esc(p.cliente||'Sin cliente')+
-                ' · Vendedor: '+esc(p.vendedor||'—')+
-              '</div>'+
-              extra+
-            '</div>'+
-            '<div>'+
-              '<span class="badge '+cls+'">'+
-                esc(p.estado)+
-              '</span>'+
-              '<br><b>'+Q(p.total)+'</b>'+
-            '</div>'+
-          '</div>'+
-          '<button class="btnGris w100" style="margin-top:8px">Ver pedido</button>';
-
-        d.querySelector('button').onclick=
-          ()=>verPedido(p.numeroPedido);
-
-        box.appendChild(d);
-      });
-
-      if(!(r.pedidos||[]).length){
-        box.innerHTML=
-          '<div class="sub">No hay pedidos para este filtro.</div>';
-      }
-    }
-  );
+  if(!SESION||!['ADMIN','CAJERO','VENDEDOR'].includes(SESION.rol)) return;
+  api('pedidos',{estado:$('filtroEstadoPedido').value},r=>{
+    if(!r||!r.ok) return msg('mensajePedidos',(r&&r.error)||'No se pudieron cargar los pedidos.','error');
+    const box=$('listaPedidos');box.innerHTML='';
+    (r.pedidos||[]).forEach(p=>{
+      const d=document.createElement('div');d.className='pedidoCard';
+      const cls=p.estado==='COMPLETADO'?'badgeCompleto':(p.estado==='CANCELADO'?'badgeCancelado':'badgePendiente');
+      const reserva=String(p.tipoPedido||'').toUpperCase()==='RESERVA';
+      d.innerHTML=
+        '<div class="cartTop"><div><b>'+esc(p.numeroPedido)+'</b>'+(reserva?' · <b>RESERVA</b>':'')+
+        '<div class="mini">'+esc(p.fecha)+' · '+esc(p.cliente||'Sin cliente')+' · Vendedor: '+esc(p.vendedor||'—')+'</div>'+
+        (reserva?'<div class="mini">Vence: '+esc(p.fechaVencimiento||'—')+' · Anticipo: '+Q(p.anticipo||0)+' · Saldo: '+Q(p.saldoPendiente||0)+'</div>':'')+
+        '</div><div><span class="badge '+cls+'">'+esc(p.estado)+'</span><br><b>'+Q(p.total)+'</b></div></div>'+
+        '<button class="btnGris w100" style="margin-top:8px">Ver pedido</button>';
+      d.querySelector('button').onclick=()=>verPedido(p.numeroPedido);box.appendChild(d);
+    });
+    if(!(r.pedidos||[]).length) box.innerHTML='<div class="sub">No hay pedidos para este filtro.</div>';
+  });
 }
 
 function verPedido(numero){
+
   const lista=$('pedidoListaCard');
 
   if(lista){
     lista.classList.add('oculto');
   }
 
+  // Cerrar cualquier pedido/ticket anterior antes de abrir otro.
   $('ticketPedidoCard').classList.add('oculto');
   $('ticketPedido').innerHTML='';
   $('pedidoDetalle').innerHTML='';
   $('pedidoCobroBox').classList.add('oculto');
-  $('pedidoReservaInfo').classList.add('oculto');
-  $('pedidoReactivarBox').classList.add('oculto');
 
   api(
     'detallepedido',
-    {
-      numeroPedido:numero
-    },
+    {numeroPedido:numero},
     r=>{
+
       if(!r.ok){
         mostrarListaPedidos();
 
@@ -6075,38 +5859,22 @@ function verPedido(numero){
 
       PEDIDO_ACTUAL=r;
 
+      // Mostrar el pedido con el mismo formato de numeración/escala del ticket,
+      // pero con encabezado PEDIDO y sin convertirlo en comprobante de venta.
       pedidoHTML(
         r,
         'pedidoDetalle'
       );
 
-      $('pedidoDetalleCard')
-        .classList.remove('oculto');
+      renderInfoReservaPedido(r);
 
-      if(r.tipoRegistro==='RESERVA'){
-        $('pedidoReservaInfo').classList.remove('oculto');
-
-        $('pedidoReservaInfo').innerHTML=
-          '<b>RESERVA</b>'+
-          ' · Estado: '+esc(r.estado)+
-          ' · Caduca: '+esc(r.reservaHasta||'—')+
-          ' · Anticipo: <b>'+Q(r.anticipo||0)+'</b>'+
-          ' · Saldo pendiente: <b>'+Q(r.saldoPendiente||0)+'</b>';
-
-        $('pedidoReactivarBox').classList.toggle(
-          'oculto',
-          r.estado!=='VENCIDO'
-        );
-      }
-
-      const puedeCobrar=
-        ['PENDIENTE','RESERVADO'].includes(r.estado) &&
-        SESION &&
-        ['ADMIN','CAJERO'].includes(SESION.rol);
+      $('pedidoDetalleCard').classList.remove('oculto');
 
       $('pedidoCobroBox').classList.toggle(
         'oculto',
-        !puedeCobrar
+        !['PENDIENTE','RESERVADO'].includes(r.estado) ||
+        !SESION ||
+        !['ADMIN','CAJERO'].includes(SESION.rol)
       );
 
       actualizarCobroPedido();
@@ -6119,223 +5887,95 @@ function verPedido(numero){
   );
 }
 
-function actualizarCobroPedido(){
-  if(!PEDIDO_ACTUAL){
-    return;
+
+function renderInfoReservaPedido(r){
+  const box=$('pedidoReservaInfo');if(!box) return;
+  box.innerHTML='';
+  if(String(r.tipoPedido||'').toUpperCase()!=='RESERVA') return;
+
+  let h='<div class="mensaje info" style="margin-top:10px"><b>RESERVA</b> · Estado: '+esc(r.estado)+
+    ' · Vence: '+esc(r.fechaVencimiento||'—')+' · Anticipo: '+Q(r.anticipo||0)+
+    ' · Saldo: '+Q(r.saldoPendiente||0)+'</div>';
+
+  if(Array.isArray(r.pagosReserva)&&r.pagosReserva.length){
+    h+='<h4>Comprobantes de anticipo</h4>';
+    r.pagosReserva.forEach((p,i)=>{
+      h+='<div class="pedidoCard"><b>'+esc(p.comprobante)+'</b> · '+esc(p.fecha)+' · '+Q(p.monto)+' · '+esc(p.metodo)+
+        '<button class="btnGris w100" style="margin-top:6px" onclick="verComprobanteAnticipoPedido('+i+')">Ver / imprimir comprobante</button></div>';
+    });
   }
 
-  const d=divisaActual(
-    $('pedMoneda').value
-  );
+  if(r.estado==='VENCIDO'){
+    h+='<div class="card" style="margin-top:10px"><h4 style="margin-top:0">Reactivar reserva</h4>'+
+      '<div class="fila"><input id="reactDuracion" type="number" min="1" value="8" style="flex:1">'+
+      '<select id="reactUnidad" style="flex:1"><option value="HORAS">Horas</option><option value="DIAS">Días</option></select>'+
+      '<button class="btnMorado" onclick="reactivarReservaUI()">Reactivar</button></div>'+
+      '<div class="sub">Solo se reactivará si la existencia disponible cubre nuevamente todo el pedido.</div></div>';
+  }
+  box.innerHTML=h;
+}
 
-  llenarCambioMoneda(
-    'pedCambioMoneda',
-    $('pedMoneda').value
-  );
+function verComprobanteAnticipoPedido(indice){
+  if(!PEDIDO_ACTUAL||!Array.isArray(PEDIDO_ACTUAL.pagosReserva)) return;
+  const p=PEDIDO_ACTUAL.pagosReserva[indice];if(!p) return;
+  comprobanteAnticipoHTML(p,'ticketAnticipoPedido');
+  $('ticketAnticipoPedidoCard').classList.remove('oculto');
+  $('ticketAnticipoPedidoCard').scrollIntoView({behavior:'smooth',block:'start'});
+}
 
-  const ef=Number(
-    $('pedEfectivo').value
-  )||0;
+function reactivarReservaUI(){
+  if(!PEDIDO_ACTUAL) return;
+  api('reactivarreserva',{
+    numeroPedido:PEDIDO_ACTUAL.numeroPedido,
+    duracion:$('reactDuracion').value,
+    unidadDuracion:$('reactUnidad').value
+  },r=>{
+    if(!r||!r.ok) return msg('mensajePedidos',(r&&r.error)||'No se pudo reactivar la reserva.','error');
+    msg('mensajePedidos',r.mensaje+' · Nueva vigencia: '+r.fechaVencimiento,'ok');
+    verPedido(PEDIDO_ACTUAL.numeroPedido);cargarPedidos();
+    CATALOGO_POS=[];CATALOGO_POS_TS=0;precargarCatalogoPos(true);
+  });
+}
 
-  const total=
-    PEDIDO_ACTUAL.tipoRegistro==='RESERVA'
-      ? Number(PEDIDO_ACTUAL.saldoPendiente)||0
-      : Number(PEDIDO_ACTUAL.total)||0;
-
-  const cambioGTQ=
-    Math.max(
-      0,
-      ef*d.tipoCambio-total
-    );
-
-  const cm=
-    $('pedCambioMoneda').value||
-    'GTQ';
-
-  const val=
-    cm==='GTQ'
-      ? cambioGTQ
-      : cambioGTQ/d.tipoCambio;
-
-  const sym=
-    cm==='GTQ'
-      ? 'Q'
-      : d.simbolo;
-
-  const anticipoTxt=
-    PEDIDO_ACTUAL.tipoRegistro==='RESERVA'
-      ? (
-          ' · Anticipo aplicado: <b>'+
-          Q(PEDIDO_ACTUAL.anticipo||0)+
-          '</b>'
-        )
-      : '';
-
+function actualizarCobroPedido(){
+  if(!PEDIDO_ACTUAL) return;
+  const d=divisaActual($('pedMoneda').value);
+  llenarCambioMoneda('pedCambioMoneda',$('pedMoneda').value);
+  const ef=Number($('pedEfectivo').value)||0;
+  const total=String(PEDIDO_ACTUAL.tipoPedido||'').toUpperCase()==='RESERVA'
+    ? Number(PEDIDO_ACTUAL.saldoPendiente)||0
+    : Number(PEDIDO_ACTUAL.total)||0;
+  const cambioGTQ=Math.max(0,ef*d.tipoCambio-total);
+  const cm=$('pedCambioMoneda').value||'GTQ';
+  const val=cm==='GTQ'?cambioGTQ:cambioGTQ/d.tipoCambio;
+  const sym=cm==='GTQ'?'Q':d.simbolo;
   $('pedCambio').innerHTML=
-    'Saldo a cobrar: <b>'+
-    d.simbolo+
-    (total/d.tipoCambio).toFixed(2)+
-    ' '+d.codigo+
-    '</b>'+
-    anticipoTxt+
-    ' · Cambio: <b>'+
-    sym+val.toFixed(2)+
-    ' '+cm+
-    '</b>';
-
-  $('pedEfectivoBox').classList.toggle(
-    'oculto',
-    $('pedMetodo').value!=='EFECTIVO'
-  );
+    (Number(PEDIDO_ACTUAL.anticipo||0)>0?'Anticipo: <b>'+Q(PEDIDO_ACTUAL.anticipo)+'</b> · ':'')+
+    'Saldo a cobrar: <b>'+d.simbolo+(total/d.tipoCambio).toFixed(2)+' '+d.codigo+'</b> · Cambio: <b>'+sym+val.toFixed(2)+' '+cm+'</b>';
+  $('pedEfectivoBox').classList.toggle('oculto',$('pedMetodo').value!=='EFECTIVO');
 }
 
 function completarPedidoUI(){
-  if(!PEDIDO_ACTUAL){
-    return;
+  if(!PEDIDO_ACTUAL) return;
+  const d=divisaActual($('pedMoneda').value);
+  const ef=Number($('pedEfectivo').value)||0;
+  const saldo=String(PEDIDO_ACTUAL.tipoPedido||'').toUpperCase()==='RESERVA'
+    ? Number(PEDIDO_ACTUAL.saldoPendiente)||0
+    : Number(PEDIDO_ACTUAL.total)||0;
+  if($('pedMetodo').value==='EFECTIVO'&&ef*d.tipoCambio<saldo){
+    return msg('mensajePedidos','Efectivo insuficiente para el saldo de '+Q(saldo)+'.','error');
   }
-
-  const d=divisaActual(
-    $('pedMoneda').value
-  );
-
-  const ef=Number(
-    $('pedEfectivo').value
-  )||0;
-
-  const saldo=
-    PEDIDO_ACTUAL.tipoRegistro==='RESERVA'
-      ? Number(PEDIDO_ACTUAL.saldoPendiente)||0
-      : Number(PEDIDO_ACTUAL.total)||0;
-
-  if(
-    $('pedMetodo').value==='EFECTIVO' &&
-    ef*d.tipoCambio<saldo
-  ){
-    return msg(
-      'mensajePedidos',
-      'Efectivo insuficiente para el saldo pendiente.',
-      'error'
-    );
-  }
-
-  if(
-    !confirm(
-      '¿Completar '+PEDIDO_ACTUAL.numeroPedido+
-      ' · Saldo a cobrar '+Q(saldo)+'?'
-    )
-  ){
-    return;
-  }
-
-  api(
-    'completarpedido',
-    {
-      numeroPedido:PEDIDO_ACTUAL.numeroPedido,
-      metodo:$('pedMetodo').value,
-      moneda:$('pedMoneda').value,
-      efectivoDivisa:ef,
-      cambioMoneda:$('pedCambioMoneda').value
-    },
-    r=>{
-      if(!r.ok){
-        return msg(
-          'mensajePedidos',
-          r.error,
-          'error'
-        );
-      }
-
-      ticketHTML(
-        r,
-        'ticketPedido'
-      );
-
-      $('ticketPedidoCard')
-        .classList.remove('oculto');
-
-      $('pedidoCobroBox')
-        .classList.add('oculto');
-
-      $('pedidoReactivarBox')
-        .classList.add('oculto');
-
-      msg(
-        'mensajePedidos',
-        'Pedido completado. Venta: '+r.numeroVenta+
-        (
-          Number(r.anticipoAplicado)>0
-            ? ' · Anticipo aplicado '+Q(r.anticipoAplicado)
-            : ''
-        ),
-        'ok'
-      );
-
-      cargarPedidos();
-      cargarResumen();
-
-      CATALOGO_POS=[];
-      CATALOGO_POS_TS=0;
-      precargarCatalogoPos(true);
-    }
-  );
-}
-
-
-function reactivarReservaUI(){
-  if(!PEDIDO_ACTUAL){
-    return;
-  }
-
-  if(PEDIDO_ACTUAL.estado!=='VENCIDO'){
-    return msg(
-      'mensajePedidos',
-      'La reserva no está vencida.',
-      'error'
-    );
-  }
-
-  if(
-    !confirm(
-      '¿Reactivar '+PEDIDO_ACTUAL.numeroPedido+
-      ' si existe stock disponible?'
-    )
-  ){
-    return;
-  }
-
-  api(
-    'reactivarreserva',
-    {
-      numeroPedido:PEDIDO_ACTUAL.numeroPedido,
-      tiempoValor:$('pedReactivarValor').value,
-      tiempoUnidad:$('pedReactivarUnidad').value
-    },
-    r=>{
-      if(!r||!r.ok){
-        return msg(
-          'mensajePedidos',
-          (r&&r.error)||
-          'No se pudo reactivar la reserva.',
-          'error'
-        );
-      }
-
-      msg(
-        'mensajePedidos',
-        r.mensaje+
-        ' · Nueva caducidad: '+r.reservaHasta,
-        'ok'
-      );
-
-      verPedido(
-        PEDIDO_ACTUAL.numeroPedido
-      );
-
-      CATALOGO_POS=[];
-      CATALOGO_POS_TS=0;
-      precargarCatalogoPos(true);
-    }
-  );
+  if(!confirm('¿Completar '+PEDIDO_ACTUAL.numeroPedido+'? Saldo a cobrar: '+Q(saldo))) return;
+  api('completarpedido',{
+    numeroPedido:PEDIDO_ACTUAL.numeroPedido,metodo:$('pedMetodo').value,
+    moneda:$('pedMoneda').value,efectivoDivisa:ef,cambioMoneda:$('pedCambioMoneda').value
+  },r=>{
+    if(!r||!r.ok) return msg('mensajePedidos',(r&&r.error)||'No se pudo completar el pedido.','error');
+    ticketHTML(r,'ticketPedido');$('ticketPedidoCard').classList.remove('oculto');
+    $('pedidoCobroBox').classList.add('oculto');
+    msg('mensajePedidos','Pedido completado. Venta: '+r.numeroVenta,'ok');
+    cargarPedidos();cargarResumen();CATALOGO_POS=[];CATALOGO_POS_TS=0;precargarCatalogoPos(true);
+  });
 }
 
 function cancelarPedidoUI(){
@@ -8717,7 +8357,13 @@ function guardarClienteUI(){
   api('guardarcliente',{
     nombre:$('cliNombre').value,nit:$('cliNit').value,telefono:$('cliTelefono').value,whatsapp:$('cliWhatsapp').value,
     direccion:$('cliDireccion').value,limiteCredito:$('cliLimite').value
-  },r=>{msg('mensajeClientes',r.ok?r.mensaje:r.error,r.ok?'ok':'error');if(r.ok)cargarClientes();});
+  },r=>{
+    msg('mensajeClientes',r.ok?r.mensaje:r.error,r.ok?'ok':'error');
+    if(r.ok){
+      cargarClientes();
+      cargarClientesPos(true,r.clienteId);
+    }
+  });
 }
 
 function cargarCreditos(){
