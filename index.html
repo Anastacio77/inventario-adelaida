@@ -5678,11 +5678,13 @@ function toggleNuevoClientePos(forzar){
   const mostrar=typeof forzar==='boolean'?forzar:box.classList.contains('oculto');
   box.classList.toggle('oculto',!mostrar);
   if(mostrar){
-    $('posCliNombre').value=$('posCliente').value||'';
-    $('posCliNit').value=$('posNit').value||'';
-    $('posCliTelefono').value=$('posTelefono').value||'';
-    $('posCliWhatsapp').value=$('posWhatsapp').value||'';
-    $('posCliDireccion').value=$('posDireccion').value||'';
+    // Al crear un cliente nuevo, el formulario siempre inicia completamente vacío.
+    $('posCliNombre').value='';
+    $('posCliNit').value='';
+    $('posCliTelefono').value='';
+    $('posCliWhatsapp').value='';
+    $('posCliDireccion').value='';
+    $('posCliLimite').value=0;
     $('posCliNombre').focus();
   }
 }
