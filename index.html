@@ -67,7 +67,7 @@ document.addEventListener('click',e=>{
     <button id="tabNuevo" onclick="vista('nuevo')">➕ Producto</button>
     <button id="tabTraslados" onclick="vista('traslados')">🔁 Traslados</button>
     <button id="tabStockglobal" onclick="vista('stockglobal');cargarStockGlobal()">🏬 Stock global</button>
-    <button id="tabUsuarios" onclick="vista('usuarios');cargarUsuarios()">👥 Usuarios</button>
+    <button id="tabUsuarios" onclick="vista('usuarios');cargarUsuarios();cargarPermisosRoles()">👥 Usuarios</button>
     <button id="tabTrazabilidad" onclick="vista('trazabilidad')">🔎 Trazabilidad</button>
     <button id="tabComisiones" onclick="vista('comisiones');cargarComisiones()">💰 Comisiones</button>
     <button id="tabDevoluciones" onclick="vista('devoluciones');cargarDevoluciones();cargarVentasDevolucion()">↩️ Devoluciones</button>
@@ -691,6 +691,23 @@ document.addEventListener('click',e=>{
         El administrador puede editar nombre, rol, sucursal base, contraseña y comisión.
         Los vendedores pueden cambiar de sucursal desde el selector superior; los cajeros permanecen fijos en su sucursal asignada.
       </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">Permisos por rol</h3>
+      <div class="sub">Active o desactive las funciones disponibles para cada rol. ADMIN conserva acceso total para evitar perder el control del sistema.</div>
+      <div class="fila" style="margin-top:10px">
+        <select id="permRol" onchange="dibujarPermisosRol()">
+          <option value="CAJERO">CAJERO</option>
+          <option value="BODEGA">BODEGA</option>
+          <option value="VENDEDOR">VENDEDOR</option>
+          <option value="ADMIN">ADMIN (solo lectura)</option>
+        </select>
+        <button class="btnGris" type="button" onclick="cargarPermisosRoles()">↻ Actualizar</button>
+      </div>
+      <div id="permMatriz" class="grid2" style="margin-top:12px"></div>
+      <button id="btnGuardarPermisosRol" class="btnMorado w100" style="margin-top:12px" onclick="guardarPermisosRolUI()">Guardar permisos del rol</button>
+      <div id="mensajePermisosRol"></div>
     </div>
 
     <div class="card">
@@ -1559,6 +1576,57 @@ function restaurarSesion(){
   );
 }
 
+
+let PERMISOS_ROLES_DATA={catalogo:[],roles:[],permisos:{}};
+
+function tienePermiso(id){
+  if(!SESION) return false;
+  if(SESION.rol==='ADMIN') return true;
+  const p=Array.isArray(SESION.permisos)?SESION.permisos:[];
+  return p.includes(id);
+}
+
+function mostrarSegunPermiso(id,permiso){
+  const e=$(id); if(e) e.classList.toggle('oculto',!tienePermiso(permiso));
+}
+
+function cargarPermisosRoles(){
+  if(!SESION||SESION.rol!=='ADMIN') return;
+  api('permisosroles',{},r=>{
+    if(!r||!r.ok) return msg('mensajePermisosRol',(r&&r.error)||'No se pudieron cargar los permisos.','error');
+    PERMISOS_ROLES_DATA=r;
+    dibujarPermisosRol();
+  });
+}
+
+function dibujarPermisosRol(){
+  const box=$('permMatriz'); if(!box) return;
+  const rol=$('permRol')?$('permRol').value:'CAJERO';
+  const seleccionados=(PERMISOS_ROLES_DATA.permisos||{})[rol]||[];
+  const catalogo=PERMISOS_ROLES_DATA.catalogo||[];
+  const bloqueado=rol==='ADMIN';
+  box.innerHTML=catalogo.map(p=>
+    '<label style="display:flex;align-items:center;gap:8px;border:1px solid #ddd;border-radius:8px;padding:9px;margin:0">'+
+      '<input class="permRolCheck" type="checkbox" value="'+esc(p.id)+'" '+(seleccionados.includes(p.id)?'checked ':'')+(bloqueado?'disabled ':'')+'style="width:auto">'+
+      '<span><b>'+esc(p.nombre)+'</b><br><span class="sub">'+esc(p.id)+'</span></span>'+ 
+    '</label>'
+  ).join('');
+  if($('btnGuardarPermisosRol')) $('btnGuardarPermisosRol').disabled=bloqueado;
+  if($('mensajePermisosRol')) $('mensajePermisosRol').innerHTML=bloqueado?'<div class="mensaje info">ADMIN siempre tiene todos los permisos.</div>':'';
+}
+
+function guardarPermisosRolUI(){
+  const rol=$('permRol').value;
+  if(rol==='ADMIN') return msg('mensajePermisosRol','ADMIN conserva acceso total.','info');
+  const permisos=[...document.querySelectorAll('.permRolCheck:checked')].map(x=>x.value);
+  api('guardarpermisosrol',{rol,permisos:JSON.stringify(permisos)},r=>{
+    if(!r||!r.ok) return msg('mensajePermisosRol',(r&&r.error)||'No se pudieron guardar los permisos.','error');
+    PERMISOS_ROLES_DATA.permisos=PERMISOS_ROLES_DATA.permisos||{};
+    PERMISOS_ROLES_DATA.permisos[rol]=r.permisos||permisos;
+    msg('mensajePermisosRol',r.mensaje+' Los usuarios de ese rol recibirán los cambios al volver a iniciar sesión.','ok');
+  });
+}
+
 function iniciarApp(u){
   SESION=u;
   if(location.hash==='#vistaConfig') history.replaceState(null,'',location.pathname+location.search);
@@ -1579,25 +1647,31 @@ function iniciarApp(u){
     );
   }
 
-  $('tabUsuarios').classList.toggle('oculto',u.rol!=='ADMIN');
-  $('tabNuevo').classList.toggle('oculto',['CAJERO','VENDEDOR'].includes(u.rol));
-  $('tabTraslados').classList.toggle('oculto',['CAJERO','VENDEDOR'].includes(u.rol));
-  $('tabStockglobal').classList.toggle('oculto',!['ADMIN','CAJERO','BODEGA','VENDEDOR'].includes(u.rol));
-  $('tabConfig').classList.toggle('oculto',u.rol!=='ADMIN');
-  $('tabComisiones').classList.toggle('oculto',!['ADMIN','VENDEDOR'].includes(u.rol));
-  $('tabPedidos').classList.toggle('oculto',!['ADMIN','CAJERO','VENDEDOR'].includes(u.rol));
-  $('tabDevoluciones').classList.toggle('oculto',!['ADMIN','CAJERO'].includes(u.rol));
-  $('tabCompras').classList.toggle('oculto',!['ADMIN','BODEGA'].includes(u.rol));
-  $('tabCaja').classList.toggle('oculto',!['ADMIN','CAJERO'].includes(u.rol));
-  $('tabReportes').classList.toggle('oculto',u.rol!=='ADMIN');
-  $('tabClientes').classList.toggle('oculto',!['ADMIN','CAJERO','VENDEDOR'].includes(u.rol));
-  $('atributosProductoBox').classList.toggle('oculto',!['ADMIN','BODEGA'].includes(u.rol));
-  if($('inventarioCurvasCard')) $('inventarioCurvasCard').classList.toggle('oculto',!['ADMIN','BODEGA'].includes(u.rol));
-  $('movimientoBox').classList.toggle('oculto',['CAJERO','VENDEDOR'].includes(u.rol));
-  $('btnGuardarPedido').classList.toggle('oculto',!['ADMIN','CAJERO','VENDEDOR'].includes(u.rol));
-  $('btnCobrarVenta').classList.toggle('oculto',!['ADMIN','CAJERO'].includes(u.rol));
-  if($('divisasAdmin')) $('divisasAdmin').classList.toggle('oculto',u.rol!=='ADMIN');
-  if($('promocionesAdmin')) $('promocionesAdmin').classList.toggle('oculto',u.rol!=='ADMIN');
+  mostrarSegunPermiso('tabPos','POS');
+  mostrarSegunPermiso('tabPedidos','PEDIDOS');
+  mostrarSegunPermiso('tabVentas','VENTAS');
+  mostrarSegunPermiso('tabInventario','INVENTARIO');
+  mostrarSegunPermiso('tabNuevo','PRODUCTOS');
+  mostrarSegunPermiso('tabTraslados','TRASLADOS');
+  mostrarSegunPermiso('tabStockglobal','STOCK_GLOBAL');
+  mostrarSegunPermiso('tabTrazabilidad','TRAZABILIDAD');
+  mostrarSegunPermiso('tabComisiones','COMISIONES');
+  mostrarSegunPermiso('tabDevoluciones','DEVOLUCIONES');
+  mostrarSegunPermiso('tabCompras','COMPRAS');
+  mostrarSegunPermiso('tabCaja','CAJA');
+  mostrarSegunPermiso('tabReportes','REPORTES');
+  mostrarSegunPermiso('tabClientes','CLIENTES');
+  mostrarSegunPermiso('tabUsuarios','USUARIOS');
+  mostrarSegunPermiso('tabConfig','CONFIG');
+  if($('atributosProductoBox')) $('atributosProductoBox').classList.toggle('oculto',!tienePermiso('PRODUCTOS'));
+  if($('inventarioCurvasCard')) $('inventarioCurvasCard').classList.toggle('oculto',!tienePermiso('MOV_INVENTARIO'));
+  if($('movimientoBox')) $('movimientoBox').classList.toggle('oculto',!tienePermiso('MOV_INVENTARIO'));
+  if($('btnGuardarPedido')) $('btnGuardarPedido').classList.toggle('oculto',!tienePermiso('PEDIDOS'));
+  if($('btnReservarPedido')) $('btnReservarPedido').classList.toggle('oculto',!tienePermiso('RESERVAS'));
+  if($('btnCobrarVenta')) $('btnCobrarVenta').classList.toggle('oculto',!tienePermiso('COBRAR'));
+  if($('divisasAdmin')) $('divisasAdmin').classList.toggle('oculto',!tienePermiso('CONFIG'));
+  if($('promocionesAdmin')) $('promocionesAdmin').classList.toggle('oculto',!tienePermiso('CONFIG'));
+  if(u.rol==='ADMIN') cargarPermisosRoles();
 
   api('sucursales',{},r=>{
     if(!r.ok) return;
@@ -1614,12 +1688,15 @@ function iniciarApp(u){
       cargarProveedores();
     }
 
-    vista('pos');
+    const destinos=[
+      ['POS','pos'],['PEDIDOS','pedidos'],['VENTAS','ventas'],['INVENTARIO','inventario'],['STOCK_GLOBAL','stockglobal'],
+      ['TRAZABILIDAD','trazabilidad'],['COMPRAS','compras'],['CAJA','caja'],['CLIENTES','clientes'],['REPORTES','reportes']
+    ];
+    const primero=destinos.find(x=>tienePermiso(x[0]));
+    if(primero) vista(primero[1]);
     cargarResumen();
 
-    if(SESION&&['ADMIN','CAJERO'].includes(SESION.rol)){
-      cargarCaja();
-    }
+    if(SESION&&tienePermiso('CAJA')) cargarCaja();
   });
 }
 
@@ -1629,9 +1706,8 @@ function llenarSucursales(){
 
   let permitidas=SUCURSALES.slice();
 
-  // CAJERO permanece fijo en su sucursal.
-  // VENDEDOR puede cambiar entre sucursales activas.
-  if(SESION.rol==='CAJERO'){
+  // El permiso CAMBIAR_SUCURSAL controla si puede trabajar en otras sucursales.
+  if(!tienePermiso('CAMBIAR_SUCURSAL')){
     permitidas=[SESION.sucursal];
   }
 
@@ -1652,7 +1728,7 @@ function llenarSucursales(){
   );
 
   sel.value=SUCURSAL;
-  sel.disabled=SESION.rol==='CAJERO';
+  sel.disabled=!tienePermiso('CAMBIAR_SUCURSAL');
 
   localStorage.setItem(
     'adelaida_sucursal',
