@@ -653,11 +653,29 @@ document.addEventListener('click',e=>{
   <div id="vistaStockglobal" class="vistaApp oculto">
     <div class="card">
       <h3 style="margin-top:0">Stock global consolidado</h3>
-      <div class="sub">Consulta existencias por código, modelo, color o talla en todas las sucursales y bodegas.</div>
+      <div class="sub">Consulta existencias por sucursal, filtra por producto y visualiza todas las tallas agrupadas por modelo y color.</div>
+
       <div class="fila" style="margin-top:10px">
-        <input id="stockGlobalQ" placeholder="Modelo, código, color o talla" oninput="filtrarStockGlobalLocal()">
-        <button class="btnNegro" onclick="cargarStockGlobal(true)">Actualizar</button>
+        <input id="stockGlobalQ" placeholder="Buscar código, marca, modelo, color o talla" oninput="filtrarStockGlobalLocal()">
+        <button class="btnNegro" onclick="cargarStockGlobal(true)">↻ Actualizar</button>
+        <button class="btnVerde" onclick="exportarStockGlobalCSV()">⬇ Exportar CSV / Excel</button>
       </div>
+
+      <div class="grid2" style="margin-top:10px">
+        <div><label>Marca</label><select id="stockFiltroMarca" onchange="actualizarFiltrosStockGlobal('marca');filtrarStockGlobalLocal()"><option value="">Todas</option></select></div>
+        <div><label>Modelo</label><select id="stockFiltroModelo" onchange="actualizarFiltrosStockGlobal('modelo');filtrarStockGlobalLocal()"><option value="">Todos</option></select></div>
+        <div><label>Color</label><select id="stockFiltroColor" onchange="filtrarStockGlobalLocal()"><option value="">Todos</option></select></div>
+        <div><label>Sucursal</label><select id="stockFiltroSucursal" onchange="filtrarStockGlobalLocal()"><option value="">Todas</option></select></div>
+      </div>
+
+      <div class="fila" style="margin-top:10px">
+        <label style="margin:0;display:flex;align-items:center;gap:8px">
+          <input id="stockSoloExistencia" type="checkbox" onchange="filtrarStockGlobalLocal()" style="width:auto">
+          Mostrar solo con existencia
+        </label>
+        <button class="btnGris" type="button" onclick="limpiarFiltrosStockGlobal()">Limpiar filtros</button>
+      </div>
+
       <div id="stockGlobalResumen" class="sub" style="margin-top:8px"></div>
     </div>
     <div class="card">
@@ -8447,6 +8465,7 @@ function cargarStockGlobal(forzar=false){
     (Date.now()-STOCK_GLOBAL_TS)<10000;
 
   if(vigente&&!forzar){
+    prepararFiltrosStockGlobal();
     filtrarStockGlobalLocal();
     return;
   }
@@ -8470,81 +8489,253 @@ function cargarStockGlobal(forzar=false){
       STOCK_GLOBAL_SUCURSALES=r.sucursales||[];
       STOCK_GLOBAL_TS=Date.now();
 
+      prepararFiltrosStockGlobal();
       filtrarStockGlobalLocal();
     }
+  );
+}
+
+function valoresUnicosStock(campo,lista){
+  return [...new Set((lista||[]).map(x=>String(x[campo]||'').trim()).filter(Boolean))]
+    .sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}));
+}
+
+function llenarSelectStock(id,valores,etiqueta){
+  const s=$(id);
+  if(!s) return;
+  const actual=s.value;
+  s.innerHTML='<option value="">'+etiqueta+'</option>';
+  valores.forEach(v=>s.add(new Option(v,v)));
+  if(actual&&[...s.options].some(o=>o.value===actual)) s.value=actual;
+}
+
+function prepararFiltrosStockGlobal(){
+  llenarSelectStock('stockFiltroMarca',valoresUnicosStock('marca',STOCK_GLOBAL_CACHE),'Todas');
+  actualizarFiltrosStockGlobal('marca');
+
+  const ss=$('stockFiltroSucursal');
+  if(ss){
+    const actual=ss.value;
+    ss.innerHTML='<option value="">Todas</option>';
+    (STOCK_GLOBAL_SUCURSALES||[]).forEach(v=>ss.add(new Option(v,v)));
+    if(actual&&[...ss.options].some(o=>o.value===actual)) ss.value=actual;
+  }
+}
+
+function actualizarFiltrosStockGlobal(origen){
+  const marca=$('stockFiltroMarca')?$('stockFiltroMarca').value:'';
+  const modeloActual=$('stockFiltroModelo')?$('stockFiltroModelo').value:'';
+  const colorActual=$('stockFiltroColor')?$('stockFiltroColor').value:'';
+
+  let base=(STOCK_GLOBAL_CACHE||[]).filter(p=>!marca||String(p.marca||'')===marca);
+
+  llenarSelectStock('stockFiltroModelo',valoresUnicosStock('modelo',base),'Todos');
+  if(modeloActual&&$('stockFiltroModelo')&&[...$('stockFiltroModelo').options].some(o=>o.value===modeloActual)){
+    $('stockFiltroModelo').value=modeloActual;
+  }
+
+  const modelo=$('stockFiltroModelo')?$('stockFiltroModelo').value:'';
+  base=base.filter(p=>!modelo||String(p.modelo||'')===modelo);
+  llenarSelectStock('stockFiltroColor',valoresUnicosStock('color',base),'Todos');
+  if(colorActual&&$('stockFiltroColor')&&[...$('stockFiltroColor').options].some(o=>o.value===colorActual)){
+    $('stockFiltroColor').value=colorActual;
+  }
+}
+
+function limpiarFiltrosStockGlobal(){
+  if($('stockGlobalQ')) $('stockGlobalQ').value='';
+  if($('stockFiltroMarca')) $('stockFiltroMarca').value='';
+  if($('stockFiltroModelo')) $('stockFiltroModelo').value='';
+  if($('stockFiltroColor')) $('stockFiltroColor').value='';
+  if($('stockFiltroSucursal')) $('stockFiltroSucursal').value='';
+  if($('stockSoloExistencia')) $('stockSoloExistencia').checked=false;
+  prepararFiltrosStockGlobal();
+  filtrarStockGlobalLocal();
+}
+
+function obtenerStockGlobalFiltrado(){
+  const q=L($('stockGlobalQ')?$('stockGlobalQ').value:'');
+  const marca=$('stockFiltroMarca')?$('stockFiltroMarca').value:'';
+  const modelo=$('stockFiltroModelo')?$('stockFiltroModelo').value:'';
+  const color=$('stockFiltroColor')?$('stockFiltroColor').value:'';
+  const sucursal=$('stockFiltroSucursal')?$('stockFiltroSucursal').value:'';
+  const soloExistencia=$('stockSoloExistencia')?$('stockSoloExistencia').checked:false;
+
+  return (STOCK_GLOBAL_CACHE||[]).filter(p=>{
+    if(q && ![
+      p.codigo,p.marca,p.modelo,p.categoria,p.color,p.talla
+    ].some(v=>L(v).includes(q))) return false;
+
+    if(marca&&String(p.marca||'')!==marca) return false;
+    if(modelo&&String(p.modelo||'')!==modelo) return false;
+    if(color&&String(p.color||'')!==color) return false;
+
+    if(sucursal){
+      const n=Number((p.porSucursal||{})[sucursal])||0;
+      if(soloExistencia&&n<=0) return false;
+    }else if(soloExistencia && Number(p.total||0)<=0){
+      return false;
+    }
+
+    return true;
+  });
+}
+
+function agruparStockGlobalPorModelo(lista){
+  const grupos={};
+
+  (lista||[]).forEach(p=>{
+    const clave=[p.marca||'',p.modelo||'',p.categoria||'',p.color||''].join('||');
+    if(!grupos[clave]){
+      grupos[clave]={
+        marca:p.marca||'',
+        modelo:p.modelo||'',
+        categoria:p.categoria||'',
+        color:p.color||'',
+        tallas:[],
+        total:0,
+        porSucursal:{}
+      };
+      (STOCK_GLOBAL_SUCURSALES||[]).forEach(s=>grupos[clave].porSucursal[s]=0);
+    }
+
+    const g=grupos[clave];
+    g.tallas.push({
+      talla:String(p.talla||''),
+      codigo:p.codigo||'',
+      total:Number(p.total||0),
+      porSucursal:{...(p.porSucursal||{})}
+    });
+    g.total+=Number(p.total||0);
+    (STOCK_GLOBAL_SUCURSALES||[]).forEach(s=>{
+      g.porSucursal[s]+=Number((p.porSucursal||{})[s])||0;
+    });
+  });
+
+  return Object.values(grupos).map(g=>{
+    g.tallas.sort((a,b)=>String(a.talla).localeCompare(String(b.talla),undefined,{numeric:true,sensitivity:'base'}));
+    return g;
+  }).sort((a,b)=>
+    [a.marca,a.modelo,a.color].join(' ').localeCompare([b.marca,b.modelo,b.color].join(' '),undefined,{numeric:true,sensitivity:'base'})
   );
 }
 
 function filtrarStockGlobalLocal(){
   if(!$('stockGlobalTabla')) return;
 
-  const q=L(
-    $('stockGlobalQ')
-      ? $('stockGlobalQ').value
-      : ''
-  );
-
-  const lista=(STOCK_GLOBAL_CACHE||[]).filter(p=>{
-    if(!q) return true;
-
-    return [
-      p.codigo,
-      p.marca,
-      p.modelo,
-      p.categoria,
-      p.color,
-      p.talla
-    ].some(v=>L(v).includes(q));
-  }).slice(0,200);
+  const lista=obtenerStockGlobalFiltrado();
+  const grupos=agruparStockGlobalPorModelo(lista);
+  const sucursal=$('stockFiltroSucursal')?$('stockFiltroSucursal').value:'';
+  const sucursalesVisibles=sucursal?[sucursal]:(STOCK_GLOBAL_SUCURSALES||[]);
 
   let h=
     '<table class="tabla">'+
     '<thead><tr>'+
-      '<th>Producto</th>'+
-      '<th>Talla</th>';
+      '<th>Modelo / Color</th>'+
+      '<th>Tallas</th>';
 
-  (STOCK_GLOBAL_SUCURSALES||[]).forEach(s=>{
+  sucursalesVisibles.forEach(s=>{
     h+='<th>'+esc(s)+'</th>';
   });
 
   h+='<th>Total</th></tr></thead><tbody>';
 
-  lista.forEach(p=>{
+  grupos.forEach(g=>{
+    const chips=g.tallas.map(t=>{
+      const exist=sucursal
+        ? Number((t.porSucursal||{})[sucursal])||0
+        : Number(t.total||0);
+      return '<span style="display:inline-block;padding:4px 7px;margin:2px;border:1px solid #d5d7dd;border-radius:8px;white-space:nowrap">'+
+        '<b>'+esc(t.talla||'—')+'</b>: '+exist+
+      '</span>';
+    }).join('');
+
     h+=
       '<tr>'+
-        '<td><b>'+esc(p.codigo)+'</b><br>'+
-          '<span class="sub">'+
-          esc([p.marca,p.modelo,p.color].filter(Boolean).join(' · '))+
-          '</span>'+
+        '<td><b>'+esc([g.marca,g.modelo].filter(Boolean).join(' · '))+'</b><br>'+
+          '<span class="sub">'+esc([g.categoria,g.color].filter(Boolean).join(' · '))+'</span>'+ 
         '</td>'+
-        '<td>'+esc(p.talla)+'</td>';
+        '<td>'+chips+'</td>';
 
-    (STOCK_GLOBAL_SUCURSALES||[]).forEach(s=>{
-      const n=Number((p.porSucursal||{})[s])||0;
-      h+=
-        '<td>'+
-        (
-          n>0
-            ? '<b>'+n+'</b>'
-            : '0'
-        )+
-        '</td>';
+    sucursalesVisibles.forEach(s=>{
+      const n=Number(g.porSucursal[s])||0;
+      h+='<td>'+(n>0?'<b>'+n+'</b>':'0')+'</td>';
     });
 
-    h+='<td><b>'+Number(p.total||0)+'</b></td></tr>';
+    const totalVisible=sucursal?(Number(g.porSucursal[sucursal])||0):g.total;
+    h+='<td><b>'+totalVisible+'</b></td></tr>';
   });
 
   h+='</tbody></table>';
 
   $('stockGlobalTabla').innerHTML=
-    lista.length
+    grupos.length
       ? h
       : '<div class="sub">Sin coincidencias.</div>';
 
+  const totalPares=lista.reduce((acc,p)=>acc+(sucursal?(Number((p.porSucursal||{})[sucursal])||0):(Number(p.total||0)||0)),0);
   $('stockGlobalResumen').textContent=
-    lista.length+
-    ' referencias mostradas · actualizado '+
+    grupos.length+' modelos/color · '+
+    lista.length+' tallas/referencias · '+
+    totalPares+' unidades en existencia · actualizado '+
     new Date(STOCK_GLOBAL_TS||Date.now()).toLocaleTimeString();
+}
+
+function exportarStockGlobalCSV(){
+  const lista=obtenerStockGlobalFiltrado();
+
+  if(!lista.length){
+    return alert('No hay datos de stock para exportar.');
+  }
+
+  const sucursal=$('stockFiltroSucursal')?$('stockFiltroSucursal').value:'';
+  const sucursales=sucursal?[sucursal]:(STOCK_GLOBAL_SUCURSALES||[]);
+  const encabezados=[
+    'Código','Marca','Modelo','Categoría','Color','Talla',
+    ...sucursales,
+    'Total'
+  ];
+
+  const filas=[encabezados];
+
+  lista.forEach(p=>{
+    const totalVisible=sucursal
+      ? Number((p.porSucursal||{})[sucursal])||0
+      : Number(p.total||0);
+
+    filas.push([
+      p.codigo||'',
+      p.marca||'',
+      p.modelo||'',
+      p.categoria||'',
+      p.color||'',
+      p.talla||'',
+      ...sucursales.map(s=>Number((p.porSucursal||{})[s])||0),
+      totalVisible
+    ]);
+  });
+
+  const csv='\uFEFF'+filas.map(f=>
+    f.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')
+  ).join('\r\n');
+
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const ahora=new Date();
+  const sello=
+    ahora.getFullYear()+
+    String(ahora.getMonth()+1).padStart(2,'0')+
+    String(ahora.getDate()).padStart(2,'0')+'_'+
+    String(ahora.getHours()).padStart(2,'0')+
+    String(ahora.getMinutes()).padStart(2,'0');
+
+  a.href=url;
+  a.download='stock_global_'+sello+'.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 
 function cargarCurvas(){
