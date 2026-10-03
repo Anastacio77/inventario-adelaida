@@ -317,6 +317,10 @@ document.addEventListener('click',e=>{
           <input id="inventarioSoloExistencia" type="checkbox" onchange="filtrarInventarioSucursalLocal()" style="width:auto">
           Mostrar solo con existencia
         </label>
+        <label style="margin:0;display:flex;align-items:center;gap:8px">
+          <input id="inventarioSoloStockBajo" type="checkbox" onchange="filtrarInventarioSucursalLocal()" style="width:auto">
+          Mostrar solo stock bajo
+        </label>
         <button class="btnGris" type="button" onclick="limpiarFiltrosInventario()">Limpiar filtros</button>
       </div>
       <div id="inventarioListaResumen" class="sub" style="margin-top:8px"></div>
@@ -1404,7 +1408,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.03-ESTABLE-04';
+const VERSION_SISTEMA_UI='2026.10.03-ESTABLE-04.1';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -1824,6 +1828,30 @@ function abrirModuloDesdeAlerta(modulo){
     vista('compras');
     mostrarListaCompras();
     cargarCompras();
+  }else if(m==='inventario_stock_bajo'){
+    vista('inventario');
+    limpiarFiltrosInventario();
+
+    if($('inventarioSoloStockBajo')){
+      $('inventarioSoloStockBajo').checked=true;
+    }
+
+    cargarInventarioSucursal(true);
+
+    setTimeout(()=>{
+      if($('inventarioSoloStockBajo')){
+        $('inventarioSoloStockBajo').checked=true;
+      }
+      filtrarInventarioSucursalLocal();
+
+      if($('inventarioListaTabla')){
+        $('inventarioListaTabla').scrollIntoView({
+          behavior:'smooth',
+          block:'start'
+        });
+      }
+    },500);
+
   }else if(m==='inventario'){
     vista('inventario');
     cargarInventarioSucursal();
@@ -10650,6 +10678,7 @@ function limpiarFiltrosInventario(){
   if($('inventarioFiltroModelo')) $('inventarioFiltroModelo').value='';
   if($('inventarioFiltroColor')) $('inventarioFiltroColor').value='';
   if($('inventarioSoloExistencia')) $('inventarioSoloExistencia').checked=false;
+  if($('inventarioSoloStockBajo')) $('inventarioSoloStockBajo').checked=false;
   prepararFiltrosInventario();
   filtrarInventarioSucursalLocal();
 }
@@ -10657,12 +10686,21 @@ function limpiarFiltrosInventario(){
 function obtenerInventarioSucursalFiltrado(){
   const q=L($('inventarioListaQ')?$('inventarioListaQ').value:'');
   const solo=$('inventarioSoloExistencia')?$('inventarioSoloExistencia').checked:false;
+  const soloStockBajo=$('inventarioSoloStockBajo')?$('inventarioSoloStockBajo').checked:false;
   const marca=$('inventarioFiltroMarca')?$('inventarioFiltroMarca').value:'';
   const modelo=$('inventarioFiltroModelo')?$('inventarioFiltroModelo').value:'';
   const color=$('inventarioFiltroColor')?$('inventarioFiltroColor').value:'';
 
   return (INVENTARIO_LISTA_CACHE||[]).filter(p=>{
     if(solo && Number(p.total||0)<=0) return false;
+
+    if(
+      soloStockBajo &&
+      !(
+        Number(p.stockMinimo||0)>0 &&
+        Number(p.total||0)<=Number(p.stockMinimo||0)
+      )
+    ) return false;
 
     if(
       q &&
@@ -10710,6 +10748,8 @@ function cargarInventarioSucursal(forzar=false){
     INVENTARIO_LISTA_CACHE=(r.productos||[]).map(p=>({
       ...p,
       total:Number(p.existencia||0),
+      stockMinimo:Number(p.stockMinimo||0),
+      ubicacion:String(p.ubicacion||''),
       porSucursal:{[suc]:Number(p.existencia||0)},
       _sucursalReporte:suc
     }));
