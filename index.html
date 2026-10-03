@@ -194,13 +194,23 @@ document.addEventListener('click',e=>{
       <div class="fila" style="margin-top:10px">
         <input id="inventarioListaQ" placeholder="Buscar código, marca, modelo, color o talla" oninput="filtrarInventarioSucursalLocal()">
         <button class="btnNegro" type="button" onclick="cargarInventarioSucursal(true)">↻ Actualizar</button>
-        <button class="btnVerde" type="button" onclick="exportarInventarioSucursalCSV()">⬇ Exportar CSV / Excel</button>
+        <button class="btnVerde" type="button" onclick="exportarInventarioSucursalCSV()">⬇ CSV / Excel</button>
+        <button class="btnAzul" type="button" onclick="imprimirInventarioSucursal()">🖨 Imprimir</button>
       </div>
+
+      <div class="grid2" style="margin-top:10px">
+        <div><label>Marca</label><select id="inventarioFiltroMarca" onchange="actualizarFiltrosInventario('marca');filtrarInventarioSucursalLocal()"><option value="">Todas</option></select></div>
+        <div><label>Modelo</label><select id="inventarioFiltroModelo" onchange="actualizarFiltrosInventario('modelo');filtrarInventarioSucursalLocal()"><option value="">Todos</option></select></div>
+        <div><label>Color</label><select id="inventarioFiltroColor" onchange="filtrarInventarioSucursalLocal()"><option value="">Todos</option></select></div>
+        <div><label>Sucursal</label><select id="inventarioFiltroSucursal" onchange="cambiarSucursalReporteInventario()"></select></div>
+      </div>
+
       <div class="fila" style="margin-top:10px">
         <label style="margin:0;display:flex;align-items:center;gap:8px">
           <input id="inventarioSoloExistencia" type="checkbox" onchange="filtrarInventarioSucursalLocal()" style="width:auto">
           Mostrar solo con existencia
         </label>
+        <button class="btnGris" type="button" onclick="limpiarFiltrosInventario()">Limpiar filtros</button>
       </div>
       <div id="inventarioListaResumen" class="sub" style="margin-top:8px"></div>
     </div>
@@ -681,6 +691,7 @@ document.addEventListener('click',e=>{
         <input id="stockGlobalQ" placeholder="Buscar código, marca, modelo, color o talla" oninput="filtrarStockGlobalLocal()">
         <button class="btnNegro" onclick="cargarStockGlobal(true)">↻ Actualizar</button>
         <button class="btnVerde" onclick="exportarStockGlobalCSV()">⬇ Exportar CSV / Excel</button>
+        <button class="btnAzul" type="button" onclick="imprimirStockGlobal()">🖨 Imprimir</button>
       </div>
 
       <div class="grid2" style="margin-top:10px">
@@ -1216,6 +1227,7 @@ let CURVAS_TALLAS=[];
 let STOCK_GLOBAL_CACHE=[];
 let INVENTARIO_LISTA_CACHE=[];
 let INVENTARIO_LISTA_TS=0;
+let INVENTARIO_SUCURSAL_REPORTE='';
 let STOCK_GLOBAL_SUCURSALES=[];
 let STOCK_GLOBAL_TS=0;
 let RECEPCION_COMPRA_ACTUAL=null;
@@ -8560,66 +8572,267 @@ function cargarHistorialCostos(){
 }
 
 
+function sucursalReporteInventario(){
+  return INVENTARIO_SUCURSAL_REPORTE || SUCURSAL;
+}
+
+function prepararFiltroSucursalInventario(){
+  const s=$('inventarioFiltroSucursal');
+  if(!s) return;
+
+  const anterior=s.value || sucursalReporteInventario();
+  const permitidas=[];
+  const top=$('sucursalActual');
+
+  if(top){
+    [...top.options].forEach(o=>{
+      if(o.value && !permitidas.includes(o.value)) permitidas.push(o.value);
+    });
+  }
+
+  if(!permitidas.length && SUCURSAL) permitidas.push(SUCURSAL);
+
+  s.innerHTML='';
+  permitidas.forEach(x=>s.add(new Option(x,x)));
+
+  const elegida=permitidas.includes(anterior)
+    ? anterior
+    : (permitidas.includes(SUCURSAL)?SUCURSAL:(permitidas[0]||SUCURSAL));
+
+  s.value=elegida;
+  INVENTARIO_SUCURSAL_REPORTE=elegida;
+}
+
+function cambiarSucursalReporteInventario(){
+  const s=$('inventarioFiltroSucursal');
+  INVENTARIO_SUCURSAL_REPORTE=s&&s.value?s.value:SUCURSAL;
+  INVENTARIO_LISTA_CACHE=[];
+  INVENTARIO_LISTA_TS=0;
+  cargarInventarioSucursal(true);
+}
+
+function valoresUnicosInventario(campo,lista){
+  return [...new Set(
+    (lista||[])
+      .map(x=>String(x[campo]||'').trim())
+      .filter(Boolean)
+  )].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}));
+}
+
+function llenarSelectInventario(id,valores,etiqueta){
+  const s=$(id);
+  if(!s) return;
+  const actual=s.value;
+  s.innerHTML='<option value="">'+etiqueta+'</option>';
+  (valores||[]).forEach(v=>s.add(new Option(v,v)));
+  if(actual&&[...s.options].some(o=>o.value===actual)) s.value=actual;
+}
+
+function prepararFiltrosInventario(){
+  prepararFiltroSucursalInventario();
+
+  llenarSelectInventario(
+    'inventarioFiltroMarca',
+    valoresUnicosInventario('marca',INVENTARIO_LISTA_CACHE),
+    'Todas'
+  );
+
+  actualizarFiltrosInventario('marca');
+}
+
+function actualizarFiltrosInventario(origen){
+  const marca=$('inventarioFiltroMarca')?$('inventarioFiltroMarca').value:'';
+  const modeloActual=$('inventarioFiltroModelo')?$('inventarioFiltroModelo').value:'';
+  const colorActual=$('inventarioFiltroColor')?$('inventarioFiltroColor').value:'';
+
+  let base=(INVENTARIO_LISTA_CACHE||[])
+    .filter(p=>!marca||String(p.marca||'')===marca);
+
+  llenarSelectInventario(
+    'inventarioFiltroModelo',
+    valoresUnicosInventario('modelo',base),
+    'Todos'
+  );
+
+  if(
+    modeloActual &&
+    $('inventarioFiltroModelo') &&
+    [...$('inventarioFiltroModelo').options].some(o=>o.value===modeloActual)
+  ){
+    $('inventarioFiltroModelo').value=modeloActual;
+  }
+
+  const modelo=$('inventarioFiltroModelo')?$('inventarioFiltroModelo').value:'';
+  base=base.filter(p=>!modelo||String(p.modelo||'')===modelo);
+
+  llenarSelectInventario(
+    'inventarioFiltroColor',
+    valoresUnicosInventario('color',base),
+    'Todos'
+  );
+
+  if(
+    colorActual &&
+    $('inventarioFiltroColor') &&
+    [...$('inventarioFiltroColor').options].some(o=>o.value===colorActual)
+  ){
+    $('inventarioFiltroColor').value=colorActual;
+  }
+}
+
+function limpiarFiltrosInventario(){
+  if($('inventarioListaQ')) $('inventarioListaQ').value='';
+  if($('inventarioFiltroMarca')) $('inventarioFiltroMarca').value='';
+  if($('inventarioFiltroModelo')) $('inventarioFiltroModelo').value='';
+  if($('inventarioFiltroColor')) $('inventarioFiltroColor').value='';
+  if($('inventarioSoloExistencia')) $('inventarioSoloExistencia').checked=false;
+  prepararFiltrosInventario();
+  filtrarInventarioSucursalLocal();
+}
+
+function obtenerInventarioSucursalFiltrado(){
+  const q=L($('inventarioListaQ')?$('inventarioListaQ').value:'');
+  const solo=$('inventarioSoloExistencia')?$('inventarioSoloExistencia').checked:false;
+  const marca=$('inventarioFiltroMarca')?$('inventarioFiltroMarca').value:'';
+  const modelo=$('inventarioFiltroModelo')?$('inventarioFiltroModelo').value:'';
+  const color=$('inventarioFiltroColor')?$('inventarioFiltroColor').value:'';
+
+  return (INVENTARIO_LISTA_CACHE||[]).filter(p=>{
+    if(solo && Number(p.total||0)<=0) return false;
+
+    if(
+      q &&
+      ![p.codigo,p.marca,p.modelo,p.categoria,p.color,p.talla,p.escala]
+        .some(v=>L(v).includes(q))
+    ) return false;
+
+    if(marca&&String(p.marca||'')!==marca) return false;
+    if(modelo&&String(p.modelo||'')!==modelo) return false;
+    if(color&&String(p.color||'')!==color) return false;
+
+    return true;
+  });
+}
+
 function cargarInventarioSucursal(forzar=false){
   if(!$('inventarioListaTabla')) return;
-  const vigente=INVENTARIO_LISTA_CACHE.length && (Date.now()-INVENTARIO_LISTA_TS)<10000;
+
+  prepararFiltroSucursalInventario();
+  const suc=sucursalReporteInventario();
+
+  const vigente=
+    INVENTARIO_LISTA_CACHE.length &&
+    (Date.now()-INVENTARIO_LISTA_TS)<10000 &&
+    String(INVENTARIO_LISTA_CACHE[0]&&INVENTARIO_LISTA_CACHE[0]._sucursalReporte||'')===String(suc);
+
   if(vigente&&!forzar){
+    prepararFiltrosInventario();
     filtrarInventarioSucursalLocal();
     return;
   }
-  $('inventarioListaTabla').innerHTML='<div class="mensaje info">Cargando inventario de '+esc(SUCURSAL)+'…</div>';
-  api('inventariolista',{sucursal:SUCURSAL,q:''},r=>{
+
+  $('inventarioListaTabla').innerHTML=
+    '<div class="mensaje info">Cargando inventario de '+esc(suc)+'…</div>';
+
+  api('inventariolista',{sucursal:suc,q:''},r=>{
     if(!r||!r.ok){
-      $('inventarioListaTabla').innerHTML='<div class="mensaje error">'+esc((r&&r.error)||'No se pudo cargar el inventario.')+'</div>';
+      $('inventarioListaTabla').innerHTML=
+        '<div class="mensaje error">'+
+        esc((r&&r.error)||'No se pudo cargar el inventario.')+
+        '</div>';
       return;
     }
+
     INVENTARIO_LISTA_CACHE=(r.productos||[]).map(p=>({
       ...p,
       total:Number(p.existencia||0),
-      porSucursal:{[SUCURSAL]:Number(p.existencia||0)}
+      porSucursal:{[suc]:Number(p.existencia||0)},
+      _sucursalReporte:suc
     }));
+
     INVENTARIO_LISTA_TS=Date.now();
+    prepararFiltrosInventario();
     filtrarInventarioSucursalLocal();
   });
 }
 
-function filtrarInventarioSucursalLocal(){
-  if(!$('inventarioListaTabla')) return;
-  const q=L($('inventarioListaQ')?$('inventarioListaQ').value:'');
-  const solo=$('inventarioSoloExistencia')?$('inventarioSoloExistencia').checked:false;
-  let lista=(INVENTARIO_LISTA_CACHE||[]).filter(p=>{
-    if(solo && Number(p.total||0)<=0) return false;
-    if(q && ![p.codigo,p.marca,p.modelo,p.categoria,p.color,p.talla,p.escala].some(v=>L(v).includes(q))) return false;
-    return true;
-  });
+function construirInventarioTicketDatos(){
+  const lista=obtenerInventarioSucursalFiltrado();
+  const suc=sucursalReporteInventario();
 
   const anteriores=STOCK_GLOBAL_SUCURSALES;
-  STOCK_GLOBAL_SUCURSALES=[SUCURSAL];
+  STOCK_GLOBAL_SUCURSALES=[suc];
   const filas=prepararFilasStockGlobalTicket(lista);
   STOCK_GLOBAL_SUCURSALES=anteriores;
 
   const escalasUsadas=[];
   filas.forEach(f=>{
-    if(!f.individual&&f.escala&&!escalasUsadas.includes(f.escala)) escalasUsadas.push(f.escala);
+    if(!f.individual&&f.escala&&!escalasUsadas.includes(f.escala)){
+      escalasUsadas.push(f.escala);
+    }
   });
+
   escalasUsadas.sort((a,b)=>{
-    const ia=(ESCALAS||[]).findIndex(x=>x.nombre===a), ib=(ESCALAS||[]).findIndex(x=>x.nombre===b);
-    if(ia>=0||ib>=0){ if(ia<0)return 1; if(ib<0)return -1; return ia-ib; }
+    const ia=(ESCALAS||[]).findIndex(x=>x.nombre===a);
+    const ib=(ESCALAS||[]).findIndex(x=>x.nombre===b);
+    if(ia>=0||ib>=0){
+      if(ia<0)return 1;
+      if(ib<0)return -1;
+      return ia-ib;
+    }
     return String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'});
   });
+
   let maxSlots=1;
-  escalasUsadas.forEach(e=>maxSlots=Math.max(maxSlots,(ESCALAS_MAP[e]||[]).length));
+  escalasUsadas.forEach(e=>{
+    maxSlots=Math.max(maxSlots,(ESCALAS_MAP[e]||[]).length);
+  });
+
+  return{lista,filas,escalasUsadas,maxSlots,sucursal:suc};
+}
+
+function construirTablaInventarioHTML(datos,paraImpresion=false){
+  const {filas,escalasUsadas,maxSlots}=datos;
   const filasEncabezado=Math.max(1,escalasUsadas.length);
 
-  let h='<table class="tabla tablaBordes"><thead><tr>'+
+  let h='<table class="tabla tablaBordes'+(paraImpresion?' inventarioPrintTabla':'')+'"><thead>';
+
+  if(paraImpresion){
+    const filtros=[
+      $('inventarioFiltroMarca')&&$('inventarioFiltroMarca').value
+        ? 'Marca: '+$('inventarioFiltroMarca').value : '',
+      $('inventarioFiltroModelo')&&$('inventarioFiltroModelo').value
+        ? 'Modelo: '+$('inventarioFiltroModelo').value : '',
+      $('inventarioFiltroColor')&&$('inventarioFiltroColor').value
+        ? 'Color: '+$('inventarioFiltroColor').value : ''
+    ].filter(Boolean).join(' · ');
+
+    const columnas=2+maxSlots+1;
+
+    h+=
+      '<tr class="encabezadoEmpresa"><th colspan="'+columnas+'">'+
+        '<div style="font-size:18px;font-weight:800">COMERCIAL ADELAIDA</div>'+
+        '<div style="font-size:14px">INVENTARIO — '+esc(datos.sucursal)+'</div>'+
+        '<div style="font-size:11px;font-weight:400;margin-top:2px">'+
+          esc(filtros||'Inventario completo')+
+          ' · Impreso '+esc(new Date().toLocaleString())+
+        '</div>'+
+      '</th></tr>';
+  }
+
+  h+='<tr>'+
     '<th rowspan="'+(1+filasEncabezado)+'">Modelo / Color</th>'+
     '<th colspan="'+(1+maxSlots)+'" style="text-align:center">Numeración</th>'+
-    '<th rowspan="'+(1+filasEncabezado)+'">Existencia</th></tr>';
+    '<th rowspan="'+(1+filasEncabezado)+'">Existencia</th>'+
+    '</tr>';
+
   if(escalasUsadas.length){
     escalasUsadas.forEach(e=>{
       const tallas=ESCALAS_MAP[e]||[];
       h+='<tr><th>'+esc(e)+'</th>';
-      for(let i=0;i<maxSlots;i++) h+='<th>'+esc(tallas[i]||'')+'</th>';
+      for(let i=0;i<maxSlots;i++){
+        h+='<th>'+esc(tallas[i]||'')+'</th>';
+      }
       h+='</tr>';
     });
   }else{
@@ -8627,48 +8840,147 @@ function filtrarInventarioSucursalLocal(){
     for(let i=0;i<maxSlots;i++) h+='<th></th>';
     h+='</tr>';
   }
+
   h+='</thead><tbody>';
+
   filas.forEach(f=>{
     const detalle=[f.categoria,f.color].filter(Boolean).join(' · ');
-    const detalleFinal=f.individual?[detalle,f.talla?'Talla '+f.talla:''].filter(Boolean).join(' · '):detalle;
-    h+='<tr><td><b>'+esc([f.marca,f.modelo].filter(Boolean).join(' · '))+'</b><br><span class="sub">'+esc(detalleFinal)+'</span></td>';
+    const detalleFinal=f.individual
+      ? [detalle,f.talla?'Talla '+f.talla:''].filter(Boolean).join(' · ')
+      : detalle;
+
+    h+='<tr>'+
+      '<td><b>'+esc([f.marca,f.modelo].filter(Boolean).join(' · '))+'</b><br>'+
+      '<span class="sub">'+esc(detalleFinal)+'</span></td>';
+
     if(f.individual){
       h+='<td><b>✓</b></td><td><b>'+Number(f.total||0)+'</b></td>';
       for(let i=1;i<maxSlots;i++) h+='<td></td>';
     }else{
       const tallas=ESCALAS_MAP[f.escala]||[];
       h+='<td><b>'+esc(f.escala)+'</b></td>';
+
       for(let i=0;i<maxSlots;i++){
-        const talla=tallas[i], item=talla?f.cantidades[String(talla)]:null;
+        const talla=tallas[i];
+        const item=talla?f.cantidades[String(talla)]:null;
         const n=item?Number(item.total||0):0;
         h+='<td>'+(n>0?'<b>'+n+'</b>':'')+'</td>';
       }
     }
+
     h+='<td><b>'+Number(f.total||0)+'</b></td></tr>';
   });
+
   h+='</tbody></table>';
-  $('inventarioListaTabla').innerHTML=filas.length?h:'<div class="sub">Sin coincidencias.</div>';
+  return h;
+}
+
+function filtrarInventarioSucursalLocal(){
+  if(!$('inventarioListaTabla')) return;
+
+  const datos=construirInventarioTicketDatos();
+  const {lista,filas,sucursal}=datos;
+
+  $('inventarioListaTabla').innerHTML=
+    filas.length
+      ? construirTablaInventarioHTML(datos,false)
+      : '<div class="sub">Sin coincidencias.</div>';
+
   const unidades=lista.reduce((a,p)=>a+Number(p.total||0),0);
-  const modelos=new Set(lista.map(p=>[p.marca||'',p.modelo||'',p.categoria||'',p.color||''].join('||'))).size;
-  $('inventarioListaResumen').textContent=SUCURSAL+' · '+modelos+' modelos/color · '+lista.length+' tallas/referencias · '+unidades+' unidades';
+  const modelos=new Set(
+    lista.map(p=>[
+      p.marca||'',p.modelo||'',p.categoria||'',p.color||''
+    ].join('||'))
+  ).size;
+
+  $('inventarioListaResumen').textContent=
+    sucursal+' · '+
+    modelos+' modelos/color · '+
+    lista.length+' tallas/referencias · '+
+    unidades+' unidades';
 }
 
 function exportarInventarioSucursalCSV(){
-  let lista=(INVENTARIO_LISTA_CACHE||[]);
-  const q=L($('inventarioListaQ')?$('inventarioListaQ').value:'');
-  const solo=$('inventarioSoloExistencia')?$('inventarioSoloExistencia').checked:false;
-  lista=lista.filter(p=>{
-    if(solo&&Number(p.total||0)<=0)return false;
-    if(q&&![p.codigo,p.marca,p.modelo,p.categoria,p.color,p.talla,p.escala].some(v=>L(v).includes(q)))return false;
-    return true;
-  });
-  if(!lista.length) return alert('No hay datos de inventario para exportar.');
-  const filas=[['Código','Marca','Modelo','Categoría','Color','Talla','Escala','Existencia','Sucursal']];
-  lista.forEach(p=>filas.push([p.codigo||'',p.marca||'',p.modelo||'',p.categoria||'',p.color||'',p.talla||'',p.escala||'',Number(p.total||0),SUCURSAL]));
-  const csv='\uFEFF'+filas.map(f=>f.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\r\n');
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}), url=URL.createObjectURL(blob), a=document.createElement('a');
-  a.href=url; a.download='inventario_'+SUCURSAL.replace(/\s+/g,'_')+'.csv'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+  const lista=obtenerInventarioSucursalFiltrado();
+  const suc=sucursalReporteInventario();
+
+  if(!lista.length){
+    return alert('No hay datos de inventario para exportar.');
+  }
+
+  const filas=[[
+    'Código','Marca','Modelo','Categoría','Color',
+    'Talla','Escala','Existencia','Sucursal'
+  ]];
+
+  lista.forEach(p=>filas.push([
+    p.codigo||'',
+    p.marca||'',
+    p.modelo||'',
+    p.categoria||'',
+    p.color||'',
+    p.talla||'',
+    p.escala||'',
+    Number(p.total||0),
+    suc
+  ]));
+
+  const csv='\uFEFF'+filas.map(f=>
+    f.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')
+  ).join('\r\n');
+
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+
+  a.href=url;
+  a.download='inventario_'+suc.replace(/\s+/g,'_')+'.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+
+function imprimirInventarioSucursal(){
+  const datos=construirInventarioTicketDatos();
+
+  if(!datos.filas.length){
+    return alert('No hay datos de inventario para imprimir.');
+  }
+
+  const w=window.open('','_blank');
+  if(!w){
+    return alert('El navegador bloqueó la ventana de impresión.');
+  }
+
+  const html=construirTablaInventarioHTML(datos,true);
+
+  w.document.open();
+  w.document.write(
+    '<!doctype html><html><head><meta charset="utf-8">'+
+    '<title>Inventario - '+esc(datos.sucursal)+'</title>'+
+    '<style>'+
+      '@page{size:landscape;margin:10mm}'+
+      '*{box-sizing:border-box}'+
+      'body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;font-size:10px}'+
+      'table{width:100%;border-collapse:collapse;table-layout:auto}'+
+      'thead{display:table-header-group}'+
+      'tfoot{display:table-footer-group}'+
+      'tr{page-break-inside:avoid}'+
+      'th,td{border:1px solid #666;padding:4px 5px;text-align:center;vertical-align:middle}'+
+      'th{font-weight:700;background:#f3f3f3}'+
+      'td:first-child,th:first-child{text-align:left}'+
+      '.sub{font-weight:400;color:#444}'+
+      '.encabezadoEmpresa th{text-align:center;background:#fff;border-left:0;border-right:0;border-top:0;padding:0 0 7px}'+
+    '</style></head><body>'+
+    html+
+    '<script>window.onload=function(){setTimeout(function(){window.print();},150)};<\/script>'+
+    '</body></html>'
+  );
+  w.document.close();
+}
+
 
 function cargarStockGlobal(forzar=false){
   const vigente=
@@ -9014,6 +9326,79 @@ function filtrarStockGlobalLocal(){
     totalPares+' unidades en existencia · actualizado '+
     new Date(STOCK_GLOBAL_TS||Date.now()).toLocaleTimeString();
 }
+
+
+function imprimirStockGlobal(){
+  const tablaOrigen=$('stockGlobalTabla') ? $('stockGlobalTabla').querySelector('table') : null;
+
+  if(!tablaOrigen){
+    return alert('No hay datos de stock global para imprimir.');
+  }
+
+  const tabla=tablaOrigen.cloneNode(true);
+  const thead=tabla.querySelector('thead');
+
+  if(thead){
+    const marca=$('stockFiltroMarca')?$('stockFiltroMarca').value:'';
+    const modelo=$('stockFiltroModelo')?$('stockFiltroModelo').value:'';
+    const color=$('stockFiltroColor')?$('stockFiltroColor').value:'';
+    const sucursal=$('stockFiltroSucursal')?$('stockFiltroSucursal').value:'';
+    const q=$('stockGlobalQ')?$('stockGlobalQ').value.trim():'';
+    const solo=$('stockSoloExistencia')&&$('stockSoloExistencia').checked;
+
+    const filtros=[
+      marca ? 'Marca: '+marca : '',
+      modelo ? 'Modelo: '+modelo : '',
+      color ? 'Color: '+color : '',
+      sucursal ? 'Sucursal: '+sucursal : 'Sucursales: Todas',
+      q ? 'Búsqueda: '+q : '',
+      solo ? 'Solo con existencia' : ''
+    ].filter(Boolean).join(' · ');
+
+    const filaTitulo=document.createElement('tr');
+    filaTitulo.className='encabezadoEmpresa';
+    filaTitulo.innerHTML=
+      '<th colspan="100">'+
+        '<div style="font-size:16px;font-weight:700">COMERCIAL ADELAIDA</div>'+
+        '<div style="font-size:13px;font-weight:700;margin-top:2px">STOCK GLOBAL CONSOLIDADO</div>'+
+        '<div style="font-size:9px;font-weight:400;margin-top:3px">'+esc(filtros)+'</div>'+
+        '<div style="font-size:9px;font-weight:400">Impreso: '+esc(new Date().toLocaleString())+'</div>'+
+      '</th>';
+
+    thead.insertBefore(filaTitulo,thead.firstChild);
+  }
+
+  const w=window.open('','_blank');
+
+  if(!w){
+    return alert('El navegador bloqueó la ventana de impresión.');
+  }
+
+  w.document.open();
+  w.document.write(
+    '<!doctype html><html><head><meta charset="utf-8">'+
+    '<title>Stock global - Comercial Adelaida</title>'+
+    '<style>'+
+      '@page{size:landscape;margin:9mm}'+
+      '*{box-sizing:border-box}'+
+      'body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;font-size:9px}'+
+      'table{width:100%;border-collapse:collapse;table-layout:auto}'+
+      'thead{display:table-header-group}'+
+      'tfoot{display:table-footer-group}'+
+      'tr{page-break-inside:avoid}'+
+      'th,td{border:1px solid #666;padding:3px 4px;text-align:center;vertical-align:middle;white-space:nowrap}'+
+      'th{font-weight:700;background:#f3f3f3}'+
+      'td:first-child,th:first-child{text-align:left;white-space:normal}'+
+      '.sub{font-weight:400;color:#444}'+
+      '.encabezadoEmpresa th{text-align:center!important;background:#fff;border-left:0;border-right:0;border-top:0;padding:0 0 7px;white-space:normal}'+
+    '</style></head><body>'+
+    tabla.outerHTML+
+    '<script>window.onload=function(){setTimeout(function(){window.print();},150)};<\/script>'+
+    '</body></html>'
+  );
+  w.document.close();
+}
+
 
 function exportarStockGlobalCSV(){
   const lista=obtenerStockGlobalFiltrado();
