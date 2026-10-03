@@ -8659,74 +8659,86 @@ function obtenerStockGlobalFiltrado(){
   });
 }
 
-function agruparStockGlobalPorModelo(lista){
+function prepararFilasStockGlobalTicket(lista){
   const grupos={};
+  const filasIndividuales=[];
 
   (lista||[]).forEach(p=>{
-    const clave=[p.marca||'',p.modelo||'',p.categoria||'',p.color||''].join('||');
-    if(!grupos[clave]){
-      grupos[clave]={
+    const escala=String(p.escala||'').trim();
+    const tipo=String(p.tipoIngreso||'INDIVIDUAL').toUpperCase();
+    const usaEscala=!!escala && tipo==='CORRIDA';
+
+    if(usaEscala){
+      const clave=[
+        p.marca||'',p.modelo||'',p.categoria||'',p.color||'',escala
+      ].join('||');
+
+      if(!grupos[clave]){
+        grupos[clave]={
+          marca:p.marca||'',
+          modelo:p.modelo||'',
+          categoria:p.categoria||'',
+          color:p.color||'',
+          escala,
+          cantidades:{},
+          total:0,
+          porSucursal:{}
+        };
+        (STOCK_GLOBAL_SUCURSALES||[]).forEach(s=>grupos[clave].porSucursal[s]=0);
+      }
+
+      const g=grupos[clave];
+      g.cantidades[String(p.talla||'')]=p;
+      g.total+=Number(p.total||0);
+      (STOCK_GLOBAL_SUCURSALES||[]).forEach(s=>{
+        g.porSucursal[s]+=Number((p.porSucursal||{})[s])||0;
+      });
+    }else{
+      filasIndividuales.push({
         marca:p.marca||'',
         modelo:p.modelo||'',
         categoria:p.categoria||'',
         color:p.color||'',
-        escalas:{},
-        individuales:[],
-        total:0,
-        porSucursal:{}
-      };
-      (STOCK_GLOBAL_SUCURSALES||[]).forEach(s=>grupos[clave].porSucursal[s]=0);
+        talla:String(p.talla||''),
+        escala:'',
+        individual:true,
+        cantidad:Number(p.total||0),
+        total:Number(p.total||0),
+        porSucursal:{...(p.porSucursal||{})}
+      });
     }
-
-    const g=grupos[clave];
-    const escala=String(p.escala||'').trim();
-    const tipo=String(p.tipoIngreso||'INDIVIDUAL').toUpperCase();
-    const item={
-      talla:String(p.talla||''),
-      codigo:p.codigo||'',
-      total:Number(p.total||0),
-      porSucursal:{...(p.porSucursal||{})}
-    };
-
-    if(escala && (tipo==='CORRIDA' || tipo==='PAQUETE_CURVA')){
-      if(!g.escalas[escala]) g.escalas[escala]=[];
-      g.escalas[escala].push(item);
-    }else{
-      g.individuales.push(item);
-    }
-
-    g.total+=Number(p.total||0);
-    (STOCK_GLOBAL_SUCURSALES||[]).forEach(s=>{
-      g.porSucursal[s]+=Number((p.porSucursal||{})[s])||0;
-    });
   });
 
-  return Object.values(grupos).map(g=>{
-    Object.keys(g.escalas).forEach(e=>{
-      const orden=ESCALAS_MAP[e]||[];
-      g.escalas[e].sort((a,b)=>{
-        const ia=orden.indexOf(String(a.talla));
-        const ib=orden.indexOf(String(b.talla));
-        if(ia>=0||ib>=0){
-          if(ia<0) return 1;
-          if(ib<0) return -1;
-          return ia-ib;
-        }
-        return String(a.talla).localeCompare(String(b.talla),undefined,{numeric:true,sensitivity:'base'});
-      });
-    });
-    g.individuales.sort((a,b)=>String(a.talla).localeCompare(String(b.talla),undefined,{numeric:true,sensitivity:'base'}));
-    return g;
-  }).sort((a,b)=>
-    [a.marca,a.modelo,a.color].join(' ').localeCompare([b.marca,b.modelo,b.color].join(' '),undefined,{numeric:true,sensitivity:'base'})
-  );
+  const filasEscala=Object.values(grupos).map(g=>({
+    ...g,
+    individual:false
+  }));
+
+  return [...filasEscala,...filasIndividuales].sort((a,b)=>{
+    const aa=[a.marca,a.modelo,a.color,a.escala,a.talla||''].join(' ');
+    const bb=[b.marca,b.modelo,b.color,b.escala,b.talla||''].join(' ');
+    return aa.localeCompare(bb,undefined,{numeric:true,sensitivity:'base'});
+  });
 }
 
-function stockNumeracionTicketHTML(g,sucursal){
-  const filas=[];
-  const ordenEscalas=(ESCALAS||[]).map(e=>e.nombre);
-  const nombresEscala=Object.keys(g.escalas||{}).sort((a,b)=>{
-    const ia=ordenEscalas.indexOf(a), ib=ordenEscalas.indexOf(b);
+function filtrarStockGlobalLocal(){
+  if(!$('stockGlobalTabla')) return;
+
+  const lista=obtenerStockGlobalFiltrado();
+  const filas=prepararFilasStockGlobalTicket(lista);
+  const sucursal=$('stockFiltroSucursal')?$('stockFiltroSucursal').value:'';
+  const sucursalesVisibles=sucursal?[sucursal]:(STOCK_GLOBAL_SUCURSALES||[]);
+
+  const escalasUsadas=[];
+  filas.forEach(f=>{
+    if(!f.individual && f.escala && !escalasUsadas.includes(f.escala)){
+      escalasUsadas.push(f.escala);
+    }
+  });
+
+  escalasUsadas.sort((a,b)=>{
+    const ia=(ESCALAS||[]).findIndex(x=>x.nombre===a);
+    const ib=(ESCALAS||[]).findIndex(x=>x.nombre===b);
     if(ia>=0||ib>=0){
       if(ia<0) return 1;
       if(ib<0) return -1;
@@ -8735,88 +8747,95 @@ function stockNumeracionTicketHTML(g,sucursal){
     return String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'});
   });
 
-  nombresEscala.forEach(e=>{
-    const map={};
-    (g.escalas[e]||[]).forEach(t=>map[String(t.talla)]=t);
-    const tallasBase=(ESCALAS_MAP[e]||[]).map(String);
-    const extras=(g.escalas[e]||[]).map(t=>String(t.talla)).filter(t=>!tallasBase.includes(t));
-    const tallas=[...tallasBase,...extras];
-    if(!tallas.length) return;
-
-    const encabezado=['<th style="min-width:28px">'+esc(e)+'</th>'];
-    const cantidades=['<td><b>'+esc(e)+'</b></td>'];
-    tallas.forEach(t=>{
-      const item=map[t];
-      const n=item
-        ? (sucursal ? Number((item.porSucursal||{})[sucursal])||0 : Number(item.total||0))
-        : 0;
-      encabezado.push('<th>'+esc(t)+'</th>');
-      cantidades.push('<td>'+(n>0?'<b>'+n+'</b>':'')+'</td>');
-    });
-    filas.push('<table style="border-collapse:collapse;margin:2px 0 6px 0"><thead><tr>'+encabezado.join('')+'</tr></thead><tbody><tr>'+cantidades.join('')+'</tr></tbody></table>');
+  let maxSlots=1;
+  escalasUsadas.forEach(e=>{
+    maxSlots=Math.max(maxSlots,(ESCALAS_MAP[e]||[]).length);
   });
 
-  if((g.individuales||[]).length){
-    const encabezado=['<th style="min-width:28px">✓</th>'];
-    const cantidades=['<td><b>✓</b></td>'];
-    (g.individuales||[]).forEach(t=>{
-      const n=sucursal ? Number((t.porSucursal||{})[sucursal])||0 : Number(t.total||0);
-      encabezado.push('<th>'+esc(t.talla||'—')+'</th>');
-      cantidades.push('<td>'+(n>0?'<b>'+n+'</b>':'')+'</td>');
-    });
-    filas.push('<table style="border-collapse:collapse;margin:2px 0 6px 0"><thead><tr>'+encabezado.join('')+'</tr></thead><tbody><tr>'+cantidades.join('')+'</tr></tbody></table>');
-  }
+  const filasEncabezado=Math.max(1,escalasUsadas.length);
 
-  return '<div class="stockNumeracionTicket">'+filas.join('')+'</div>';
-}
-
-function filtrarStockGlobalLocal(){
-  if(!$('stockGlobalTabla')) return;
-
-  const lista=obtenerStockGlobalFiltrado();
-  const grupos=agruparStockGlobalPorModelo(lista);
-  const sucursal=$('stockFiltroSucursal')?$('stockFiltroSucursal').value:'';
-  const sucursalesVisibles=sucursal?[sucursal]:(STOCK_GLOBAL_SUCURSALES||[]);
-
-  let h=
-    '<table class="tabla">'+
-    '<thead><tr>'+
-      '<th>Modelo / Color</th>'+
-      '<th>Numeración</th>';
+  let h='<table class="tabla"><thead>';
+  h+='<tr>'+
+    '<th rowspan="'+(1+filasEncabezado)+'">Modelo / Color</th>'+
+    '<th colspan="'+(1+maxSlots)+'" style="text-align:center">Numeración</th>';
 
   sucursalesVisibles.forEach(s=>{
-    h+='<th>'+esc(s)+'</th>';
+    h+='<th rowspan="'+(1+filasEncabezado)+'">'+esc(s)+'</th>';
   });
+  h+='<th rowspan="'+(1+filasEncabezado)+'">Total</th></tr>';
 
-  h+='<th>Total</th></tr></thead><tbody>';
+  if(escalasUsadas.length){
+    escalasUsadas.forEach(e=>{
+      const tallas=ESCALAS_MAP[e]||[];
+      h+='<tr><th>'+esc(e)+'</th>';
+      for(let i=0;i<maxSlots;i++){
+        h+='<th>'+esc(tallas[i]||'')+'</th>';
+      }
+      h+='</tr>';
+    });
+  }else{
+    h+='<tr><th></th>';
+    for(let i=0;i<maxSlots;i++) h+='<th></th>';
+    h+='</tr>';
+  }
 
-  grupos.forEach(g=>{
-    h+=
-      '<tr>'+
-        '<td><b>'+esc([g.marca,g.modelo].filter(Boolean).join(' · '))+'</b><br>'+
-          '<span class="sub">'+esc([g.categoria,g.color].filter(Boolean).join(' · '))+'</span>'+ 
-        '</td>'+
-        '<td>'+stockNumeracionTicketHTML(g,sucursal)+'</td>';
+  h+='</thead><tbody>';
+
+  filas.forEach(f=>{
+    const detalle=[f.categoria,f.color].filter(Boolean).join(' · ');
+    const detalleFinal=f.individual
+      ? [detalle, f.talla ? 'Talla '+f.talla : ''].filter(Boolean).join(' · ')
+      : detalle;
+
+    h+='<tr>'+
+      '<td><b>'+esc([f.marca,f.modelo].filter(Boolean).join(' · '))+'</b><br>'+
+      '<span class="sub">'+esc(detalleFinal)+'</span></td>';
+
+    if(f.individual){
+      h+='<td><b>✓</b></td>';
+      h+='<td><b>'+Number(f.total||0)+'</b></td>';
+      for(let i=1;i<maxSlots;i++) h+='<td></td>';
+    }else{
+      const tallas=ESCALAS_MAP[f.escala]||[];
+      h+='<td><b>'+esc(f.escala)+'</b></td>';
+      for(let i=0;i<maxSlots;i++){
+        const talla=tallas[i];
+        const item=talla ? f.cantidades[String(talla)] : null;
+        const n=item
+          ? (sucursal
+              ? Number((item.porSucursal||{})[sucursal])||0
+              : Number(item.total||0))
+          : 0;
+        h+='<td>'+(n>0?'<b>'+n+'</b>':'')+'</td>';
+      }
+    }
 
     sucursalesVisibles.forEach(s=>{
-      const n=Number(g.porSucursal[s])||0;
+      const n=Number((f.porSucursal||{})[s])||0;
       h+='<td>'+(n>0?'<b>'+n+'</b>':'0')+'</td>';
     });
 
-    const totalVisible=sucursal?(Number(g.porSucursal[sucursal])||0):g.total;
+    const totalVisible=sucursal
+      ? Number((f.porSucursal||{})[sucursal])||0
+      : Number(f.total||0);
     h+='<td><b>'+totalVisible+'</b></td></tr>';
   });
 
   h+='</tbody></table>';
 
   $('stockGlobalTabla').innerHTML=
-    grupos.length
-      ? h
-      : '<div class="sub">Sin coincidencias.</div>';
+    filas.length ? h : '<div class="sub">Sin coincidencias.</div>';
 
-  const totalPares=lista.reduce((acc,p)=>acc+(sucursal?(Number((p.porSucursal||{})[sucursal])||0):(Number(p.total||0)||0)),0);
+  const modelosUnicos=new Set(lista.map(p=>[
+    p.marca||'',p.modelo||'',p.categoria||'',p.color||''
+  ].join('||'))).size;
+  const totalPares=lista.reduce((acc,p)=>
+    acc+(sucursal
+      ? (Number((p.porSucursal||{})[sucursal])||0)
+      : (Number(p.total||0)||0)),0);
+
   $('stockGlobalResumen').textContent=
-    grupos.length+' modelos/color · '+
+    modelosUnicos+' modelos/color · '+
     lista.length+' tallas/referencias · '+
     totalPares+' unidades en existencia · actualizado '+
     new Date(STOCK_GLOBAL_TS||Date.now()).toLocaleTimeString();
