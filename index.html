@@ -71,7 +71,7 @@ document.addEventListener('click',e=>{
     <button id="tabTraslados" onclick="vista('traslados');cargarProductosTrasladoOrigen();cargarTraslados()">🔁 Traslados</button>
     <button id="tabStockglobal" onclick="vista('stockglobal');cargarStockGlobal()">🏬 Stock global</button>
     <button id="tabUsuarios" onclick="vista('usuarios');cargarUsuarios();cargarPermisosRoles()">👥 Usuarios</button>
-    <button id="tabTrazabilidad" onclick="vista('trazabilidad')">🔎 Trazabilidad</button>
+    <button id="tabTrazabilidad" onclick="vista('trazabilidad');prepararTrazabilidad()">🔎 Trazabilidad</button>
     <button id="tabComisiones" onclick="vista('comisiones');cargarComisiones()">💰 Comisiones</button>
     <button id="tabDevoluciones" onclick="vista('devoluciones');cargarDevoluciones();cargarVentasDevolucion()">↩️ Devoluciones</button>
     <button id="tabCompras" onclick="vista('compras');mostrarListaCompras();cargarProveedores();cargarCompras()">🚚 Compras</button>
@@ -901,8 +901,19 @@ document.addEventListener('click',e=>{
     <div class="card">
       <h3 style="margin-top:0">Trazabilidad por producto</h3>
 
+      <label>Producto</label>
+      <div class="fila" style="align-items:end">
+        <div style="flex:1">
+          <select id="trazaProductoSelect" onchange="seleccionarProductoTrazabilidad()">
+            <option value="">Seleccione un producto</option>
+          </select>
+        </div>
+        <button class="btnGris" type="button" onclick="cargarProductosTrazabilidad(true)">↻ Productos</button>
+      </div>
+
+      <label style="margin-top:10px">Buscar / escribir código manualmente</label>
       <div class="fila">
-        <input id="trazaCodigo" placeholder="Código o escanee el QR">
+        <input id="trazaCodigo" autocomplete="off" placeholder="Código, modelo, marca, color o escanee el QR">
         <button class="btnNegro" onclick="buscarTrazabilidad()">Buscar</button>
       </div>
 
@@ -1303,6 +1314,16 @@ document.addEventListener('DOMContentLoaded',()=>{
 
     if($('trasProductoSelect')){
       cargarProductosTrasladoOrigen(true);
+    }
+
+    PRODUCTOS_TRAZABILIDAD=[];
+    PRODUCTOS_TRAZABILIDAD_SUCURSAL='';
+    PRODUCTOS_TRAZABILIDAD_TS=0;
+
+    if($('vistaTrazabilidad') && !$('vistaTrazabilidad').classList.contains('oculto')){
+      limpiarEstadoTrazabilidad();
+      if($('trazaCodigo')) $('trazaCodigo').value='';
+      cargarProductosTrazabilidad(true);
     }
 
     if($('listaTraslados')){
@@ -5875,10 +5896,121 @@ function abrirVenta(numeroVenta,imprimir){
   );
 }
 
+
+let PRODUCTOS_TRAZABILIDAD=[];
+let PRODUCTOS_TRAZABILIDAD_SUCURSAL='';
+let PRODUCTOS_TRAZABILIDAD_TS=0;
+
+function limpiarEstadoTrazabilidad(){
+  if($('mensajeTraza')){
+    $('mensajeTraza').innerHTML='';
+  }
+
+  if($('trazaResultado')){
+    $('trazaResultado').classList.add('oculto');
+  }
+}
+
+function prepararTrazabilidad(){
+  limpiarEstadoTrazabilidad();
+
+  if($('trazaCodigo')){
+    $('trazaCodigo').value='';
+  }
+
+  if($('trazaProductoSelect')){
+    $('trazaProductoSelect').value='';
+  }
+
+  cargarProductosTrazabilidad();
+}
+
+function cargarProductosTrazabilidad(forzar=false){
+  const sel=$('trazaProductoSelect');
+  if(!sel || !TOKEN) return;
+
+  const vigente=
+    PRODUCTOS_TRAZABILIDAD.length &&
+    PRODUCTOS_TRAZABILIDAD_SUCURSAL===SUCURSAL &&
+    (Date.now()-PRODUCTOS_TRAZABILIDAD_TS)<15000;
+
+  if(vigente && !forzar){
+    llenarProductosTrazabilidad();
+    return;
+  }
+
+  sel.disabled=true;
+  sel.innerHTML='<option value="">Cargando productos…</option>';
+
+  api(
+    'inventariolista',
+    {sucursal:SUCURSAL,q:''},
+    r=>{
+      sel.disabled=false;
+
+      if(!r||!r.ok){
+        sel.innerHTML='<option value="">No se pudieron cargar los productos</option>';
+        return;
+      }
+
+      PRODUCTOS_TRAZABILIDAD=(r.productos||[])
+        .filter(p=>String(p.codigo||'').trim())
+        .sort((a,b)=>{
+          const aa=[a.marca||'',a.modelo||'',a.color||'',a.talla||''].join(' ');
+          const bb=[b.marca||'',b.modelo||'',b.color||'',b.talla||''].join(' ');
+          return aa.localeCompare(bb,undefined,{numeric:true,sensitivity:'base'});
+        });
+
+      PRODUCTOS_TRAZABILIDAD_SUCURSAL=SUCURSAL;
+      PRODUCTOS_TRAZABILIDAD_TS=Date.now();
+
+      llenarProductosTrazabilidad();
+    }
+  );
+}
+
+function llenarProductosTrazabilidad(){
+  const sel=$('trazaProductoSelect');
+  if(!sel) return;
+
+  const actual=$('trazaCodigo') ? $('trazaCodigo').value.trim() : '';
+
+  sel.innerHTML='';
+  sel.add(new Option('Seleccione un producto',''));
+
+  PRODUCTOS_TRAZABILIDAD.forEach(p=>{
+    const texto=[
+      p.marca||'',
+      p.modelo||'',
+      p.color||'',
+      p.talla ? 'Talla '+p.talla : '',
+      'Existencia '+Number(p.existencia||0)
+    ].filter(Boolean).join(' · ');
+
+    sel.add(new Option(texto,String(p.codigo||'')));
+  });
+
+  if(actual && [...sel.options].some(o=>o.value===actual)){
+    sel.value=actual;
+  }
+}
+
+function seleccionarProductoTrazabilidad(){
+  const sel=$('trazaProductoSelect');
+  if(!sel || !sel.value) return;
+
+  $('trazaCodigo').value=sel.value;
+  $('mensajeTraza').innerHTML='';
+  buscarTrazabilidad();
+}
+
+
 function abrirTrazabilidadProducto(){
   if(!productoActual){
     return;
   }
+
+  limpiarEstadoTrazabilidad();
 
   $('trazaCodigo').value=
     productoActual.codigo;
@@ -5887,10 +6019,16 @@ function abrirTrazabilidadProducto(){
     'trazabilidad'
   );
 
+  cargarProductosTrazabilidad();
+
   buscarTrazabilidad();
 }
 
 function buscarTrazabilidad(){
+  if($('mensajeTraza')){
+    $('mensajeTraza').innerHTML='';
+  }
+
   const c=
     $('trazaCodigo')
       .value
