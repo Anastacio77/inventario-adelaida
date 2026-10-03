@@ -5433,10 +5433,10 @@ function cargarTraslados(sucursalSolicitada){
 
         if(t.puedeRecibir || puedeRecibirLocal){
           accion=
-            '<button class="btnVerde" type="button" onclick="confirmarRecibidoTraslado('+
-            JSON.stringify(String(t.numeroTraslado||''))+','+
-            JSON.stringify(String(t.destino||''))+
-            ')">✓ Confirmar recibido</button>';
+            '<button class="btnVerde btnConfirmarTraslado" type="button" '+
+            'data-numero="'+esc(String(t.numeroTraslado||''))+'" '+
+            'data-destino="'+esc(String(t.destino||''))+'">'+
+            '✓ Confirmar recibido</button>';
         }else if(String(t.estado||'').toUpperCase()==='RECIBIDO'){
           accion=
             '<span class="sub">'+
@@ -5476,6 +5476,15 @@ function cargarTraslados(sucursalSolicitada){
 
       h+='</tbody></table>';
       $('listaTraslados').innerHTML=h;
+
+      $('listaTraslados').querySelectorAll('.btnConfirmarTraslado').forEach(btn=>{
+        btn.addEventListener('click',()=>{
+          confirmarRecibidoTraslado(
+            btn.dataset.numero||'',
+            btn.dataset.destino||''
+          );
+        });
+      });
     }
   );
 }
@@ -5603,10 +5612,20 @@ function confirmarRecibidoTraslado(numeroTraslado,destinoTraslado){
 
         if(celdaRec){
           celdaRec.innerHTML=
-            '<button class="btnVerde" type="button" onclick="confirmarRecibidoTraslado('+
-            JSON.stringify(String(numeroTraslado))+','+
-            JSON.stringify(String(sucursalRecepcion))+
-            ')">✓ Confirmar recibido</button>';
+            '<button class="btnVerde btnConfirmarTraslado" type="button" '+
+            'data-numero="'+esc(String(numeroTraslado))+'" '+
+            'data-destino="'+esc(String(sucursalRecepcion))+'">'+
+            '✓ Confirmar recibido</button>';
+
+          const btn=celdaRec.querySelector('.btnConfirmarTraslado');
+          if(btn){
+            btn.addEventListener('click',()=>{
+              confirmarRecibidoTraslado(
+                btn.dataset.numero||'',
+                btn.dataset.destino||''
+              );
+            });
+          }
         }
 
         msg('mensajeTraslado',err,'error');
