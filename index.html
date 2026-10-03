@@ -1312,9 +1312,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     ULTIMO_TRASLADO_IMPRESION=null;
 
     // Refrescar automáticamente la información dependiente de la sucursal.
-    if($('vistaTraslados') && !$('vistaTraslados').classList.contains('oculto')){
-      cargarTraslados(nuevaSucursal);
-    }
+    cargarTraslados(nuevaSucursal);
 
     if($('vistaInventario') && !$('vistaInventario').classList.contains('oculto')){
       INVENTARIO_LISTA_CACHE=[];
@@ -5382,7 +5380,20 @@ function cargarTraslados(sucursalSolicitada){
 
         let accion='';
 
-        if(t.puedeRecibir){
+        const estadoNorm=String(t.estado||'')
+          .toUpperCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g,'')
+          .trim();
+
+        const destinoNorm=String(t.destino||'').trim();
+        const sucursalNorm=String(SUCURSAL||'').trim();
+
+        const puedeRecibirLocal=
+          destinoNorm===sucursalNorm &&
+          estadoNorm==='EN TRANSITO';
+
+        if(t.puedeRecibir || puedeRecibirLocal){
           accion=
             '<button class="btnVerde" type="button" onclick="confirmarRecibidoTraslado('+
             JSON.stringify(String(t.numeroTraslado||''))+
@@ -6662,7 +6673,9 @@ function api(a,p,cb,sinToken=false){
     TOKEN
   ){
     p.token=TOKEN;
-    p.sucursal=SUCURSAL;
+    if(!Object.prototype.hasOwnProperty.call(p,'sucursal')){
+      p.sucursal=SUCURSAL;
+    }
   }
 
   const n=
