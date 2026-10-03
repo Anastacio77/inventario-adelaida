@@ -1231,6 +1231,7 @@ document.addEventListener('click',e=>{
 
 <script>
 let API_URL=localStorage.getItem('adelaida_api_url')||'';
+const VERSION_SISTEMA_UI='2026.10.03-ESTABLE-01';
 let TOKEN=localStorage.getItem('adelaida_token')||'';
 let SESION=null;
 let SUCURSAL=localStorage.getItem('adelaida_sucursal')||'Adelaida La Paz';
@@ -1536,6 +1537,69 @@ function vista(v){
   }
 }
 
+
+function ejecutarDiagnosticoSistema(){
+  const box=$('resultadoDiagnostico');
+  if(box){
+    box.innerHTML='<div class="mensaje info">Revisando el sistema…</div>';
+  }
+
+  api('diagnostico',{},r=>{
+    if(!box) return;
+
+    if(!r||!r.ok){
+      box.innerHTML='<div class="mensaje error">'+esc((r&&r.error)||'No se pudo ejecutar el diagnóstico.')+'</div>';
+      return;
+    }
+
+    let h='<div class="mensaje '+((r.problemas||[]).length?'error':'ok')+'">'+
+      '<b>Versión: '+esc(r.version||'')+'</b><br>'+
+      'Diagnóstico: '+esc(r.fecha||'')+
+      '</div>';
+
+    if((r.problemas||[]).length){
+      h+='<h4>Problemas críticos</h4><ul>'+
+        r.problemas.map(x=>'<li>'+esc(x)+'</li>').join('')+
+        '</ul>';
+    }
+
+    if((r.advertencias||[]).length){
+      h+='<h4>Advertencias</h4><ul>'+
+        r.advertencias.map(x=>'<li>'+esc(x)+'</li>').join('')+
+        '</ul>';
+    }
+
+    if((r.correcto||[]).length){
+      h+='<h4>Correcto</h4><ul>'+
+        r.correcto.map(x=>'<li>'+esc(x)+'</li>').join('')+
+        '</ul>';
+    }
+
+    box.innerHTML=h;
+  });
+}
+
+function verificarVersionSistema(){
+  if(!TOKEN) return;
+
+  api('version',{},r=>{
+    if(!r||!r.ok) return;
+
+    if(String(r.version||'')!==String(VERSION_SISTEMA_UI||'')){
+      const aviso=
+        'La interfaz y Code.gs no son de la misma versión. '+
+        'HTML: '+VERSION_SISTEMA_UI+' · Code.gs: '+String(r.version||'')+
+        '. Actualice ambos archivos antes de registrar operaciones.';
+
+      alert(aviso);
+      if($('estadoApi')){
+        $('estadoApi').textContent='⚠️ Versiones del sistema no coinciden';
+      }
+    }
+  });
+}
+
+
 function guardarConfig(){
   const input=$('apiUrl');
   const nueva=(input?input.value:'').trim();
@@ -1828,6 +1892,7 @@ function iniciarApp(u){
     cargarResumen();
 
     if(SESION&&tienePermiso('CAJA')) cargarCaja();
+    setTimeout(verificarVersionSistema,500);
   });
 }
 
@@ -10259,7 +10324,19 @@ function imprimirStockGlobal(){
         '<div style="font-size:16px;font-weight:700">COMERCIAL ADELAIDA</div>'+
         '<div style="font-size:13px;font-weight:700;margin-top:2px">STOCK GLOBAL CONSOLIDADO</div>'+
         '<div style="font-size:9px;font-weight:400;margin-top:3px">'+esc(filtros)+'</div>'+
-        '<div style="font-size:9px;font-weight:400">Impreso: '+esc(new Date().toLocaleString())+'</div>'+
+        '<div style="font-size:9px;font-weight:400">Impreso: '+esc(new Date().toLocaleString())+'
+    <div class="card" id="diagnosticoSistemaCard">
+      <h3 style="margin-top:0">Diagnóstico del sistema</h3>
+      <div class="sub">
+        Revisa existencias negativas, documentos duplicados, cajas abiertas duplicadas,
+        traslados antiguos pendientes y versión instalada.
+      </div>
+      <button class="btnNegro w100" type="button" style="margin-top:12px" onclick="ejecutarDiagnosticoSistema()">
+        🩺 Ejecutar diagnóstico
+      </button>
+      <div id="resultadoDiagnostico" style="margin-top:12px"></div>
+    </div>
+</div>'+
       '</th>';
 
     thead.insertBefore(filaTitulo,thead.firstChild);
