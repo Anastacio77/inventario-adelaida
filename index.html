@@ -31,6 +31,7 @@ document.addEventListener('click',e=>{
 @media print{body *{visibility:hidden}.ticket.imprimir,.ticket.imprimir *{visibility:visible}.ticket.imprimir{position:absolute;left:0;top:0;width:100%}.noPrint{display:none!important}}
 
 .stockNumeracionTicket table th,.stockNumeracionTicket table td{border:1px solid #d5d7dd;padding:4px 7px;text-align:center;white-space:nowrap}.stockNumeracionTicket table th:first-child,.stockNumeracionTicket table td:first-child{font-weight:700;background:#f5f6f8}.stockNumeracionTicket{display:inline-block;max-width:100%;overflow-x:auto}
+.tablaBordes{border-collapse:collapse}.tablaBordes th,.tablaBordes td{border:1px solid #d5d7dd!important}.tablaBordes thead th{background:#f7f7f9}.tablaBordes tbody tr:hover{background:#fafafa}
 </style>
 </head>
 <body>
@@ -65,7 +66,7 @@ document.addEventListener('click',e=>{
     <button id="tabPos" class="activo" onclick="vista('pos');refrescarCatalogoVenta()">🛒 Punto de venta</button>
     <button id="tabPedidos" onclick="vista('pedidos');mostrarListaPedidos();cargarPedidos()">📋 Pedidos</button>
     <button id="tabVentas" onclick="vista('ventas');buscarVentas()">🧾 Ventas</button>
-    <button id="tabInventario" onclick="vista('inventario')">📦 Inventario</button>
+    <button id="tabInventario" onclick="vista('inventario');cargarInventarioSucursal()">📦 Inventario</button>
     <button id="tabNuevo" onclick="vista('nuevo')">➕ Producto</button>
     <button id="tabTraslados" onclick="vista('traslados')">🔁 Traslados</button>
     <button id="tabStockglobal" onclick="vista('stockglobal');cargarStockGlobal()">🏬 Stock global</button>
@@ -187,7 +188,26 @@ document.addEventListener('click',e=>{
   </div>
 
   <div id="vistaInventario" class="vistaApp oculto">
-    <div class="card"><div class="fila"><div class="buscadorAuto"><input id="codigo" autocomplete="off" placeholder="Código, modelo, marca o color"><div id="sugerenciasInv" class="listaSugerencias oculto"></div></div><button class="btnNegro" onclick="consultar()">Buscar</button></div><div id="mensaje"></div></div>    <div id="productoCard" class="card oculto">
+    <div class="card">
+      <h3 style="margin-top:0">Inventario de la sucursal</h3>
+      <div class="sub">Vista agrupada por modelo, color y escala, con el mismo formato de numeración del ticket de venta.</div>
+      <div class="fila" style="margin-top:10px">
+        <input id="inventarioListaQ" placeholder="Buscar código, marca, modelo, color o talla" oninput="filtrarInventarioSucursalLocal()">
+        <button class="btnNegro" type="button" onclick="cargarInventarioSucursal(true)">↻ Actualizar</button>
+        <button class="btnVerde" type="button" onclick="exportarInventarioSucursalCSV()">⬇ Exportar CSV / Excel</button>
+      </div>
+      <div class="fila" style="margin-top:10px">
+        <label style="margin:0;display:flex;align-items:center;gap:8px">
+          <input id="inventarioSoloExistencia" type="checkbox" onchange="filtrarInventarioSucursalLocal()" style="width:auto">
+          Mostrar solo con existencia
+        </label>
+      </div>
+      <div id="inventarioListaResumen" class="sub" style="margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <div id="inventarioListaTabla" style="overflow:auto"></div>
+    </div>
+    <div class="card"><h3 style="margin-top:0">Consulta / movimiento por referencia</h3><div class="fila"><div class="buscadorAuto"><input id="codigo" autocomplete="off" placeholder="Código, modelo, marca o color"><div id="sugerenciasInv" class="listaSugerencias oculto"></div></div><button class="btnNegro" onclick="consultar()">Buscar</button></div><div id="mensaje"></div></div>    <div id="productoCard" class="card oculto">
       <div class="producto">
         <div class="campo"><span>Código</span><b id="pCodigo"></b></div>
         <div class="campo"><span>Marca</span><b id="pMarca"></b></div>
@@ -1194,6 +1214,8 @@ let DEV_CAMBIO_TIMER=null;
 let PROMOCIONES_POS=[];
 let CURVAS_TALLAS=[];
 let STOCK_GLOBAL_CACHE=[];
+let INVENTARIO_LISTA_CACHE=[];
+let INVENTARIO_LISTA_TS=0;
 let STOCK_GLOBAL_SUCURSALES=[];
 let STOCK_GLOBAL_TS=0;
 let RECEPCION_COMPRA_ACTUAL=null;
@@ -8537,6 +8559,117 @@ function cargarHistorialCostos(){
   );
 }
 
+
+function cargarInventarioSucursal(forzar=false){
+  if(!$('inventarioListaTabla')) return;
+  const vigente=INVENTARIO_LISTA_CACHE.length && (Date.now()-INVENTARIO_LISTA_TS)<10000;
+  if(vigente&&!forzar){
+    filtrarInventarioSucursalLocal();
+    return;
+  }
+  $('inventarioListaTabla').innerHTML='<div class="mensaje info">Cargando inventario de '+esc(SUCURSAL)+'…</div>';
+  api('inventariolista',{sucursal:SUCURSAL,q:''},r=>{
+    if(!r||!r.ok){
+      $('inventarioListaTabla').innerHTML='<div class="mensaje error">'+esc((r&&r.error)||'No se pudo cargar el inventario.')+'</div>';
+      return;
+    }
+    INVENTARIO_LISTA_CACHE=(r.productos||[]).map(p=>({
+      ...p,
+      total:Number(p.existencia||0),
+      porSucursal:{[SUCURSAL]:Number(p.existencia||0)}
+    }));
+    INVENTARIO_LISTA_TS=Date.now();
+    filtrarInventarioSucursalLocal();
+  });
+}
+
+function filtrarInventarioSucursalLocal(){
+  if(!$('inventarioListaTabla')) return;
+  const q=L($('inventarioListaQ')?$('inventarioListaQ').value:'');
+  const solo=$('inventarioSoloExistencia')?$('inventarioSoloExistencia').checked:false;
+  let lista=(INVENTARIO_LISTA_CACHE||[]).filter(p=>{
+    if(solo && Number(p.total||0)<=0) return false;
+    if(q && ![p.codigo,p.marca,p.modelo,p.categoria,p.color,p.talla,p.escala].some(v=>L(v).includes(q))) return false;
+    return true;
+  });
+
+  const anteriores=STOCK_GLOBAL_SUCURSALES;
+  STOCK_GLOBAL_SUCURSALES=[SUCURSAL];
+  const filas=prepararFilasStockGlobalTicket(lista);
+  STOCK_GLOBAL_SUCURSALES=anteriores;
+
+  const escalasUsadas=[];
+  filas.forEach(f=>{
+    if(!f.individual&&f.escala&&!escalasUsadas.includes(f.escala)) escalasUsadas.push(f.escala);
+  });
+  escalasUsadas.sort((a,b)=>{
+    const ia=(ESCALAS||[]).findIndex(x=>x.nombre===a), ib=(ESCALAS||[]).findIndex(x=>x.nombre===b);
+    if(ia>=0||ib>=0){ if(ia<0)return 1; if(ib<0)return -1; return ia-ib; }
+    return String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'});
+  });
+  let maxSlots=1;
+  escalasUsadas.forEach(e=>maxSlots=Math.max(maxSlots,(ESCALAS_MAP[e]||[]).length));
+  const filasEncabezado=Math.max(1,escalasUsadas.length);
+
+  let h='<table class="tabla tablaBordes"><thead><tr>'+
+    '<th rowspan="'+(1+filasEncabezado)+'">Modelo / Color</th>'+
+    '<th colspan="'+(1+maxSlots)+'" style="text-align:center">Numeración</th>'+
+    '<th rowspan="'+(1+filasEncabezado)+'">Existencia</th></tr>';
+  if(escalasUsadas.length){
+    escalasUsadas.forEach(e=>{
+      const tallas=ESCALAS_MAP[e]||[];
+      h+='<tr><th>'+esc(e)+'</th>';
+      for(let i=0;i<maxSlots;i++) h+='<th>'+esc(tallas[i]||'')+'</th>';
+      h+='</tr>';
+    });
+  }else{
+    h+='<tr><th>✓</th>';
+    for(let i=0;i<maxSlots;i++) h+='<th></th>';
+    h+='</tr>';
+  }
+  h+='</thead><tbody>';
+  filas.forEach(f=>{
+    const detalle=[f.categoria,f.color].filter(Boolean).join(' · ');
+    const detalleFinal=f.individual?[detalle,f.talla?'Talla '+f.talla:''].filter(Boolean).join(' · '):detalle;
+    h+='<tr><td><b>'+esc([f.marca,f.modelo].filter(Boolean).join(' · '))+'</b><br><span class="sub">'+esc(detalleFinal)+'</span></td>';
+    if(f.individual){
+      h+='<td><b>✓</b></td><td><b>'+Number(f.total||0)+'</b></td>';
+      for(let i=1;i<maxSlots;i++) h+='<td></td>';
+    }else{
+      const tallas=ESCALAS_MAP[f.escala]||[];
+      h+='<td><b>'+esc(f.escala)+'</b></td>';
+      for(let i=0;i<maxSlots;i++){
+        const talla=tallas[i], item=talla?f.cantidades[String(talla)]:null;
+        const n=item?Number(item.total||0):0;
+        h+='<td>'+(n>0?'<b>'+n+'</b>':'')+'</td>';
+      }
+    }
+    h+='<td><b>'+Number(f.total||0)+'</b></td></tr>';
+  });
+  h+='</tbody></table>';
+  $('inventarioListaTabla').innerHTML=filas.length?h:'<div class="sub">Sin coincidencias.</div>';
+  const unidades=lista.reduce((a,p)=>a+Number(p.total||0),0);
+  const modelos=new Set(lista.map(p=>[p.marca||'',p.modelo||'',p.categoria||'',p.color||''].join('||'))).size;
+  $('inventarioListaResumen').textContent=SUCURSAL+' · '+modelos+' modelos/color · '+lista.length+' tallas/referencias · '+unidades+' unidades';
+}
+
+function exportarInventarioSucursalCSV(){
+  let lista=(INVENTARIO_LISTA_CACHE||[]);
+  const q=L($('inventarioListaQ')?$('inventarioListaQ').value:'');
+  const solo=$('inventarioSoloExistencia')?$('inventarioSoloExistencia').checked:false;
+  lista=lista.filter(p=>{
+    if(solo&&Number(p.total||0)<=0)return false;
+    if(q&&![p.codigo,p.marca,p.modelo,p.categoria,p.color,p.talla,p.escala].some(v=>L(v).includes(q)))return false;
+    return true;
+  });
+  if(!lista.length) return alert('No hay datos de inventario para exportar.');
+  const filas=[['Código','Marca','Modelo','Categoría','Color','Talla','Escala','Existencia','Sucursal']];
+  lista.forEach(p=>filas.push([p.codigo||'',p.marca||'',p.modelo||'',p.categoria||'',p.color||'',p.talla||'',p.escala||'',Number(p.total||0),SUCURSAL]));
+  const csv='\uFEFF'+filas.map(f=>f.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}), url=URL.createObjectURL(blob), a=document.createElement('a');
+  a.href=url; a.download='inventario_'+SUCURSAL.replace(/\s+/g,'_')+'.csv'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
 function cargarStockGlobal(forzar=false){
   const vigente=
     STOCK_GLOBAL_CACHE.length &&
@@ -8795,7 +8928,7 @@ function filtrarStockGlobalLocal(){
 
   const filasEncabezado=Math.max(1,escalasUsadas.length);
 
-  let h='<table class="tabla"><thead>';
+  let h='<table class="tabla tablaBordes"><thead>';
   h+='<tr>'+
     '<th rowspan="'+(1+filasEncabezado)+'">Modelo / Color</th>'+
     '<th colspan="'+(1+maxSlots)+'" style="text-align:center">Numeración</th>';
