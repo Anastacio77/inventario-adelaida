@@ -248,19 +248,23 @@ document.addEventListener('click',e=>{
       </div>
 
       <div id="movimientoBox">
-        <label>Cantidad</label>
+        <div class="mensaje info" style="margin-top:12px">
+          <b>Entradas bloqueadas desde Inventario.</b>
+          La mercancía nueva debe registrarse en <b>Compras</b> y entrar a existencia únicamente al
+          <b>recibir la orden de compra</b>. Traslados y devoluciones conservan sus propios flujos.
+        </div>
+
+        <label>Cantidad para ajuste de salida</label>
         <input id="cantidad" type="number" min="1" value="1">
 
-        <label>Lote para entrada (opcional)</label>
-        <input id="movLote" placeholder="Vacío = automático">
+        <input id="movLote" type="hidden" value="">
 
-        <label>Nota</label>
-        <textarea id="nota"></textarea>
+        <label>Motivo / nota</label>
+        <textarea id="nota" placeholder="Ej. merma, daño, corrección autorizada..."></textarea>
 
-        <div class="fila" style="margin-top:12px">
-          <button class="btnVerde" style="flex:1" onclick="mover('ENTRADA')">+ Entrada</button>
-          <button class="btnRojo" style="flex:1" onclick="mover('SALIDA')">− Salida</button>
-        </div>
+        <button class="btnRojo w100" style="margin-top:12px" onclick="mover('SALIDA')">
+          − Registrar ajuste de salida
+        </button>
       </div>
     </div>
     <div id="inventarioCurvasCard" class="card">
@@ -289,10 +293,14 @@ document.addEventListener('click',e=>{
         </div>
       </div>
 
-      <div class="fila" style="margin-top:10px">
-        <button class="btnVerde" style="flex:1" onclick="moverCurvaUI('ENTRADA')">+ Entrada por curva</button>
-        <button class="btnRojo" style="flex:1" onclick="moverCurvaUI('SALIDA')">− Salida por curva</button>
+      <div class="mensaje info" style="margin-top:10px">
+        Las entradas de corridas/curvas se realizan desde <b>Compras</b>.
+        Aquí solo se permite un ajuste de salida.
       </div>
+
+      <button class="btnRojo w100" style="margin-top:10px" onclick="moverCurvaUI('SALIDA')">
+        − Registrar salida por curva
+      </button>
 
       <div id="mensajeCurvas"></div>
     </div>
@@ -1081,7 +1089,33 @@ document.addEventListener('click',e=>{
       <label>Nota</label><input id="compNota">
       <button class="btnVerde w100" style="margin-top:12px" onclick="crearCompraUI()">Crear orden de compra</button>
     </div>
-    <div id="compListaCard" class="card"><h3 style="margin-top:0">Compras</h3><div id="listaCompras"></div></div>
+    <div id="compListaCard" class="card">
+      <h3 style="margin-top:0">Compras</h3>
+      <div class="sub">
+        La existencia nueva se incorpora al inventario únicamente mediante la recepción de estas compras.
+      </div>
+      <div id="listaCompras" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">Compras por proveedor</h3>
+      <div class="sub">
+        Consulte el historial de compras realizadas a un proveedor.
+        El administrador puede ver todas las sucursales.
+      </div>
+
+      <div class="fila" style="margin-top:10px">
+        <select id="histComprasProveedor" style="flex:1">
+          <option value="">Seleccione un proveedor</option>
+        </select>
+        <button class="btnNegro" type="button" onclick="cargarComprasProveedor()">
+          Consultar
+        </button>
+      </div>
+
+      <div id="histComprasProveedorResumen" class="sub" style="margin-top:10px"></div>
+      <div id="histComprasProveedorLista" style="overflow:auto;margin-top:10px"></div>
+    </div>
 
     <div id="compDetalleCard" class="card oculto">
       <div id="compDetalleTicket" class="ticket"></div>
@@ -1243,7 +1277,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.03-ESTABLE-02';
+const VERSION_SISTEMA_UI='2026.10.03-ESTABLE-03';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -4464,6 +4498,14 @@ function consultar(cod){
 function mover(tipo){
   if(!productoActual){
     return;
+  }
+
+  if(String(tipo||'').toUpperCase()==='ENTRADA'){
+    return msg(
+      'mensaje',
+      'Las entradas deben registrarse desde Compras y recibirse desde la orden de compra.',
+      'error'
+    );
   }
 
   api(
@@ -7944,14 +7986,16 @@ function cargarProveedores(){
     const proveedores=r.proveedores||[];
     window.PROVEEDORES=proveedores;
 
-    ['compProveedor','nProveedor','cProveedor','pcProveedor','aProveedorPreferido'].forEach(id=>{
+    ['compProveedor','nProveedor','cProveedor','pcProveedor','aProveedorPreferido','histComprasProveedor'].forEach(id=>{
       const s=$(id);
       if(!s) return;
 
       const prev=s.value;
       s.innerHTML='';
 
-      if(id!=='compProveedor'){
+      if(id==='histComprasProveedor'){
+        s.add(new Option('Seleccione un proveedor',''));
+      }else if(id!=='compProveedor'){
         s.add(new Option('Sin proveedor',''));
       }
 
@@ -8681,6 +8725,122 @@ function cargarCompras(){
 
     cargarCuentasPorPagar();
   });
+}
+
+
+
+function cargarComprasProveedor(){
+  const sel=$('histComprasProveedor');
+  const proveedorId=sel ? sel.value : '';
+  const box=$('histComprasProveedorLista');
+  const resumen=$('histComprasProveedorResumen');
+
+  if(!proveedorId){
+    if(box) box.innerHTML='';
+    if(resumen) resumen.textContent='Seleccione un proveedor.';
+    return;
+  }
+
+  if(box){
+    box.innerHTML='<div class="mensaje info">Cargando compras del proveedor…</div>';
+  }
+
+  api(
+    'compras',
+    {
+      estado:'',
+      proveedorId,
+      todasSucursales:
+        SESION&&SESION.rol==='ADMIN'
+          ? 'SI'
+          : 'NO'
+    },
+    r=>{
+      if(!r||!r.ok){
+        if(box){
+          box.innerHTML=
+            '<div class="mensaje error">'+
+            esc((r&&r.error)||'No se pudieron cargar las compras.')+
+            '</div>';
+        }
+        return;
+      }
+
+      const compras=r.compras||[];
+      const proveedor=
+        (window.PROVEEDORES||[])
+          .find(x=>x.proveedorId===proveedorId);
+
+      const total=compras.reduce(
+        (s,x)=>s+Number(x.total||0),
+        0
+      );
+
+      const recibidas=compras.filter(
+        x=>String(x.estado||'').toUpperCase()==='RECIBIDA'
+      ).length;
+
+      const pendientes=compras.filter(
+        x=>['PENDIENTE','PARCIAL'].includes(
+          String(x.estado||'').toUpperCase()
+        )
+      ).length;
+
+      if(resumen){
+        resumen.innerHTML=
+          '<b>'+esc(proveedor?proveedor.nombre:'Proveedor')+'</b>'+
+          ' · '+compras.length+' compra(s)'+
+          ' · Total '+Q(total)+
+          ' · Recibidas '+recibidas+
+          ' · Pendientes/parciales '+pendientes+
+          (
+            SESION&&SESION.rol==='ADMIN'
+              ? ' · Todas las sucursales'
+              : ' · '+esc(SUCURSAL)
+          );
+      }
+
+      if(!compras.length){
+        if(box){
+          box.innerHTML='<div class="sub">No hay compras registradas para este proveedor.</div>';
+        }
+        return;
+      }
+
+      let h=
+        '<table class="tabla">'+
+        '<thead><tr>'+
+          '<th>Compra</th>'+
+          '<th>Fecha</th>'+
+          '<th>Sucursal</th>'+
+          '<th>Estado</th>'+
+          '<th>Pago</th>'+
+          '<th>Total</th>'+
+          '<th>Acción</th>'+
+        '</tr></thead><tbody>';
+
+      compras.forEach(c=>{
+        h+=
+          '<tr>'+
+            '<td><b>'+esc(c.numeroCompra)+'</b></td>'+
+            '<td>'+esc(c.fecha||'')+'</td>'+
+            '<td>'+esc(c.sucursal||'')+'</td>'+
+            '<td>'+esc(c.estado||'')+'</td>'+
+            '<td>'+esc(c.estadoPago||'')+'</td>'+
+            '<td><b>'+Q(c.total)+'</b></td>'+
+            '<td>'+
+              '<button class="btnGris" type="button" '+
+              'onclick="abrirDetalleCompra('+JSON.stringify(String(c.numeroCompra||''))+',false,false)">'+
+              '👁 Ver'+
+              '</button>'+
+            '</td>'+
+          '</tr>';
+      });
+
+      h+='</tbody></table>';
+      box.innerHTML=h;
+    }
+  );
 }
 
 
@@ -11287,6 +11447,14 @@ function actualizarCorridasCurvaUI(){
 }
 
 function moverCurvaUI(tipo){
+  if(String(tipo||'').toUpperCase()==='ENTRADA'){
+    return msg(
+      'mensajeCurvas',
+      'Las entradas por corrida/curva deben registrarse desde Compras.',
+      'error'
+    );
+  }
+
   const key=$('invCorridaCurva').value;
   const curvaId=$('invCurvaSelect').value;
   const g=(window.CORRIDAS_INVENTARIO||[])
