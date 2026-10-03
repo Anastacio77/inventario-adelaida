@@ -8829,8 +8829,8 @@ function cargarComprasProveedor(){
             '<td>'+esc(c.estadoPago||'')+'</td>'+
             '<td><b>'+Q(c.total)+'</b></td>'+
             '<td>'+
-              '<button class="btnGris" type="button" '+
-              'onclick="abrirDetalleCompra('+JSON.stringify(String(c.numeroCompra||''))+',false,false)">'+
+              '<button class="btnGris btnVerCompraProveedor" type="button" '+
+              'data-numero="'+esc(String(c.numeroCompra||''))+'">'+
               '👁 Ver'+
               '</button>'+
             '</td>'+
@@ -8839,6 +8839,16 @@ function cargarComprasProveedor(){
 
       h+='</tbody></table>';
       box.innerHTML=h;
+
+      box.querySelectorAll('.btnVerCompraProveedor').forEach(btn=>{
+        btn.addEventListener('click',()=>{
+          abrirDetalleCompra(
+            btn.dataset.numero||'',
+            false,
+            false
+          );
+        });
+      });
     }
   );
 }
@@ -9091,6 +9101,14 @@ function ticketCompraHTML(r,id){
 }
 
 function abrirDetalleCompra(numeroCompra,imprimir=false,exportar=false){
+  if(!numeroCompra){
+    return msg(
+      'mensajeCompras',
+      'Número de compra inválido.',
+      'error'
+    );
+  }
+
   const lista=$('compListaCard');
   const card=$('compDetalleCard');
   const ticket=$('compDetalleTicket');
