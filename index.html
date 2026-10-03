@@ -29,6 +29,8 @@ document.addEventListener('click',e=>{
 }.tabs button{background:#e9e9ee}.tabs button.activo{background:#222;color:#fff}button{border:0;border-radius:12px;padding:12px;font:inherit;font-weight:700;cursor:pointer}input,select,textarea{width:100%;border:1px solid #d5d5db;border-radius:12px;padding:12px;font-size:16px;background:#fff}textarea{min-height:65px}label{display:block;font-size:13px;font-weight:700;margin-top:10px;margin-bottom:5px}.fila{display:flex;gap:8px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.btnNegro{background:#222;color:#fff}.btnAzul{background:#0d6efd;color:#fff}.btnVerde{background:#198754;color:#fff}.btnRojo{background:#c0392b;color:#fff}.btnGris{background:#e9e9ee}.btnMorado{background:#5a3ec8;color:#fff}.oculto{display:none!important}.resumen{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}.dato{background:#f4f4f6;border-radius:12px;padding:10px}.dato b{font-size:21px;display:block}.dato span{font-size:12px;color:#666}.mensaje{padding:11px;border-radius:12px;margin-top:10px}.ok{background:#dcf4e5;color:#135d31}.error{background:#ffe3e3;color:#8e2525}.info{background:#e8f1ff;color:#244d7c}.buscadorAuto{position:relative;flex:1}.listaSugerencias{position:absolute;top:calc(100% + 5px);left:0;right:0;background:#fff;border:1px solid #ddd;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);max-height:320px;overflow:auto;z-index:9999}.itemSugerencia{padding:12px;border-bottom:1px solid #eee}.sugCodigo{font-weight:800}.sugDetalle{font-size:13px;color:#666;margin-top:3px}.scanner{width:100%;overflow:hidden;border-radius:14px;margin-top:10px}.cartItem{border:1px solid #e3e3e8;border-radius:14px;padding:12px;margin-top:10px}.cartTop{display:flex;justify-content:space-between;gap:8px}.cartMeta{font-size:12px;color:#666}.cartControls{display:grid;grid-template-columns:45px 58px 45px 1fr;gap:6px;margin-top:9px}.cartControls input{text-align:center;padding:8px}.totales{background:#f4f4f6;border-radius:14px;padding:14px;margin-top:14px}.lineaTotal{display:flex;justify-content:space-between;margin-top:5px}.totalGrande{font-size:30px;font-weight:900}.cambio{background:#dcf4e5;border-radius:12px;padding:12px;margin-top:10px;text-align:center}.cambio b{font-size:25px}.producto{display:grid;grid-template-columns:1fr 1fr;gap:9px}.campo{background:#f4f4f6;border-radius:11px;padding:10px}.campo span{font-size:11px;color:#777;display:block}.codigoAuto{text-align:center;font-weight:800;padding:12px;background:#eef1ff;border-radius:12px;margin-top:10px}.qrBox{text-align:center;padding:12px;background:#f4f4f6;border-radius:14px;margin-top:12px}.qrBox img{max-width:220px;width:100%}.ticket{font-family:monospace;background:#fff;padding:16px;max-width:900px;margin:auto}.ticketTabla{width:100%;border-collapse:collapse}.ticketTabla th,.ticketTabla td{border:1px solid #222;padding:3px;text-align:center;font-size:11px}.ticketTabla .descripcion{text-align:left}.ticketTabla .derecha{text-align:right}.precioEdit{width:105px;padding:7px;font-size:14px}.loteAviso{margin-top:7px;padding:7px;border-radius:8px;background:#fff3cd;font-size:12px}.corridaTabla{width:100%;border-collapse:collapse}.corridaTabla th,.corridaTabla td{padding:7px;border-bottom:1px solid #eee;text-align:center}.mini{font-size:12px;color:#666}.timeline{border-left:3px solid #ddd;margin-left:8px;padding-left:14px}.evento{margin:10px 0;padding:10px;background:#f7f7f8;border-radius:10px}.ticket h2{text-align:center;margin:0}.ticket hr{border:0;border-top:1px dashed #333}.ticket table{width:100%}.derecha{text-align:right}.centro{text-align:center}.sesionBar{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;margin-top:12px}.usuarioTag{font-size:13px;color:#555}.tabla{width:100%;border-collapse:collapse}.tabla th,.tabla td{padding:9px;border-bottom:1px solid #eee;text-align:left;font-size:14px}.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#eee;font-size:12px}.badgePendiente{background:#fff3cd}.badgeCompleto{background:#dcf4e5}.badgeCancelado{background:#ffe3e3}.pedidoCard{border:1px solid #e3e3e8;border-radius:14px;padding:12px;margin-top:10px}.w100{width:100%}.botonEnlace{display:block;text-align:center;text-decoration:none;color:inherit}
 @media(max-width:780px){.tabs{grid-template-columns:1fr 1fr}.resumen,.grid2,.producto,.sesionBar{grid-template-columns:1fr}.fila{flex-direction:column}.cartControls{grid-template-columns:42px 52px 42px 1fr}}
 @media print{body *{visibility:hidden}.ticket.imprimir,.ticket.imprimir *{visibility:visible}.ticket.imprimir{position:absolute;left:0;top:0;width:100%}.noPrint{display:none!important}}
+
+.stockNumeracionTicket table th,.stockNumeracionTicket table td{border:1px solid #d5d7dd;padding:4px 7px;text-align:center;white-space:nowrap}.stockNumeracionTicket table th:first-child,.stockNumeracionTicket table td:first-child{font-weight:700;background:#f5f6f8}.stockNumeracionTicket{display:inline-block;max-width:100%;overflow-x:auto}
 </style>
 </head>
 <body>
@@ -8668,7 +8670,8 @@ function agruparStockGlobalPorModelo(lista){
         modelo:p.modelo||'',
         categoria:p.categoria||'',
         color:p.color||'',
-        tallas:[],
+        escalas:{},
+        individuales:[],
         total:0,
         porSucursal:{}
       };
@@ -8676,12 +8679,22 @@ function agruparStockGlobalPorModelo(lista){
     }
 
     const g=grupos[clave];
-    g.tallas.push({
+    const escala=String(p.escala||'').trim();
+    const tipo=String(p.tipoIngreso||'INDIVIDUAL').toUpperCase();
+    const item={
       talla:String(p.talla||''),
       codigo:p.codigo||'',
       total:Number(p.total||0),
       porSucursal:{...(p.porSucursal||{})}
-    });
+    };
+
+    if(escala && (tipo==='CORRIDA' || tipo==='PAQUETE_CURVA')){
+      if(!g.escalas[escala]) g.escalas[escala]=[];
+      g.escalas[escala].push(item);
+    }else{
+      g.individuales.push(item);
+    }
+
     g.total+=Number(p.total||0);
     (STOCK_GLOBAL_SUCURSALES||[]).forEach(s=>{
       g.porSucursal[s]+=Number((p.porSucursal||{})[s])||0;
@@ -8689,11 +8702,72 @@ function agruparStockGlobalPorModelo(lista){
   });
 
   return Object.values(grupos).map(g=>{
-    g.tallas.sort((a,b)=>String(a.talla).localeCompare(String(b.talla),undefined,{numeric:true,sensitivity:'base'}));
+    Object.keys(g.escalas).forEach(e=>{
+      const orden=ESCALAS_MAP[e]||[];
+      g.escalas[e].sort((a,b)=>{
+        const ia=orden.indexOf(String(a.talla));
+        const ib=orden.indexOf(String(b.talla));
+        if(ia>=0||ib>=0){
+          if(ia<0) return 1;
+          if(ib<0) return -1;
+          return ia-ib;
+        }
+        return String(a.talla).localeCompare(String(b.talla),undefined,{numeric:true,sensitivity:'base'});
+      });
+    });
+    g.individuales.sort((a,b)=>String(a.talla).localeCompare(String(b.talla),undefined,{numeric:true,sensitivity:'base'}));
     return g;
   }).sort((a,b)=>
     [a.marca,a.modelo,a.color].join(' ').localeCompare([b.marca,b.modelo,b.color].join(' '),undefined,{numeric:true,sensitivity:'base'})
   );
+}
+
+function stockNumeracionTicketHTML(g,sucursal){
+  const filas=[];
+  const ordenEscalas=(ESCALAS||[]).map(e=>e.nombre);
+  const nombresEscala=Object.keys(g.escalas||{}).sort((a,b)=>{
+    const ia=ordenEscalas.indexOf(a), ib=ordenEscalas.indexOf(b);
+    if(ia>=0||ib>=0){
+      if(ia<0) return 1;
+      if(ib<0) return -1;
+      return ia-ib;
+    }
+    return String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'});
+  });
+
+  nombresEscala.forEach(e=>{
+    const map={};
+    (g.escalas[e]||[]).forEach(t=>map[String(t.talla)]=t);
+    const tallasBase=(ESCALAS_MAP[e]||[]).map(String);
+    const extras=(g.escalas[e]||[]).map(t=>String(t.talla)).filter(t=>!tallasBase.includes(t));
+    const tallas=[...tallasBase,...extras];
+    if(!tallas.length) return;
+
+    const encabezado=['<th style="min-width:28px">'+esc(e)+'</th>'];
+    const cantidades=['<td><b>'+esc(e)+'</b></td>'];
+    tallas.forEach(t=>{
+      const item=map[t];
+      const n=item
+        ? (sucursal ? Number((item.porSucursal||{})[sucursal])||0 : Number(item.total||0))
+        : 0;
+      encabezado.push('<th>'+esc(t)+'</th>');
+      cantidades.push('<td>'+(n>0?'<b>'+n+'</b>':'')+'</td>');
+    });
+    filas.push('<table style="border-collapse:collapse;margin:2px 0 6px 0"><thead><tr>'+encabezado.join('')+'</tr></thead><tbody><tr>'+cantidades.join('')+'</tr></tbody></table>');
+  });
+
+  if((g.individuales||[]).length){
+    const encabezado=['<th style="min-width:28px">✓</th>'];
+    const cantidades=['<td><b>✓</b></td>'];
+    (g.individuales||[]).forEach(t=>{
+      const n=sucursal ? Number((t.porSucursal||{})[sucursal])||0 : Number(t.total||0);
+      encabezado.push('<th>'+esc(t.talla||'—')+'</th>');
+      cantidades.push('<td>'+(n>0?'<b>'+n+'</b>':'')+'</td>');
+    });
+    filas.push('<table style="border-collapse:collapse;margin:2px 0 6px 0"><thead><tr>'+encabezado.join('')+'</tr></thead><tbody><tr>'+cantidades.join('')+'</tr></tbody></table>');
+  }
+
+  return '<div class="stockNumeracionTicket">'+filas.join('')+'</div>';
 }
 
 function filtrarStockGlobalLocal(){
@@ -8708,7 +8782,7 @@ function filtrarStockGlobalLocal(){
     '<table class="tabla">'+
     '<thead><tr>'+
       '<th>Modelo / Color</th>'+
-      '<th>Tallas</th>';
+      '<th>Numeración</th>';
 
   sucursalesVisibles.forEach(s=>{
     h+='<th>'+esc(s)+'</th>';
@@ -8717,37 +8791,12 @@ function filtrarStockGlobalLocal(){
   h+='<th>Total</th></tr></thead><tbody>';
 
   grupos.forEach(g=>{
-    const tallasFila=g.tallas.map(t=>
-      '<th style="padding:4px 7px;border:1px solid #d5d7dd;white-space:nowrap;text-align:center">'+
-      esc(t.talla||'—')+
-      '</th>'
-    ).join('');
-
-    const existenciasFila=g.tallas.map(t=>{
-      const exist=sucursal
-        ? Number((t.porSucursal||{})[sucursal])||0
-        : Number(t.total||0);
-      return '<td style="padding:4px 7px;border:1px solid #d5d7dd;white-space:nowrap;text-align:center"><b>'+
-        exist+
-      '</b></td>';
-    }).join('');
-
-    const numeracion=
-      '<div style="overflow-x:auto">'+
-        '<table style="border-collapse:collapse;width:auto;min-width:max-content">'+
-          '<tbody>'+
-            '<tr>'+tallasFila+'</tr>'+
-            '<tr>'+existenciasFila+'</tr>'+
-          '</tbody>'+
-        '</table>'+
-      '</div>';
-
     h+=
       '<tr>'+
         '<td><b>'+esc([g.marca,g.modelo].filter(Boolean).join(' · '))+'</b><br>'+
           '<span class="sub">'+esc([g.categoria,g.color].filter(Boolean).join(' · '))+'</span>'+ 
         '</td>'+
-        '<td>'+numeracion+'</td>';
+        '<td>'+stockNumeracionTicketHTML(g,sucursal)+'</td>';
 
     sucursalesVisibles.forEach(s=>{
       const n=Number(g.porSucursal[s])||0;
