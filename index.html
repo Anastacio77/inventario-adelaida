@@ -681,6 +681,7 @@ document.addEventListener('click',e=>{
       <button class="btnAzul w100" style="margin-top:12px" onclick="hacerTraslado()">Despachar traslado</button>
 
       <div id="mensajeTraslado"></div>
+      <button id="btnImprimirUltimoTraslado" class="btnNegro w100 oculto" type="button" style="margin-top:10px" onclick="imprimirUltimoTraslado()">🖨 Imprimir último traslado</button>
     </div>
 
     <div class="card">
@@ -5058,11 +5059,28 @@ function guardarCorrida(){
   );
 }
 
+let ULTIMO_TRASLADO_IMPRESION=null;
+
+function imprimirUltimoTraslado(){
+  if(!ULTIMO_TRASLADO_IMPRESION){
+    return alert('No hay un traslado reciente para imprimir.');
+  }
+  imprimirTraslado(ULTIMO_TRASLADO_IMPRESION);
+}
+
 function hacerTraslado(){
   const codigo=
     $('trasCodigo')
       .value
       .trim();
+
+  const trasladoFormulario={
+    codigo,
+    origen:SUCURSAL,
+    destino:$('trasDestino').value,
+    cantidad:Number($('trasCantidad').value||0),
+    nota:$('trasNota').value||''
+  };
 
   if(!codigo){
     return msg(
@@ -5096,6 +5114,28 @@ function hacerTraslado(){
 
       cargarResumen();
       cargarTraslados();
+
+      ULTIMO_TRASLADO_IMPRESION={
+        numeroTraslado:r.numeroTraslado||'',
+        fecha:new Date().toLocaleString(),
+        codigo:r.codigo||trasladoFormulario.codigo,
+        marca:'',
+        modelo:'',
+        color:'',
+        talla:'',
+        origen:r.origen||trasladoFormulario.origen,
+        destino:r.destino||trasladoFormulario.destino,
+        cantidad:Number(r.cantidad||trasladoFormulario.cantidad||0),
+        usuario:(SESION&&SESION.nombre)||'',
+        nota:trasladoFormulario.nota,
+        estado:r.estado||'EN TRANSITO',
+        fechaRecepcion:'',
+        usuarioRecibe:''
+      };
+
+      if($('btnImprimirUltimoTraslado')){
+        $('btnImprimirUltimoTraslado').classList.remove('oculto');
+      }
 
       msg(
         'mensajeTraslado',
