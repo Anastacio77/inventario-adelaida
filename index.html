@@ -32,6 +32,32 @@ document.addEventListener('click',e=>{
 
 .stockNumeracionTicket table th,.stockNumeracionTicket table td{border:1px solid #d5d7dd;padding:4px 7px;text-align:center;white-space:nowrap}.stockNumeracionTicket table th:first-child,.stockNumeracionTicket table td:first-child{font-weight:700;background:#f5f6f8}.stockNumeracionTicket{display:inline-block;max-width:100%;overflow-x:auto}
 .tablaBordes{border-collapse:collapse}.tablaBordes th,.tablaBordes td{border:1px solid #d5d7dd!important}.tablaBordes thead th{background:#f7f7f9}.tablaBordes tbody tr:hover{background:#fafafa}
+
+.dashboardGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.kpi{background:#f4f4f6;border-radius:14px;padding:14px;min-height:88px}
+.kpi .valor{font-size:25px;font-weight:900;line-height:1.1}
+.kpi .etiqueta{font-size:12px;color:#666;margin-top:4px}
+.dashboardDos{display:grid;grid-template-columns:1.2fr .8fr;gap:12px}
+.alertaItem{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #eee}
+.alertaItem:last-child{border-bottom:0}
+.alertaPunto{width:11px;height:11px;border-radius:50%;margin-top:5px;flex:0 0 auto}
+.estadoBadge{display:inline-block;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap}
+.estado-ok{background:#dcf4e5;color:#135d31}
+.estado-pendiente{background:#fff3cd;color:#7a5500}
+.estado-error{background:#ffe3e3;color:#8e2525}
+.estado-info{background:#e8f1ff;color:#244d7c}
+.busquedaGlobalWrap{margin-top:12px;position:relative}
+.busquedaGlobalResultados{position:absolute;left:0;right:0;top:calc(100% + 5px);z-index:10001;background:#fff;border:1px solid #ddd;border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.16);max-height:380px;overflow:auto}
+.resultadoGlobal{padding:12px;border-bottom:1px solid #eee;cursor:pointer}
+.resultadoGlobal:hover{background:#f7f7f9}
+.resultadoGlobal:last-child{border-bottom:0}
+.resultadoGlobalTitulo{font-weight:800}
+.resultadoGlobalMeta{font-size:12px;color:#666;margin-top:3px}
+@media(max-width:800px){
+  .dashboardGrid{grid-template-columns:repeat(2,1fr)}
+  .dashboardDos{grid-template-columns:1fr}
+}
+
 </style>
 </head>
 <body>
@@ -45,6 +71,19 @@ document.addEventListener('click',e=>{
       <div><label style="margin-top:0">Sucursal actual</label><select id="sucursalActual"></select></div>
       <button class="btnGris" onclick="cerrarSesion()">Cerrar sesión</button>
     </div>
+
+    <div id="busquedaGlobalBar" class="busquedaGlobalWrap oculto">
+      <div class="fila">
+        <input id="busquedaGlobalTexto"
+          autocomplete="off"
+          placeholder="Buscar producto, cliente, venta, pedido, traslado o compra..."
+          oninput="programarBusquedaGlobal()"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();buscarGlobalAhora()}">
+        <button class="btnNegro" type="button" onclick="buscarGlobalAhora()">Buscar</button>
+      </div>
+      <div id="busquedaGlobalResultados" class="busquedaGlobalResultados oculto"></div>
+    </div>
+
     <div id="resumen" class="resumen oculto">
       <div class="dato"><b id="rReferencias">—</b><span>Referencias</span></div>
       <div class="dato"><b id="rPares">—</b><span>Pares</span></div>
@@ -63,7 +102,8 @@ document.addEventListener('click',e=>{
   </div>
 
   <div id="tabs" class="tabs oculto">
-    <button id="tabPos" class="activo" onclick="vista('pos');refrescarCatalogoVenta()">🛒 Punto de venta</button>
+    <button id="tabInicio" class="activo" onclick="vista('inicio');cargarDashboard()">🏠 Inicio</button>
+    <button id="tabPos" onclick="vista('pos');refrescarCatalogoVenta()">🛒 Punto de venta</button>
     <button id="tabPedidos" onclick="vista('pedidos');mostrarListaPedidos();cargarPedidos()">📋 Pedidos</button>
     <button id="tabVentas" onclick="vista('ventas');buscarVentas()">🧾 Ventas</button>
     <button id="tabInventario" onclick="vista('inventario');cargarInventarioSucursal()">📦 Inventario</button>
@@ -79,6 +119,55 @@ document.addEventListener('click',e=>{
     <button id="tabReportes" onclick="vista('reportes');cargarReportes()">📊 Reportes</button>
     <button id="tabClientes" onclick="vista('clientes');cargarClientes();cargarCreditos()">👤 Clientes</button>
     <button id="tabConfig" onclick="vista('config')">⚙ Configuración</button>
+  </div>
+
+
+  <div id="vistaInicio" class="vistaApp oculto">
+    <div class="card">
+      <div class="fila" style="align-items:center">
+        <div style="flex:1">
+          <h2 style="margin:0">Panel principal</h2>
+          <div class="sub">Resumen operativo de la sucursal seleccionada.</div>
+        </div>
+        <button class="btnNegro" type="button" onclick="cargarDashboard(true)">↻ Actualizar</button>
+      </div>
+      <div id="dashboardActualizado" class="sub" style="margin-top:8px"></div>
+    </div>
+
+    <div class="card">
+      <div class="dashboardGrid">
+        <div class="kpi"><div class="valor" id="dashVentasHoy">—</div><div class="etiqueta">Ventas hoy</div></div>
+        <div class="kpi"><div class="valor" id="dashTotalHoy">—</div><div class="etiqueta">Vendido hoy</div></div>
+        <div class="kpi"><div class="valor" id="dashPedidosPend">—</div><div class="etiqueta">Pedidos / reservas pendientes</div></div>
+        <div class="kpi"><div class="valor" id="dashStockBajo">—</div><div class="etiqueta">Referencias con stock bajo</div></div>
+        <div class="kpi"><div class="valor" id="dashTraslados">—</div><div class="etiqueta">Traslados en tránsito</div></div>
+        <div class="kpi"><div class="valor" id="dashCompras">—</div><div class="etiqueta">Compras por recibir</div></div>
+        <div class="kpi"><div class="valor" id="dashCobrar">—</div><div class="etiqueta">Cuentas por cobrar</div></div>
+        <div class="kpi"><div class="valor" id="dashPagar">—</div><div class="etiqueta">Cuentas por pagar</div></div>
+      </div>
+    </div>
+
+    <div class="dashboardDos">
+      <div class="card">
+        <div class="fila" style="align-items:center">
+          <h3 style="margin:0;flex:1">🔔 Centro de alertas</h3>
+          <span id="dashAlertasConteo" class="estadoBadge estado-info">0</span>
+        </div>
+        <div id="dashAlertas" style="margin-top:8px"></div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">Accesos rápidos</h3>
+        <div class="grid2">
+          <button class="btnAzul" onclick="vista('pos')">🛒 Nueva venta</button>
+          <button class="btnGris" onclick="vista('pedidos');cargarPedidos()">📋 Pedidos</button>
+          <button class="btnGris" onclick="vista('compras');cargarCompras()">🚚 Compras</button>
+          <button class="btnGris" onclick="vista('traslados');cargarTraslados()">🔁 Traslados</button>
+          <button class="btnGris" onclick="vista('inventario');cargarInventarioSucursal()">📦 Inventario</button>
+          <button class="btnGris" onclick="vista('caja');cargarCaja()">💵 Caja</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="vistaPos" class="vistaApp oculto">
@@ -1315,7 +1404,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.03-ESTABLE-03';
+const VERSION_SISTEMA_UI='2026.10.03-ESTABLE-04';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -1364,6 +1453,9 @@ let CLIENTE_POS_ID='';
 let BORRADOR_POS_ACTUAL_ID='';
 let PEDIDOS_ESPERA_POS=[];
 let TRASLADOS_CARGA_ID=0;
+let DASHBOARD_TS=0;
+let BUSQUEDA_GLOBAL_TIMER=null;
+let BUSQUEDA_GLOBAL_ID=0;
 
 const $=id=>document.getElementById(id);
 
@@ -1607,7 +1699,7 @@ function vista(v){
   ocultarVistas();
   const el=$('vista'+v.charAt(0).toUpperCase()+v.slice(1));
   if(el) el.classList.remove('oculto');
-  ['pos','pedidos','ventas','inventario','nuevo','traslados','stockglobal','usuarios','trazabilidad','comisiones','devoluciones','compras','caja','reportes','clientes','config'].forEach(n=>{
+  ['inicio','pos','pedidos','ventas','inventario','nuevo','traslados','stockglobal','usuarios','trazabilidad','comisiones','devoluciones','compras','caja','reportes','clientes','config'].forEach(n=>{
     const b=$('tab'+n.charAt(0).toUpperCase()+n.slice(1));
     if(b) b.classList.toggle('activo',n===v);
   });
@@ -1625,10 +1717,251 @@ function vista(v){
     cargarStockGlobal(false);
   }
 
+  if(v==='inicio'){
+    cargarDashboard(false);
+  }
+
   if(v==='pos'){
     verificarCajaPos();
   }
 }
+
+
+
+function estadoClase(estado){
+  const e=String(estado||'').toUpperCase();
+  if(['COMPLETADO','RECIBIDO','RECIBIDA','PAGADA','ACTIVA','ABIERTA'].includes(e)) return 'estado-ok';
+  if(['CANCELADO','VENCIDO','VENCIDA','ERROR'].includes(e)) return 'estado-error';
+  if(['PENDIENTE','PARCIAL','RESERVADO','EN TRANSITO','EN TRÁNSITO'].includes(e)) return 'estado-pendiente';
+  return 'estado-info';
+}
+
+function estadoBadgeHTML(estado){
+  return '<span class="estadoBadge '+estadoClase(estado)+'">'+esc(estado||'—')+'</span>';
+}
+
+function cargarDashboard(forzar=false){
+  if(!TOKEN || !SESION) return;
+
+  if(!forzar && DASHBOARD_TS && Date.now()-DASHBOARD_TS<15000){
+    return;
+  }
+
+  $('dashboardActualizado').textContent='Actualizando…';
+
+  api('dashboard',{sucursal:SUCURSAL},r=>{
+    if(!r||!r.ok){
+      $('dashboardActualizado').textContent=(r&&r.error)||'No se pudo cargar el panel.';
+      return;
+    }
+
+    DASHBOARD_TS=Date.now();
+
+    $('dashVentasHoy').textContent=Number(r.ventasHoy||0);
+    $('dashTotalHoy').textContent=Q(Number(r.totalHoy||0));
+    $('dashPedidosPend').textContent=Number(r.pedidosPendientes||0);
+    $('dashStockBajo').textContent=Number(r.stockBajo||0);
+    $('dashTraslados').textContent=Number(r.trasladosTransito||0);
+    $('dashCompras').textContent=Number(r.comprasPendientes||0);
+    $('dashCobrar').textContent=Q(Number(r.cuentasCobrar||0));
+    $('dashPagar').textContent=Q(Number(r.cuentasPagar||0));
+
+    $('dashboardActualizado').textContent=
+      'Sucursal: '+(r.sucursal||SUCURSAL)+' · Actualizado '+(r.actualizado||'');
+
+    const alertas=r.alertas||[];
+    $('dashAlertasConteo').textContent=alertas.length;
+
+    const box=$('dashAlertas');
+    box.innerHTML='';
+
+    if(!alertas.length){
+      box.innerHTML='<div class="mensaje ok">Sin alertas operativas importantes.</div>';
+      return;
+    }
+
+    alertas.forEach(a=>{
+      const d=document.createElement('div');
+      d.className='alertaItem';
+
+      const clase=
+        a.nivel==='ERROR'
+          ? 'estado-error'
+          : (a.nivel==='ADVERTENCIA'?'estado-pendiente':'estado-info');
+
+      d.innerHTML=
+        '<span class="alertaPunto '+clase+'"></span>'+
+        '<div style="flex:1">'+
+          '<b>'+esc(a.titulo||'Alerta')+'</b>'+
+          '<div class="sub">'+esc(a.detalle||'')+'</div>'+
+        '</div>';
+
+      if(a.modulo){
+        const b=document.createElement('button');
+        b.className='btnGris';
+        b.type='button';
+        b.textContent='Ver';
+        b.onclick=()=>abrirModuloDesdeAlerta(a.modulo);
+        d.appendChild(b);
+      }
+
+      box.appendChild(d);
+    });
+  });
+}
+
+function abrirModuloDesdeAlerta(modulo){
+  const m=String(modulo||'').toLowerCase();
+
+  if(m==='pedidos'){
+    vista('pedidos');
+    mostrarListaPedidos();
+    cargarPedidos();
+  }else if(m==='traslados'){
+    vista('traslados');
+    cargarTraslados();
+  }else if(m==='compras'){
+    vista('compras');
+    mostrarListaCompras();
+    cargarCompras();
+  }else if(m==='inventario'){
+    vista('inventario');
+    cargarInventarioSucursal();
+  }else if(m==='clientes'){
+    vista('clientes');
+    cargarClientes();
+    cargarCreditos();
+  }else if(m==='caja'){
+    vista('caja');
+    cargarCaja();
+  }
+}
+
+function programarBusquedaGlobal(){
+  clearTimeout(BUSQUEDA_GLOBAL_TIMER);
+
+  const q=$('busquedaGlobalTexto').value.trim();
+
+  if(q.length<2){
+    $('busquedaGlobalResultados').innerHTML='';
+    $('busquedaGlobalResultados').classList.add('oculto');
+    return;
+  }
+
+  BUSQUEDA_GLOBAL_TIMER=setTimeout(buscarGlobalAhora,250);
+}
+
+function buscarGlobalAhora(){
+  const q=$('busquedaGlobalTexto').value.trim();
+  const box=$('busquedaGlobalResultados');
+
+  if(q.length<2){
+    box.classList.add('oculto');
+    return;
+  }
+
+  const id=++BUSQUEDA_GLOBAL_ID;
+
+  box.classList.remove('oculto');
+  box.innerHTML='<div class="resultadoGlobal">Buscando…</div>';
+
+  api('busquedaglobal',{q,sucursal:SUCURSAL},r=>{
+    if(id!==BUSQUEDA_GLOBAL_ID) return;
+
+    if(!r||!r.ok){
+      box.innerHTML=
+        '<div class="resultadoGlobal">'+
+        esc((r&&r.error)||'No se pudo buscar.')+
+        '</div>';
+      return;
+    }
+
+    const resultados=r.resultados||[];
+    box.innerHTML='';
+
+    if(!resultados.length){
+      box.innerHTML='<div class="resultadoGlobal">Sin coincidencias.</div>';
+      return;
+    }
+
+    resultados.forEach(x=>{
+      const d=document.createElement('div');
+      d.className='resultadoGlobal';
+
+      d.innerHTML=
+        '<div class="fila" style="align-items:center">'+
+          '<div style="flex:1">'+
+            '<div class="resultadoGlobalTitulo">'+esc(x.titulo||'')+'</div>'+
+            '<div class="resultadoGlobalMeta">'+esc(x.meta||'')+'</div>'+
+          '</div>'+
+          estadoBadgeHTML(x.estado||x.tipo||'')+
+        '</div>';
+
+      d.addEventListener('mousedown',e=>{
+        e.preventDefault();
+        abrirResultadoGlobal(x);
+      });
+
+      box.appendChild(d);
+    });
+  });
+}
+
+function abrirResultadoGlobal(x){
+  $('busquedaGlobalResultados').classList.add('oculto');
+
+  const tipo=String(x.tipo||'').toUpperCase();
+
+  if(tipo==='PRODUCTO'){
+    vista('inventario');
+    cargarInventarioSucursal();
+    setTimeout(()=>{
+      if($('inventarioListaQ')){
+        $('inventarioListaQ').value=x.codigo||x.referencia||'';
+        filtrarInventarioSucursalLocal();
+      }
+    },250);
+  }else if(tipo==='VENTA'){
+    vista('ventas');
+    $('buscarVentaTexto').value=x.referencia||'';
+    buscarVentas();
+  }else if(tipo==='PEDIDO'){
+    vista('pedidos');
+    mostrarListaPedidos();
+    cargarPedidos();
+    if(x.referencia){
+      setTimeout(()=>verPedido(x.referencia),350);
+    }
+  }else if(tipo==='TRASLADO'){
+    vista('traslados');
+    cargarTraslados();
+  }else if(tipo==='COMPRA'){
+    vista('compras');
+    mostrarListaCompras();
+    cargarCompras();
+    if(x.referencia){
+      setTimeout(()=>abrirDetalleCompra(x.referencia,false,false),350);
+    }
+  }else if(tipo==='CLIENTE'){
+    vista('clientes');
+    cargarClientes(x.titulo||'');
+    cargarCreditos();
+  }
+}
+
+document.addEventListener('click',e=>{
+  const box=$('busquedaGlobalResultados');
+  const input=$('busquedaGlobalTexto');
+
+  if(
+    box &&
+    input &&
+    !box.contains(e.target) &&
+    e.target!==input
+  ){
+    box.classList.add('oculto');
+  }
+});
 
 
 function ejecutarDiagnosticoSistema(){
@@ -1920,6 +2253,7 @@ function iniciarApp(u){
   $('loginCard').classList.add('oculto');
   $('tabs').classList.remove('oculto');
   $('sesionBar').classList.remove('oculto');
+  $('busquedaGlobalBar').classList.remove('oculto');
   $('resumen').classList.remove('oculto');
   $('usuarioActual').textContent=u.nombre+' · '+u.rol;
   $('btnVolverLogin').classList.add('oculto');
@@ -1932,6 +2266,7 @@ function iniciarApp(u){
     );
   }
 
+  mostrarSegunPermiso('tabInicio','POS');
   mostrarSegunPermiso('tabPos','POS');
   mostrarSegunPermiso('tabPedidos','PEDIDOS');
   mostrarSegunPermiso('tabVentas','VENTAS');
@@ -1974,7 +2309,7 @@ function iniciarApp(u){
     }
 
     const destinos=[
-      ['POS','pos'],['PEDIDOS','pedidos'],['VENTAS','ventas'],['INVENTARIO','inventario'],['STOCK_GLOBAL','stockglobal'],
+      ['POS','inicio'],['PEDIDOS','pedidos'],['VENTAS','ventas'],['INVENTARIO','inventario'],['STOCK_GLOBAL','stockglobal'],
       ['TRAZABILIDAD','trazabilidad'],['COMPRAS','compras'],['CAJA','caja'],['CLIENTES','clientes'],['REPORTES','reportes']
     ];
     const primero=destinos.find(x=>tienePermiso(x[0]));
@@ -2072,6 +2407,10 @@ function cerrarSesion(){
 
   $('sesionBar')
     .classList.add('oculto');
+
+  if($('busquedaGlobalBar')){
+    $('busquedaGlobalBar').classList.add('oculto');
+  }
 
   $('resumen')
     .classList.add('oculto');
