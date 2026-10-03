@@ -1257,6 +1257,7 @@ let STOCK_GLOBAL_TS=0;
 let RECEPCION_COMPRA_ACTUAL=null;
 let CLIENTES_POS=[];
 let CLIENTE_POS_ID='';
+let TRASLADOS_CARGA_ID=0;
 
 const $=id=>document.getElementById(id);
 
@@ -1294,6 +1295,41 @@ document.addEventListener('DOMContentLoaded',()=>{
 
     if($('trasProductoSelect')){
       cargarProductosTrasladoOrigen(true);
+    }
+
+    if($('listaTraslados')){
+      $('listaTraslados').innerHTML=
+        '<div class="mensaje info">Cargando traslados de '+esc(nuevaSucursal)+'…</div>';
+    }
+
+    if($('mensajeTraslado')){
+      $('mensajeTraslado').innerHTML='';
+    }
+
+    if($('btnImprimirUltimoTraslado')){
+      $('btnImprimirUltimoTraslado').classList.add('oculto');
+    }
+    ULTIMO_TRASLADO_IMPRESION=null;
+
+    // Refrescar automáticamente la información dependiente de la sucursal.
+    if($('vistaTraslados') && !$('vistaTraslados').classList.contains('oculto')){
+      cargarTraslados(nuevaSucursal);
+    }
+
+    if($('vistaInventario') && !$('vistaInventario').classList.contains('oculto')){
+      INVENTARIO_LISTA_CACHE=[];
+      INVENTARIO_LISTA_TS=0;
+      INVENTARIO_SUCURSAL_REPORTE=nuevaSucursal;
+      cargarInventarioSucursal(true);
+    }
+
+    if($('vistaVentas') && !$('vistaVentas').classList.contains('oculto')){
+      VENTAS_LISTA_CARGADA=false;
+      buscarVentas();
+    }
+
+    if($('vistaPedidos') && !$('vistaPedidos').classList.contains('oculto')){
+      cargarPedidos();
     }
 
     setTimeout(()=>{
@@ -5288,16 +5324,24 @@ function hacerTraslado(){
   );
 }
 
-function cargarTraslados(){
+function cargarTraslados(sucursalSolicitada){
   if(!TOKEN||!$('listaTraslados')) return;
 
+  const sucursalCarga=String(sucursalSolicitada||SUCURSAL);
+  const cargaId=++TRASLADOS_CARGA_ID;
+
   $('listaTraslados').innerHTML=
-    '<div class="mensaje info">Cargando traslados…</div>';
+    '<div class="mensaje info">Cargando traslados de '+esc(sucursalCarga)+'…</div>';
 
   api(
     'listartraslados',
-    {sucursal:SUCURSAL},
+    {sucursal:sucursalCarga},
     r=>{
+      // Evita que una respuesta de la sucursal anterior reemplace la actual.
+      if(cargaId!==TRASLADOS_CARGA_ID || SUCURSAL!==sucursalCarga){
+        return;
+      }
+
       if(!r||!r.ok){
         $('listaTraslados').innerHTML=
           '<div class="mensaje error">'+
@@ -5310,7 +5354,7 @@ function cargarTraslados(){
 
       if(!lista.length){
         $('listaTraslados').innerHTML=
-          '<div class="sub">No hay traslados relacionados con '+esc(r.sucursal||SUCURSAL)+'.</div>';
+          '<div class="sub">No hay traslados relacionados con '+esc(sucursalCarga)+'.</div>';
         return;
       }
 
@@ -5362,6 +5406,8 @@ function cargarTraslados(){
             ? '<b style="color:#198754">RECIBIDO</b>'
             : '<b style="color:#b26a00">EN TRÁNSITO</b>';
 
+        const clave=String(t.numeroTraslado||'').replace(/[^A-Za-z0-9_-]/g,'_');
+
         h+=
           '<tr>'+
             '<td><b>'+esc(t.numeroTraslado)+'</b></td>'+
@@ -5370,9 +5416,11 @@ function cargarTraslados(){
             '<td>'+esc(t.origen||'')+'</td>'+
             '<td>'+esc(t.destino||'')+'</td>'+
             '<td><b>'+Number(t.cantidad||0)+'</b></td>'+
-            '<td id="trasEstado_'+esc(String(t.numeroTraslado||'').replace(/[^A-Za-z0-9_-]/g,'_'))+'">'+badge+'</td>'+
-            '<td id="trasRecepcion_'+esc(String(t.numeroTraslado||'').replace(/[^A-Za-z0-9_-]/g,'_'))+'">'+accion+'</td>'+
-            '<td><button class="btnNegro" type="button" onclick=\'imprimirTraslado('+JSON.stringify(t)+')\'>🖨 Imprimir</button></td>'+
+            '<td id="trasEstado_'+esc(clave)+'">'+badge+'</td>'+
+            '<td id="trasRecepcion_'+esc(clave)+'">'+accion+'</td>'+
+            '<td><button class="btnNegro" type="button" onclick=\''+
+              'imprimirTraslado('+JSON.stringify(t)+')'+
+            '\'>🖨 Imprimir</button></td>'+
           '</tr>';
       });
 
@@ -5381,7 +5429,6 @@ function cargarTraslados(){
     }
   );
 }
-
 
 function imprimirTraslado(t){
   if(!t){
@@ -5464,9 +5511,11 @@ function imprimirTraslado(t){
 function confirmarRecibidoTraslado(numeroTraslado){
   if(!numeroTraslado) return;
 
+  const sucursalRecepcion=SUCURSAL;
+
   if(!confirm(
     '¿Confirmar que el traslado '+numeroTraslado+
-    ' fue recibido físicamente en '+SUCURSAL+'?'
+    ' fue recibido físicamente en '+sucursalRecepcion+'?'
   )){
     return;
   }
@@ -5489,7 +5538,7 @@ function confirmarRecibidoTraslado(numeroTraslado){
     'recibirtraslado',
     {
       numeroTraslado,
-      sucursal:SUCURSAL
+      sucursal:sucursalRecepcion
     },
     r=>{
       if(!r||!r.ok){
@@ -5530,7 +5579,12 @@ function confirmarRecibidoTraslado(numeroTraslado){
         'ok'
       );
 
-      setTimeout(()=>cargarTraslados(),350);
+      setTimeout(()=>{
+        if(SUCURSAL===sucursalRecepcion){
+          cargarTraslados(sucursalRecepcion);
+          cargarProductosTrasladoOrigen(true);
+        }
+      },250);
     }
   );
 }
@@ -6626,6 +6680,7 @@ function api(a,p,cb,sinToken=false){
 
   p.accion=a;
   p.callback=n;
+  p._ts=Date.now();
 
   const q=
     Object.keys(p)
