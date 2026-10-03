@@ -8660,19 +8660,58 @@ function obtenerStockGlobalFiltrado(){
 }
 
 function prepararFilasStockGlobalTicket(lista){
+  const base=(lista||[]).filter(p=>{
+    const tipo=String(p.tipoIngreso||'INDIVIDUAL').toUpperCase();
+    const talla=String(p.talla||'').trim().toUpperCase();
+    return tipo!=='PAQUETE_CURVA' && talla!=='PAQUETE/CURVA';
+  });
+
+  /*
+    Detecta escalas antiguas cuando el producto pertenece a una corrida,
+    pero sus referencias históricas no guardaron el nombre de la escala.
+    Solo se infiere cuando el mismo modelo/color tiene 2 o más tallas de
+    una escala; así un producto individual talla 38 no se convierte en D.
+  */
+  const porModelo={};
+  base.forEach(p=>{
+    const k=[p.marca||'',p.modelo||'',p.categoria||'',p.color||''].join('||');
+    (porModelo[k]||(porModelo[k]=[])).push(p);
+  });
+
+  const escalasInferidas={};
+  Object.entries(porModelo).forEach(([k,items])=>{
+    escalasInferidas[k]={};
+    (ESCALAS||[]).forEach(e=>{
+      const tallas=(ESCALAS_MAP[e.nombre]||[]).map(String);
+      const coincidencias=items.filter(p=>tallas.includes(String(p.talla||'')));
+      if(coincidencias.length>=2){
+        coincidencias.forEach(p=>{
+          escalasInferidas[k][String(p.codigo||'')]=e.nombre;
+        });
+      }
+    });
+  });
+
   const grupos={};
   const filasIndividuales=[];
 
-  (lista||[]).forEach(p=>{
-    const escala=String(p.escala||'').trim();
+  base.forEach(p=>{
+    const claveModelo=[p.marca||'',p.modelo||'',p.categoria||'',p.color||''].join('||');
     const tipo=String(p.tipoIngreso||'INDIVIDUAL').toUpperCase();
-    const usaEscala=!!escala && tipo==='CORRIDA';
+    let escala=String(p.escala||'').trim();
 
-    if(usaEscala){
-      const clave=[
-        p.marca||'',p.modelo||'',p.categoria||'',p.color||'',escala
-      ].join('||');
+    if(!escala && tipo==='CORRIDA'){
+      const talla=String(p.talla||'');
+      const encontrada=(ESCALAS||[]).find(e=>(ESCALAS_MAP[e.nombre]||[]).map(String).includes(talla));
+      if(encontrada) escala=encontrada.nombre;
+    }
 
+    if(!escala){
+      escala=(escalasInferidas[claveModelo]||{})[String(p.codigo||'')]||'';
+    }
+
+    if(escala){
+      const clave=claveModelo+'||'+escala;
       if(!grupos[clave]){
         grupos[clave]={
           marca:p.marca||'',
@@ -8709,10 +8748,7 @@ function prepararFilasStockGlobalTicket(lista){
     }
   });
 
-  const filasEscala=Object.values(grupos).map(g=>({
-    ...g,
-    individual:false
-  }));
+  const filasEscala=Object.values(grupos).map(g=>({...g,individual:false}));
 
   return [...filasEscala,...filasIndividuales].sort((a,b)=>{
     const aa=[a.marca,a.modelo,a.color,a.escala,a.talla||''].join(' ');
@@ -8724,7 +8760,12 @@ function prepararFilasStockGlobalTicket(lista){
 function filtrarStockGlobalLocal(){
   if(!$('stockGlobalTabla')) return;
 
-  const lista=obtenerStockGlobalFiltrado();
+  const listaBruta=obtenerStockGlobalFiltrado();
+  const lista=listaBruta.filter(p=>{
+    const tipo=String(p.tipoIngreso||'INDIVIDUAL').toUpperCase();
+    const talla=String(p.talla||'').trim().toUpperCase();
+    return tipo!=='PAQUETE_CURVA' && talla!=='PAQUETE/CURVA';
+  });
   const filas=prepararFilasStockGlobalTicket(lista);
   const sucursal=$('stockFiltroSucursal')?$('stockFiltroSucursal').value:'';
   const sucursalesVisibles=sucursal?[sucursal]:(STOCK_GLOBAL_SUCURSALES||[]);
@@ -8774,7 +8815,7 @@ function filtrarStockGlobalLocal(){
       h+='</tr>';
     });
   }else{
-    h+='<tr><th></th>';
+    h+='<tr><th>✓</th>';
     for(let i=0;i<maxSlots;i++) h+='<th></th>';
     h+='</tr>';
   }
