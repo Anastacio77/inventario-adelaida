@@ -68,7 +68,7 @@ document.addEventListener('click',e=>{
     <button id="tabVentas" onclick="vista('ventas');buscarVentas()">🧾 Ventas</button>
     <button id="tabInventario" onclick="vista('inventario');cargarInventarioSucursal()">📦 Inventario</button>
     <button id="tabNuevo" onclick="vista('nuevo')">➕ Producto</button>
-    <button id="tabTraslados" onclick="vista('traslados')">🔁 Traslados</button>
+    <button id="tabTraslados" onclick="vista('traslados');cargarTraslados()">🔁 Traslados</button>
     <button id="tabStockglobal" onclick="vista('stockglobal');cargarStockGlobal()">🏬 Stock global</button>
     <button id="tabUsuarios" onclick="vista('usuarios');cargarUsuarios();cargarPermisosRoles()">👥 Usuarios</button>
     <button id="tabTrazabilidad" onclick="vista('trazabilidad')">🔎 Trazabilidad</button>
@@ -657,7 +657,10 @@ document.addEventListener('click',e=>{
     <div class="card">
       <h3 style="margin-top:0">Traslado entre sucursales</h3>
 
-      <div class="sub">El origen es la sucursal seleccionada arriba.</div>
+      <div class="sub">
+        Al registrar, la mercadería sale del inventario de origen y queda <b>EN TRÁNSITO</b>.
+        La existencia entrará a la sucursal destino únicamente cuando se confirme <b>Recibido</b>.
+      </div>
 
       <label>Producto</label>
 
@@ -675,12 +678,22 @@ document.addEventListener('click',e=>{
       <label>Nota</label>
       <textarea id="trasNota"></textarea>
 
-      <button class="btnAzul w100" style="margin-top:12px" onclick="hacerTraslado()">Registrar traslado</button>
+      <button class="btnAzul w100" style="margin-top:12px" onclick="hacerTraslado()">Despachar traslado</button>
 
       <div id="mensajeTraslado"></div>
     </div>
-  </div>
 
+    <div class="card">
+      <div class="fila" style="align-items:center">
+        <div style="flex:1">
+          <h3 style="margin:0">Traslados de la sucursal</h3>
+          <div class="sub">Entradas y salidas relacionadas con la sucursal seleccionada.</div>
+        </div>
+        <button class="btnNegro" type="button" onclick="cargarTraslados()">↻ Actualizar</button>
+      </div>
+      <div id="listaTraslados" style="overflow:auto;margin-top:12px"></div>
+    </div>
+  </div>
 
   <div id="vistaStockglobal" class="vistaApp oculto">
     <div class="card">
@@ -5082,16 +5095,237 @@ function hacerTraslado(){
       $('trasNota').value='';
 
       cargarResumen();
+      cargarTraslados();
 
       msg(
         'mensajeTraslado',
-        'Traslado registrado: '+
-        r.numeroTraslado,
+        'Traslado '+r.numeroTraslado+
+        ' despachado · estado: EN TRÁNSITO. El destino debe confirmar recibido.',
         'ok'
       );
     }
   );
 }
+
+function cargarTraslados(){
+  if(!TOKEN||!$('listaTraslados')) return;
+
+  $('listaTraslados').innerHTML=
+    '<div class="mensaje info">Cargando traslados…</div>';
+
+  api(
+    'listartraslados',
+    {sucursal:SUCURSAL},
+    r=>{
+      if(!r||!r.ok){
+        $('listaTraslados').innerHTML=
+          '<div class="mensaje error">'+
+          esc((r&&r.error)||'No se pudieron cargar los traslados.')+
+          '</div>';
+        return;
+      }
+
+      const lista=r.traslados||[];
+
+      if(!lista.length){
+        $('listaTraslados').innerHTML=
+          '<div class="sub">No hay traslados relacionados con '+esc(r.sucursal||SUCURSAL)+'.</div>';
+        return;
+      }
+
+      let h=
+        '<table class="tabla">'+
+        '<thead><tr>'+
+          '<th>N.º</th>'+
+          '<th>Fecha</th>'+
+          '<th>Producto</th>'+
+          '<th>Origen</th>'+
+          '<th>Destino</th>'+
+          '<th>Cant.</th>'+
+          '<th>Estado</th>'+
+          '<th>Recepción</th>'+
+          '<th>Imprimir</th>'+
+        '</tr></thead><tbody>';
+
+      lista.forEach(t=>{
+        const producto=[
+          t.marca||'',
+          t.modelo||'',
+          t.color||'',
+          t.talla ? 'Talla '+t.talla : ''
+        ].filter(Boolean).join(' · ');
+
+        let accion='';
+
+        if(t.puedeRecibir){
+          accion=
+            '<button class="btnVerde" type="button" onclick="confirmarRecibidoTraslado('+
+            JSON.stringify(String(t.numeroTraslado||''))+
+            ')">✓ Confirmar recibido</button>';
+        }else if(String(t.estado||'').toUpperCase()==='RECIBIDO'){
+          accion=
+            '<span class="sub">'+
+            esc(
+              [t.fechaRecepcion,t.usuarioRecibe]
+                .filter(Boolean)
+                .join(' · ')
+            )+
+            '</span>';
+        }else{
+          accion='<span class="sub">Pendiente en destino</span>';
+        }
+
+        const estado=String(t.estado||'').toUpperCase();
+        const badge=
+          estado==='RECIBIDO'
+            ? '<b style="color:#198754">RECIBIDO</b>'
+            : '<b style="color:#b26a00">EN TRÁNSITO</b>';
+
+        h+=
+          '<tr>'+
+            '<td><b>'+esc(t.numeroTraslado)+'</b></td>'+
+            '<td>'+esc(t.fecha||'')+'</td>'+
+            '<td>'+esc(producto)+'</td>'+
+            '<td>'+esc(t.origen||'')+'</td>'+
+            '<td>'+esc(t.destino||'')+'</td>'+
+            '<td><b>'+Number(t.cantidad||0)+'</b></td>'+
+            '<td>'+badge+'</td>'+
+            '<td>'+accion+'</td>'+
+            '<td><button class="btnNegro" type="button" onclick=\'imprimirTraslado('+JSON.stringify(t)+')\'>🖨 Imprimir</button></td>'+
+          '</tr>';
+      });
+
+      h+='</tbody></table>';
+      $('listaTraslados').innerHTML=h;
+    }
+  );
+}
+
+
+function imprimirTraslado(t){
+  if(!t){
+    return alert('No hay datos del traslado para imprimir.');
+  }
+
+  const estado=String(t.estado||'').toUpperCase();
+  const recibido=estado==='RECIBIDO';
+
+  const w=window.open('','_blank');
+
+  if(!w){
+    return alert('El navegador bloqueó la ventana de impresión.');
+  }
+
+  const producto=[
+    t.marca||'',
+    t.modelo||'',
+    t.color||'',
+    t.talla ? 'Talla '+t.talla : ''
+  ].filter(Boolean).join(' · ');
+
+  const filas=[
+    ['N.º traslado',t.numeroTraslado||''],
+    ['Fecha de despacho',t.fecha||''],
+    ['Origen',t.origen||''],
+    ['Destino',t.destino||''],
+    ['Producto',producto],
+    ['Código',t.codigo||''],
+    ['Cantidad',Number(t.cantidad||0)],
+    ['Estado',recibido?'RECIBIDO':'EN TRÁNSITO'],
+    ['Despachado por',t.usuario||''],
+    ['Nota',t.nota||'']
+  ];
+
+  if(recibido){
+    filas.push(['Fecha de recepción',t.fechaRecepcion||'']);
+    filas.push(['Recibido por',t.usuarioRecibe||'']);
+  }
+
+  const cuerpo=filas.map(f=>
+    '<tr><th>'+esc(f[0])+'</th><td>'+esc(f[1])+'</td></tr>'
+  ).join('');
+
+  w.document.open();
+  w.document.write(
+    '<!doctype html><html><head><meta charset="utf-8">'+
+    '<title>Traslado '+esc(t.numeroTraslado||'')+'</title>'+
+    '<style>'+
+      '@page{size:letter portrait;margin:12mm}'+
+      '*{box-sizing:border-box}'+
+      'body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;font-size:12px}'+
+      '.cab{text-align:center;margin-bottom:14px}'+
+      '.cab h1{font-size:18px;margin:0 0 4px}'+
+      '.cab h2{font-size:15px;margin:0}'+
+      'table{width:100%;border-collapse:collapse;margin-top:14px}'+
+      'th,td{border:1px solid #555;padding:8px;vertical-align:top}'+
+      'th{width:32%;text-align:left;background:#f2f2f2}'+
+      '.estado{text-align:center;font-size:14px;font-weight:700;margin:12px 0}'+
+      '.firmas{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:55px}'+
+      '.firma{text-align:center;border-top:1px solid #111;padding-top:6px}'+
+    '</style></head><body>'+
+      '<div class="cab">'+
+        '<h1>COMERCIAL ADELAIDA</h1>'+
+        '<h2>COMPROBANTE DE TRASLADO</h2>'+
+      '</div>'+
+      '<div class="estado">'+esc(recibido?'RECIBIDO':'EN TRÁNSITO')+'</div>'+
+      '<table><tbody>'+cuerpo+'</tbody></table>'+
+      '<div class="firmas">'+
+        '<div class="firma">Entrega / Despacha</div>'+
+        '<div class="firma">Recibe</div>'+
+      '</div>'+
+      '<script>window.onload=function(){setTimeout(function(){window.print();},150)};<\/script>'+
+    '</body></html>'
+  );
+  w.document.close();
+}
+
+
+function confirmarRecibidoTraslado(numeroTraslado){
+  if(!numeroTraslado) return;
+
+  if(!confirm(
+    '¿Confirmar que el traslado '+numeroTraslado+
+    ' fue recibido físicamente en '+SUCURSAL+'?'
+  )){
+    return;
+  }
+
+  msg(
+    'mensajeTraslado',
+    'Confirmando recepción…',
+    'info'
+  );
+
+  api(
+    'recibirtraslado',
+    {
+      numeroTraslado,
+      sucursal:SUCURSAL
+    },
+    r=>{
+      if(!r||!r.ok){
+        return msg(
+          'mensajeTraslado',
+          (r&&r.error)||'No se pudo confirmar la recepción.',
+          'error'
+        );
+      }
+
+      cargarTraslados();
+      cargarResumen();
+
+      if(typeof INVENTARIO_LISTA_TS!=='undefined') INVENTARIO_LISTA_TS=0;
+      if(typeof STOCK_GLOBAL_TS!=='undefined') STOCK_GLOBAL_TS=0;
+
+      msg(
+        'mensajeTraslado',
+        r.mensaje||('Traslado '+numeroTraslado+' recibido.'),
+        'ok'
+      );
+    }
+  );
+}
+
 
 
 let VENTAS_LISTA_CARGADA=false;
