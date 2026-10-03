@@ -5396,7 +5396,8 @@ function cargarTraslados(sucursalSolicitada){
         if(t.puedeRecibir || puedeRecibirLocal){
           accion=
             '<button class="btnVerde" type="button" onclick="confirmarRecibidoTraslado('+
-            JSON.stringify(String(t.numeroTraslado||''))+
+            JSON.stringify(String(t.numeroTraslado||''))+','+
+            JSON.stringify(String(t.destino||''))+
             ')">✓ Confirmar recibido</button>';
         }else if(String(t.estado||'').toUpperCase()==='RECIBIDO'){
           accion=
@@ -5519,10 +5520,17 @@ function imprimirTraslado(t){
 }
 
 
-function confirmarRecibidoTraslado(numeroTraslado){
+function confirmarRecibidoTraslado(numeroTraslado,destinoTraslado){
   if(!numeroTraslado) return;
 
-  const sucursalRecepcion=SUCURSAL;
+  const sucursalRecepcion=String(destinoTraslado||SUCURSAL).trim();
+
+  if(String(SUCURSAL||'').trim()!==sucursalRecepcion){
+    const err='Para recibir este traslado debe seleccionar la sucursal destino: '+sucursalRecepcion+'.';
+    msg('mensajeTraslado',err,'error');
+    alert(err);
+    return;
+  }
 
   if(!confirm(
     '¿Confirmar que el traslado '+numeroTraslado+
@@ -5558,7 +5566,8 @@ function confirmarRecibidoTraslado(numeroTraslado){
         if(celdaRec){
           celdaRec.innerHTML=
             '<button class="btnVerde" type="button" onclick="confirmarRecibidoTraslado('+
-            JSON.stringify(String(numeroTraslado))+
+            JSON.stringify(String(numeroTraslado))+','+
+            JSON.stringify(String(sucursalRecepcion))+
             ')">✓ Confirmar recibido</button>';
         }
 
@@ -5578,24 +5587,26 @@ function confirmarRecibidoTraslado(numeroTraslado){
           '</span>';
       }
 
-      cargarResumen();
-
-      if(typeof INVENTARIO_LISTA_TS!=='undefined') INVENTARIO_LISTA_TS=0;
-      if(typeof STOCK_GLOBAL_TS!=='undefined') STOCK_GLOBAL_TS=0;
-      if(typeof PRODUCTOS_TRASLADO_TS!=='undefined') PRODUCTOS_TRASLADO_TS=0;
-
       msg(
         'mensajeTraslado',
         r.mensaje||('Traslado '+numeroTraslado+' recibido.'),
         'ok'
       );
 
+      alert(r.mensaje||('Traslado '+numeroTraslado+' recibido correctamente.'));
+
+      if(typeof INVENTARIO_LISTA_TS!=='undefined') INVENTARIO_LISTA_TS=0;
+      if(typeof STOCK_GLOBAL_TS!=='undefined') STOCK_GLOBAL_TS=0;
+      if(typeof PRODUCTOS_TRASLADO_TS!=='undefined') PRODUCTOS_TRASLADO_TS=0;
+
+      cargarResumen();
+
       setTimeout(()=>{
-        if(SUCURSAL===sucursalRecepcion){
+        if(String(SUCURSAL||'').trim()===sucursalRecepcion){
           cargarTraslados(sucursalRecepcion);
           cargarProductosTrasladoOrigen(true);
         }
-      },250);
+      },200);
     }
   );
 }
