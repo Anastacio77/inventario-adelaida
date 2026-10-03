@@ -1230,7 +1230,28 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-let API_URL=localStorage.getItem('adelaida_api_url')||'';
+function detectarApiUrlActual(){
+  const guardada=localStorage.getItem('adelaida_api_url')||'';
+  if(guardada) return guardada;
+
+  try{
+    const u=new URL(window.location.href);
+    if(
+      u.hostname==='script.google.com' &&
+      /\/macros\/s\/[^/]+\/exec$/.test(u.pathname)
+    ){
+      return u.origin+u.pathname;
+    }
+  }catch(_e){}
+
+  return '';
+}
+
+let API_URL=detectarApiUrlActual();
+
+if(API_URL){
+  localStorage.setItem('adelaida_api_url',API_URL);
+}
 const VERSION_SISTEMA_UI='2026.10.03-ESTABLE-01';
 let TOKEN=localStorage.getItem('adelaida_token')||'';
 let SESION=null;
@@ -1440,6 +1461,11 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   if(!API_URL){
     mostrarConfigDesdeLogin();
+    msg(
+      'mensajeConfig',
+      'No se detectó automáticamente la URL de la aplicación. Pegue una vez la URL /exec de esta implementación.',
+      'info'
+    );
     return;
   }
 
