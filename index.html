@@ -913,7 +913,10 @@ document.addEventListener('click',e=>{
 
       <label style="margin-top:10px">Buscar / escribir código manualmente</label>
       <div class="fila">
-        <input id="trazaCodigo" autocomplete="off" placeholder="Código, modelo, marca, color o escanee el QR">
+        <div class="buscadorAuto" style="flex:1">
+          <input id="trazaCodigo" autocomplete="off" placeholder="Código, modelo, marca, color o talla">
+          <div id="sugerenciasTraza" class="listaSugerencias oculto"></div>
+        </div>
         <button class="btnNegro" onclick="buscarTrazabilidad()">Buscar</button>
       </div>
 
@@ -1274,6 +1277,7 @@ const $=id=>document.getElementById(id);
 
 document.addEventListener('DOMContentLoaded',()=>{
   $('apiUrl').value=API_URL;
+  setTimeout(activarBuscadorTrazabilidad,0);
 
   ['trasCodigo','trasDestino','trasCantidad','trasNota'].forEach(id=>{
     const el=$(id);
@@ -2312,6 +2316,10 @@ function auto(
     {
       input:$('trasCodigo'),
       lista:$('sugerenciasTras')
+    },
+    {
+      input:$('trazaCodigo'),
+      lista:$('sugerenciasTraza')
     }
   ];
 
@@ -2337,7 +2345,8 @@ document.addEventListener('keydown',e=>{
     [
       'sugerenciasPos',
       'sugerenciasInv',
-      'sugerenciasTras'
+      'sugerenciasTras',
+      'sugerenciasTraza'
     ].forEach(id=>{
 
       const x=$(id);
@@ -5922,7 +5931,13 @@ function prepararTrazabilidad(){
     $('trazaProductoSelect').value='';
   }
 
+  if($('sugerenciasTraza')){
+    $('sugerenciasTraza').innerHTML='';
+    $('sugerenciasTraza').classList.add('oculto');
+  }
+
   cargarProductosTrazabilidad();
+  activarBuscadorTrazabilidad();
 }
 
 function cargarProductosTrazabilidad(forzar=false){
@@ -5994,6 +6009,172 @@ function llenarProductosTrazabilidad(){
     sel.value=actual;
   }
 }
+
+
+function filtrarProductosTrazabilidad(q){
+  const buscado=String(q||'')
+    .trim()
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,'');
+
+  if(!buscado){
+    return [];
+  }
+
+  const comienza=[];
+  const contiene=[];
+
+  (PRODUCTOS_TRAZABILIDAD||[]).forEach(p=>{
+    const campos=[
+      p.codigo,
+      p.marca,
+      p.modelo,
+      p.color,
+      p.talla
+    ].map(v=>
+      String(v||'')
+        .toUpperCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g,'')
+    );
+
+    if(campos.some(v=>v.startsWith(buscado))){
+      comienza.push(p);
+    }else if(campos.some(v=>v.includes(buscado))){
+      contiene.push(p);
+    }
+  });
+
+  return comienza.concat(contiene).slice(0,30);
+}
+
+function pintarSugerenciasTrazabilidad(resultados,q){
+  const lista=$('sugerenciasTraza');
+  if(!lista) return;
+
+  lista.innerHTML='';
+
+  if(!String(q||'').trim()){
+    lista.classList.add('oculto');
+    return;
+  }
+
+  if(!resultados.length){
+    lista.innerHTML=
+      '<div class="itemSugerencia">'+
+        '<div class="sugDetalle">Sin coincidencias.</div>'+
+      '</div>';
+    lista.classList.remove('oculto');
+    return;
+  }
+
+  resultados.forEach(p=>{
+    const d=document.createElement('div');
+    d.className='itemSugerencia';
+
+    d.innerHTML=
+      '<div class="sugCodigo">'+esc(p.codigo||'')+'</div>'+
+      '<div class="sugDetalle">'+
+        esc(p.marca||'')+
+        ' · '+esc(p.modelo||'')+
+        ' · '+esc(p.color||'')+
+        (p.talla ? ' · Talla '+esc(p.talla) : '')+
+        ' · Existencia '+Number(p.existencia||0)+
+      '</div>';
+
+    d.addEventListener('mousedown',e=>{
+      e.preventDefault();
+      e.stopPropagation();
+
+      $('trazaCodigo').value=String(p.codigo||'');
+
+      if($('trazaProductoSelect')){
+        $('trazaProductoSelect').value=String(p.codigo||'');
+      }
+
+      lista.classList.add('oculto');
+      $('mensajeTraza').innerHTML='';
+      buscarTrazabilidad();
+    });
+
+    lista.appendChild(d);
+  });
+
+  lista.classList.remove('oculto');
+}
+
+function actualizarSugerenciasTrazabilidad(){
+  const input=$('trazaCodigo');
+  if(!input) return;
+
+  const q=input.value.trim();
+
+  if(!q){
+    const lista=$('sugerenciasTraza');
+    if(lista){
+      lista.innerHTML='';
+      lista.classList.add('oculto');
+    }
+    return;
+  }
+
+  // Si todavía no está cargada la lista, la cargamos y luego filtramos.
+  if(!PRODUCTOS_TRAZABILIDAD.length || PRODUCTOS_TRAZABILIDAD_SUCURSAL!==SUCURSAL){
+    cargarProductosTrazabilidad(true);
+    setTimeout(()=>{
+      pintarSugerenciasTrazabilidad(
+        filtrarProductosTrazabilidad(q),
+        q
+      );
+    },400);
+    return;
+  }
+
+  pintarSugerenciasTrazabilidad(
+    filtrarProductosTrazabilidad(q),
+    q
+  );
+}
+
+function activarBuscadorTrazabilidad(){
+  const input=$('trazaCodigo');
+  const lista=$('sugerenciasTraza');
+
+  if(!input || !lista || input.dataset.autocompleteTraza==='SI'){
+    return;
+  }
+
+  input.dataset.autocompleteTraza='SI';
+
+  input.addEventListener('input',()=>{
+    $('mensajeTraza').innerHTML='';
+    actualizarSugerenciasTrazabilidad();
+  });
+
+  input.addEventListener('focus',()=>{
+    if(input.value.trim()){
+      actualizarSugerenciasTrazabilidad();
+    }
+  });
+
+  input.addEventListener('click',()=>{
+    if(input.value.trim()){
+      actualizarSugerenciasTrazabilidad();
+    }
+  });
+
+  input.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){
+      e.preventDefault();
+      lista.classList.add('oculto');
+      buscarTrazabilidad();
+    }else if(e.key==='Escape'){
+      lista.classList.add('oculto');
+    }
+  });
+}
+
 
 function seleccionarProductoTrazabilidad(){
   const sel=$('trazaProductoSelect');
