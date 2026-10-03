@@ -8717,21 +8717,37 @@ function filtrarStockGlobalLocal(){
   h+='<th>Total</th></tr></thead><tbody>';
 
   grupos.forEach(g=>{
-    const chips=g.tallas.map(t=>{
+    const tallasFila=g.tallas.map(t=>
+      '<th style="padding:4px 7px;border:1px solid #d5d7dd;white-space:nowrap;text-align:center">'+
+      esc(t.talla||'—')+
+      '</th>'
+    ).join('');
+
+    const existenciasFila=g.tallas.map(t=>{
       const exist=sucursal
         ? Number((t.porSucursal||{})[sucursal])||0
         : Number(t.total||0);
-      return '<span style="display:inline-block;padding:4px 7px;margin:2px;border:1px solid #d5d7dd;border-radius:8px;white-space:nowrap">'+
-        '<b>'+esc(t.talla||'—')+'</b>: '+exist+
-      '</span>';
+      return '<td style="padding:4px 7px;border:1px solid #d5d7dd;white-space:nowrap;text-align:center"><b>'+
+        exist+
+      '</b></td>';
     }).join('');
+
+    const numeracion=
+      '<div style="overflow-x:auto">'+
+        '<table style="border-collapse:collapse;width:auto;min-width:max-content">'+
+          '<tbody>'+
+            '<tr>'+tallasFila+'</tr>'+
+            '<tr>'+existenciasFila+'</tr>'+
+          '</tbody>'+
+        '</table>'+
+      '</div>';
 
     h+=
       '<tr>'+
         '<td><b>'+esc([g.marca,g.modelo].filter(Boolean).join(' · '))+'</b><br>'+
           '<span class="sub">'+esc([g.categoria,g.color].filter(Boolean).join(' · '))+'</span>'+ 
         '</td>'+
-        '<td>'+chips+'</td>';
+        '<td>'+numeracion+'</td>';
 
     sucursalesVisibles.forEach(s=>{
       const n=Number(g.porSucursal[s])||0;
