@@ -1115,6 +1115,26 @@ document.addEventListener('click',e=>{
 
       <div id="histComprasProveedorResumen" class="sub" style="margin-top:10px"></div>
       <div id="histComprasProveedorLista" style="overflow:auto;margin-top:10px"></div>
+
+      <div id="histComprasProveedorDetalleCard" class="oculto" style="margin-top:14px">
+        <div id="histComprasProveedorDetalle" class="ticket"></div>
+
+        <div class="fila noPrint" style="margin-top:10px">
+          <button class="btnNegro" style="flex:1" type="button"
+            onclick="imprimirTicket('histComprasProveedorDetalle','MEDIA')">
+            🖨 Media carta horizontal
+          </button>
+          <button class="btnGris" style="flex:1" type="button"
+            onclick="imprimirTicket('histComprasProveedorDetalle','CARTA')">
+            🖨 Carta vertical
+          </button>
+        </div>
+
+        <button class="btnGris noPrint w100" style="margin-top:8px" type="button"
+          onclick="$('histComprasProveedorDetalleCard').classList.add('oculto')">
+          Cerrar detalle
+        </button>
+      </div>
     </div>
 
     <div id="compDetalleCard" class="card oculto">
@@ -8840,15 +8860,50 @@ function cargarComprasProveedor(){
       h+='</tbody></table>';
       box.innerHTML=h;
 
-      box.querySelectorAll('.btnVerCompraProveedor').forEach(btn=>{
-        btn.addEventListener('click',()=>{
-          abrirDetalleCompra(
-            btn.dataset.numero||'',
-            false,
-            false
-          );
-        });
-      });
+      box.onclick=e=>{
+        const btn=e.target.closest('.btnVerCompraProveedor');
+        if(!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        verDetalleCompraProveedor(btn.dataset.numero||'');
+      };
+    }
+  );
+}
+
+
+function verDetalleCompraProveedor(numeroCompra){
+  const numero=String(numeroCompra||'').trim();
+  const card=$('histComprasProveedorDetalleCard');
+  const ticket=$('histComprasProveedorDetalle');
+
+  if(!numero){
+    return msg('mensajeCompras','Número de compra inválido.','error');
+  }
+
+  card.classList.remove('oculto');
+  ticket.innerHTML=
+    '<div class="mensaje info">Cargando compra <b>'+esc(numero)+'</b>…</div>';
+
+  card.scrollIntoView({
+    behavior:'smooth',
+    block:'start'
+  });
+
+  api(
+    'detallecompra',
+    {numeroCompra:numero},
+    r=>{
+      if(!r||!r.ok){
+        ticket.innerHTML=
+          '<div class="mensaje error">'+
+          esc((r&&r.error)||'No se pudo cargar la compra.')+
+          '</div>';
+        return;
+      }
+
+      COMPRA_DETALLE_ACTUAL=r;
+      ticketCompraHTML(r,'histComprasProveedorDetalle');
     }
   );
 }
@@ -9101,14 +9156,6 @@ function ticketCompraHTML(r,id){
 }
 
 function abrirDetalleCompra(numeroCompra,imprimir=false,exportar=false){
-  if(!numeroCompra){
-    return msg(
-      'mensajeCompras',
-      'Número de compra inválido.',
-      'error'
-    );
-  }
-
   const lista=$('compListaCard');
   const card=$('compDetalleCard');
   const ticket=$('compDetalleTicket');
