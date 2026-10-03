@@ -83,6 +83,24 @@ document.addEventListener('click',e=>{
 
   <div id="vistaPos" class="vistaApp oculto">
     <div class="card">
+      <div class="fila" style="margin-bottom:10px;align-items:center">
+        <div style="flex:1">
+          <b>Pedido actual</b>
+          <div id="posPedidoActualInfo" class="sub">Pedido nuevo</div>
+        </div>
+        <button class="btnAzul" type="button" onclick="nuevoPedidoPos()">
+          + Nuevo pedido
+        </button>
+      </div>
+
+      <div id="pedidosEsperaPosBox" class="mensaje info" style="margin-bottom:10px">
+        <div class="fila" style="align-items:center">
+          <div style="flex:1"><b>Pedidos en espera</b> · puede cambiar entre clientes sin guardar todavía.</div>
+          <button class="btnGris" type="button" onclick="renderPedidosEsperaPos()">↻</button>
+        </div>
+        <div id="pedidosEsperaPosLista" style="margin-top:8px"></div>
+      </div>
+
       <div class="fila"><div class="buscadorAuto"><input id="posCodigo" autocomplete="off" placeholder="Código, modelo, marca o color"><div id="sugerenciasPos" class="listaSugerencias oculto"></div></div><button class="btnNegro" onclick="agregar()">Agregar</button></div>
       <button id="btnCamPos" class="btnAzul w100" style="margin-top:9px" onclick="toggleCam()">📷 Abrir cámara continua</button>
       <div id="scanPosBox" class="oculto"><div id="readerPos" class="scanner"></div></div>
@@ -1343,6 +1361,8 @@ let STOCK_GLOBAL_TS=0;
 let RECEPCION_COMPRA_ACTUAL=null;
 let CLIENTES_POS=[];
 let CLIENTE_POS_ID='';
+let BORRADOR_POS_ACTUAL_ID='';
+let PEDIDOS_ESPERA_POS=[];
 let TRASLADOS_CARGA_ID=0;
 
 const $=id=>document.getElementById(id);
@@ -1364,7 +1384,9 @@ document.addEventListener('DOMContentLoaded',()=>{
     const nuevaSucursal=$('sucursalActual').value;
 
     SUCURSAL=nuevaSucursal;
+    BORRADOR_POS_ACTUAL_ID='';
     localStorage.setItem('adelaida_sucursal',SUCURSAL);
+    cargarPedidosEsperaPos();
 
     CATALOGO_POS=[];
     CATALOGO_POS_SUCURSAL='';
@@ -3315,6 +3337,8 @@ function renderCarrito(){
     Q(tot);
 
   actualizarCambio();
+  actualizarInfoPedidoActualPos();
+  autoGuardarBorradorPos();
 }
 
 function cambiarPrecio(i,v){
@@ -6797,14 +6821,411 @@ function guardarDivisa(){
   });
 }
 
+
+function clavePedidosEsperaPos(){
+  const usuario=
+    SESION&&SESION.usuario
+      ? String(SESION.usuario)
+      : 'SIN_USUARIO';
+
+  return 'adelaida_pos_espera_'+
+    usuario.toUpperCase().replace(/[^A-Z0-9_-]/g,'_')+'_'+
+    String(SUCURSAL||'').toUpperCase().replace(/[^A-Z0-9_-]/g,'_');
+}
+
+function cargarPedidosEsperaPos(){
+  PEDIDOS_ESPERA_POS=[];
+
+  try{
+    const raw=localStorage.getItem(clavePedidosEsperaPos());
+    const arr=raw ? JSON.parse(raw) : [];
+    if(Array.isArray(arr)){
+      PEDIDOS_ESPERA_POS=arr.filter(x=>x&&x.id);
+    }
+  }catch(_e){
+    PEDIDOS_ESPERA_POS=[];
+  }
+
+  renderPedidosEsperaPos();
+}
+
+function persistirPedidosEsperaPos(){
+  try{
+    localStorage.setItem(
+      clavePedidosEsperaPos(),
+      JSON.stringify(PEDIDOS_ESPERA_POS.slice(-25))
+    );
+  }catch(_e){}
+}
+
+function datosActualesPedidoPos(){
+  return{
+    id:BORRADOR_POS_ACTUAL_ID||'',
+    fechaGuardado:new Date().toISOString(),
+    sucursal:String(SUCURSAL||''),
+    clienteId:String(CLIENTE_POS_ID||''),
+    cliente:$('posCliente') ? $('posCliente').value : '',
+    nit:$('posNit') ? $('posNit').value : '',
+    telefono:$('posTelefono') ? $('posTelefono').value : '',
+    whatsapp:$('posWhatsapp') ? $('posWhatsapp').value : '',
+    direccion:$('posDireccion') ? $('posDireccion').value : '',
+    vendedor:$('posVendedor') ? $('posVendedor').value : '',
+    metodo:$('posMetodo') ? $('posMetodo').value : 'EFECTIVO',
+    tipoDocumento:$('posTipoDocumento') ? $('posTipoDocumento').value : 'TICKET',
+    moneda:$('posMoneda') ? $('posMoneda').value : 'GTQ',
+    descuento:$('posDescuento') ? $('posDescuento').value : '0',
+    efectivo:$('posEfectivo') ? $('posEfectivo').value : '0',
+    cambioMoneda:$('posCambioMoneda') ? $('posCambioMoneda').value : 'GTQ',
+    nota:$('posNota') ? $('posNota').value : '',
+    carrito:(carrito||[]).map(x=>({...x}))
+  };
+}
+
+function pedidoPosTieneDatos(){
+  return Boolean(
+    (carrito&&carrito.length) ||
+    ($('posCliente')&&$('posCliente').value.trim()) ||
+    ($('posNit')&&$('posNit').value.trim()) ||
+    ($('posNota')&&$('posNota').value.trim())
+  );
+}
+
+function guardarPedidoActualEnEspera(silencioso=false){
+  if(!pedidoPosTieneDatos()){
+    return false;
+  }
+
+  if(!BORRADOR_POS_ACTUAL_ID){
+    BORRADOR_POS_ACTUAL_ID=
+      'BOR-'+Date.now()+'-'+
+      Math.random().toString(36).slice(2,8).toUpperCase();
+  }
+
+  const datos=datosActualesPedidoPos();
+  datos.id=BORRADOR_POS_ACTUAL_ID;
+
+  const pos=PEDIDOS_ESPERA_POS.findIndex(x=>x.id===datos.id);
+
+  if(pos>=0){
+    PEDIDOS_ESPERA_POS[pos]=datos;
+  }else{
+    PEDIDOS_ESPERA_POS.push(datos);
+  }
+
+  persistirPedidosEsperaPos();
+  renderPedidosEsperaPos();
+
+  if(!silencioso){
+    msg(
+      'mensajePos',
+      'Pedido puesto en espera. Puede atender al siguiente cliente y volver a este pedido cuando quiera.',
+      'info'
+    );
+  }
+
+  return true;
+}
+
+function autoGuardarBorradorPos(){
+  if(BORRADOR_POS_ACTUAL_ID){
+    guardarPedidoActualEnEspera(true);
+  }
+}
+
+function limpiarFormularioPedidoPos(){
+  carrito=[];
+  renderCarrito();
+
+  CLIENTE_POS_ID='';
+
+  if($('posClienteSelect')){
+    $('posClienteSelect').value='';
+  }
+
+  [
+    'posCliente','posNit','posTelefono',
+    'posWhatsapp','posDireccion','posNota'
+  ].forEach(id=>{
+    if($(id)) $(id).value='';
+  });
+
+  if($('posDescuento')) $('posDescuento').value=0;
+  if($('posEfectivo')) $('posEfectivo').value=0;
+  if($('posMetodo')) $('posMetodo').value='EFECTIVO';
+  if($('posTipoDocumento')) $('posTipoDocumento').value='TICKET';
+  if($('posMoneda')) $('posMoneda').value='GTQ';
+  if($('posCambioMoneda')) $('posCambioMoneda').value='GTQ';
+
+  cerrarReservaPos();
+  actualizarPago();
+  actualizarInfoPedidoActualPos();
+}
+
+function nuevoPedidoPos(){
+  if(pedidoPosTieneDatos()){
+    guardarPedidoActualEnEspera(true);
+  }
+
+  BORRADOR_POS_ACTUAL_ID='';
+  limpiarFormularioPedidoPos();
+
+  msg(
+    'mensajePos',
+    'Nuevo pedido listo. El pedido anterior quedó en espera.',
+    'ok'
+  );
+
+  if($('posCodigo')) $('posCodigo').focus();
+}
+
+function restaurarPedidoEsperaPos(id){
+  const b=PEDIDOS_ESPERA_POS.find(x=>x.id===id);
+
+  if(!b){
+    return msg('mensajePos','No se encontró el pedido en espera.','error');
+  }
+
+  if(
+    BORRADOR_POS_ACTUAL_ID!==id &&
+    pedidoPosTieneDatos()
+  ){
+    guardarPedidoActualEnEspera(true);
+  }
+
+  BORRADOR_POS_ACTUAL_ID=id;
+  CLIENTE_POS_ID=String(b.clienteId||'');
+
+  carrito=Array.isArray(b.carrito)
+    ? b.carrito.map(x=>({...x}))
+    : [];
+
+  const asignar=(idCampo,valor)=>{
+    if($(idCampo)) $(idCampo).value=valor==null?'':valor;
+  };
+
+  asignar('posCliente',b.cliente);
+  asignar('posNit',b.nit);
+  asignar('posTelefono',b.telefono);
+  asignar('posWhatsapp',b.whatsapp);
+  asignar('posDireccion',b.direccion);
+  asignar('posNota',b.nota);
+  asignar('posDescuento',b.descuento||0);
+  asignar('posEfectivo',b.efectivo||0);
+
+  if($('posClienteSelect')){
+    $('posClienteSelect').value=
+      [...$('posClienteSelect').options].some(
+        o=>o.value===CLIENTE_POS_ID
+      )
+        ? CLIENTE_POS_ID
+        : '';
+  }
+
+  [
+    ['posVendedor',b.vendedor],
+    ['posMetodo',b.metodo||'EFECTIVO'],
+    ['posTipoDocumento',b.tipoDocumento||'TICKET'],
+    ['posMoneda',b.moneda||'GTQ'],
+    ['posCambioMoneda',b.cambioMoneda||'GTQ']
+  ].forEach(([idCampo,valor])=>{
+    const el=$(idCampo);
+    if(
+      el &&
+      [...el.options].some(o=>o.value===String(valor||''))
+    ){
+      el.value=String(valor||'');
+    }
+  });
+
+  renderCarrito();
+  actualizarPago();
+  actualizarInfoPedidoActualPos();
+  renderPedidosEsperaPos();
+
+  msg(
+    'mensajePos',
+    'Pedido en espera recuperado'+
+    (b.cliente ? ': '+b.cliente : '')+'.',
+    'ok'
+  );
+
+  window.scrollTo({
+    top:$('vistaPos').offsetTop,
+    behavior:'smooth'
+  });
+}
+
+function eliminarPedidoEsperaPos(id){
+  const b=PEDIDOS_ESPERA_POS.find(x=>x.id===id);
+
+  if(!b) return;
+
+  if(!confirm(
+    '¿Eliminar el pedido en espera'+
+    (b.cliente?' de '+b.cliente:'')+
+    '? Esta acción solo elimina el borrador local.'
+  )){
+    return;
+  }
+
+  PEDIDOS_ESPERA_POS=
+    PEDIDOS_ESPERA_POS.filter(x=>x.id!==id);
+
+  persistirPedidosEsperaPos();
+
+  if(BORRADOR_POS_ACTUAL_ID===id){
+    BORRADOR_POS_ACTUAL_ID='';
+    limpiarFormularioPedidoPos();
+  }
+
+  renderPedidosEsperaPos();
+}
+
+function quitarBorradorPosCompletado(){
+  if(!BORRADOR_POS_ACTUAL_ID){
+    return;
+  }
+
+  PEDIDOS_ESPERA_POS=
+    PEDIDOS_ESPERA_POS.filter(
+      x=>x.id!==BORRADOR_POS_ACTUAL_ID
+    );
+
+  persistirPedidosEsperaPos();
+  BORRADOR_POS_ACTUAL_ID='';
+  renderPedidosEsperaPos();
+}
+
+function actualizarInfoPedidoActualPos(){
+  const el=$('posPedidoActualInfo');
+  if(!el) return;
+
+  const cliente=
+    $('posCliente')&&$('posCliente').value.trim()
+      ? $('posCliente').value.trim()
+      : 'Sin cliente';
+
+  const pares=(carrito||[]).reduce(
+    (s,x)=>s+Number(x.cantidad||0),
+    0
+  );
+
+  el.textContent=
+    (BORRADOR_POS_ACTUAL_ID?'En espera / editando':'Pedido nuevo')+
+    ' · '+cliente+
+    ' · '+pares+' unidad(es)';
+}
+
+function renderPedidosEsperaPos(){
+  const box=$('pedidosEsperaPosLista');
+  if(!box) return;
+
+  if(!PEDIDOS_ESPERA_POS.length){
+    box.innerHTML='<span class="sub">No hay pedidos en espera.</span>';
+    actualizarInfoPedidoActualPos();
+    return;
+  }
+
+  box.innerHTML='';
+
+  PEDIDOS_ESPERA_POS
+    .slice()
+    .sort((a,b)=>
+      String(b.fechaGuardado||'')
+        .localeCompare(String(a.fechaGuardado||''))
+    )
+    .forEach(b=>{
+      const d=document.createElement('div');
+      d.className='pedidoCard';
+      d.style.marginTop='6px';
+
+      const pares=(b.carrito||[]).reduce(
+        (s,x)=>s+Number(x.cantidad||0),
+        0
+      );
+
+      const totalB=(b.carrito||[]).reduce(
+        (s,x)=>s+
+          Number(x.precioVenta??x.precio??0)*
+          Number(x.cantidad||0),
+        0
+      );
+
+      const activo=b.id===BORRADOR_POS_ACTUAL_ID;
+
+      d.innerHTML=
+        '<div class="cartTop">'+
+          '<div>'+
+            '<b>'+esc(b.cliente||'Cliente sin nombre')+'</b>'+
+            '<div class="mini">'+
+              pares+' unidad(es) · '+Q(totalB)+
+              (activo?' · <b>ACTUAL</b>':'')+
+            '</div>'+
+          '</div>'+
+        '</div>';
+
+      const acciones=document.createElement('div');
+      acciones.className='fila';
+      acciones.style.marginTop='6px';
+
+      const abrir=document.createElement('button');
+      abrir.className=activo?'btnNegro':'btnAzul';
+      abrir.style.flex='1';
+      abrir.type='button';
+      abrir.textContent=activo?'Editando':'Continuar';
+      abrir.disabled=activo;
+      abrir.onclick=()=>restaurarPedidoEsperaPos(b.id);
+
+      const eliminar=document.createElement('button');
+      eliminar.className='btnGris';
+      eliminar.type='button';
+      eliminar.textContent='Eliminar';
+      eliminar.onclick=()=>eliminarPedidoEsperaPos(b.id);
+
+      acciones.appendChild(abrir);
+      acciones.appendChild(eliminar);
+      d.appendChild(acciones);
+      box.appendChild(d);
+    });
+
+  actualizarInfoPedidoActualPos();
+}
+
+function activarAutoguardadoPedidoPos(){
+  const ids=[
+    'posCliente','posNit','posTelefono','posWhatsapp','posDireccion',
+    'posVendedor','posMetodo','posTipoDocumento','posMoneda',
+    'posDescuento','posEfectivo','posCambioMoneda','posNota'
+  ];
+
+  ids.forEach(id=>{
+    const el=$(id);
+    if(!el || el.dataset.esperaAutosave==='SI') return;
+
+    el.dataset.esperaAutosave='SI';
+    el.addEventListener('input',()=>{
+      actualizarInfoPedidoActualPos();
+      autoGuardarBorradorPos();
+    });
+    el.addEventListener('change',()=>{
+      actualizarInfoPedidoActualPos();
+      autoGuardarBorradorPos();
+    });
+  });
+}
+
+
 function limpiarPosDespues(){
   carrito=[]; renderCarrito();
+  BORRADOR_POS_ACTUAL_ID='';
   CLIENTE_POS_ID='';
   if($('posClienteSelect')) $('posClienteSelect').value='';
   ['posCliente','posNit','posTelefono','posWhatsapp','posDireccion','posNota'].forEach(id=>{if($(id)) $(id).value='';});
   $('posDescuento').value=0;
   $('posEfectivo').value=0;
   cerrarReservaPos();
+  actualizarInfoPedidoActualPos();
+  renderPedidosEsperaPos();
 }
 
 
@@ -6834,6 +7255,8 @@ function seleccionarClientePos(){
   $('posTelefono').value=c.telefono||'';
   $('posWhatsapp').value=c.whatsapp||'';
   $('posDireccion').value=c.direccion||'';
+  actualizarInfoPedidoActualPos();
+  autoGuardarBorradorPos();
 }
 
 function toggleNuevoClientePos(forzar){
@@ -6929,6 +7352,7 @@ function guardarReservaPos(){
       $('ticketReservaPosCard').classList.remove('oculto');
     }
     const numero=r.numeroPedido,vence=r.fechaVencimiento;
+    quitarBorradorPosCompletado();
     limpiarPosDespues();
     CATALOGO_POS=[];CATALOGO_POS_TS=0;precargarCatalogoPos(true);
     msg('mensajePos','Reserva '+numero+' registrada hasta '+vence+(r.anticipo>0?' · Anticipo '+Q(r.anticipo):''),'ok');
@@ -6943,6 +7367,7 @@ function guardarPedido(){
     cliente:$('posCliente').value,nit:$('posNit').value,descuento:t.desc,nota:$('posNota').value,vendedor:$('posVendedor').value
   },r=>{
     if(!r.ok) return msg('mensajePos',r.error,'error');
+    quitarBorradorPosCompletado();
     limpiarPosDespues();
     msg('mensajePos','Pedido guardado: '+r.numeroPedido,'ok');
   });
