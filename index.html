@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Comercial Adelaida - POS</title>
+<meta name="theme-color" content="#222222">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Comercial Adelaida">
+<link rel="manifest" href="./manifest.webmanifest">
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript" defer>
 document.addEventListener('click',e=>{
   const input=$('pcModelo');
@@ -57,6 +62,15 @@ document.addEventListener('click',e=>{
   .dashboardGrid{grid-template-columns:repeat(2,1fr)}
   .dashboardDos{grid-template-columns:1fr}
 }
+
+
+#pwaUpdateBar{position:fixed;left:12px;right:12px;bottom:12px;z-index:2147483000;background:#fff;border:1px solid #ddd;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.22);padding:12px 14px;display:none;align-items:center;gap:10px;max-width:720px;margin:auto}
+#pwaUpdateBar.pwaShow{display:flex}
+#pwaUpdateBar .pwaTxt{flex:1;font-size:14px;line-height:1.3}
+#pwaUpdateBar .pwaTxt b{display:block;margin-bottom:2px}
+#pwaUpdateBar .pwaBtns{display:flex;gap:8px}
+#pwaUpdateBar button{padding:10px 12px;border-radius:10px}
+@media(max-width:560px){#pwaUpdateBar{left:8px;right:8px;bottom:8px;align-items:stretch;flex-direction:column}#pwaUpdateBar .pwaBtns button{flex:1}}
 
 </style>
 </head>
@@ -1408,7 +1422,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.03-ESTABLE-04.1';
+const VERSION_SISTEMA_UI='2026.10.06-ESTABLE-04.2';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -12501,5 +12515,88 @@ function esc(v){
     );
 }
 </script>
+
+<div id="pwaUpdateBar" role="status" aria-live="polite">
+  <div class="pwaTxt">
+    <b>Nueva versión disponible</b>
+    <span>Puedes actualizar sin desinstalar la app.</span>
+  </div>
+  <div class="pwaBtns">
+    <button id="pwaLaterBtn" type="button" class="btnGris">Después</button>
+    <button id="pwaUpdateBtn" type="button" class="btnNegro">Actualizar ahora</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const APP_VERSION='2026.10.06-ESTABLE-04.2';
+  window.APP_VERSION=APP_VERSION;
+
+  if(!('serviceWorker' in navigator)) return;
+
+  let waitingWorker=null;
+  const bar=()=>document.getElementById('pwaUpdateBar');
+
+  const showUpdate=(worker)=>{
+    waitingWorker=worker||waitingWorker;
+    const b=bar();
+    if(b) b.classList.add('pwaShow');
+  };
+
+  const hideUpdate=()=>{
+    const b=bar();
+    if(b) b.classList.remove('pwaShow');
+  };
+
+  const wireButtons=()=>{
+    const updateBtn=document.getElementById('pwaUpdateBtn');
+    const laterBtn=document.getElementById('pwaLaterBtn');
+
+    if(updateBtn){
+      updateBtn.onclick=()=>{
+        if(waitingWorker){
+          waitingWorker.postMessage({type:'SKIP_WAITING'});
+        }else{
+          location.reload();
+        }
+      };
+    }
+
+    if(laterBtn) laterBtn.onclick=hideUpdate;
+  };
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',wireButtons);
+  }else{
+    wireButtons();
+  }
+
+  navigator.serviceWorker.register('./sw.js',{scope:'./'}).then(reg=>{
+    if(reg.waiting) showUpdate(reg.waiting);
+
+    reg.addEventListener('updatefound',()=>{
+      const nw=reg.installing;
+      if(!nw) return;
+
+      nw.addEventListener('statechange',()=>{
+        if(nw.state==='installed' && navigator.serviceWorker.controller){
+          showUpdate(nw);
+        }
+      });
+    });
+
+    setInterval(()=>reg.update().catch(()=>{}),5*60*1000);
+    window.addEventListener('focus',()=>reg.update().catch(()=>{}));
+  }).catch(err=>console.warn('PWA SW:',err));
+
+  let refreshing=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(refreshing) return;
+    refreshing=true;
+    location.reload();
+  });
+})();
+</script>
+
 </body>
 </html>
