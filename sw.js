@@ -1,4 +1,4 @@
-const CACHE_NAME = 'adelaida-pos-2026.10.06-04.2';
+const CACHE_NAME = 'adelaida-pos-2026.10.06-04.2.1';
 const CORE = ['./', './index.html', './manifest.webmanifest'];
 
 self.addEventListener('install', event => {
