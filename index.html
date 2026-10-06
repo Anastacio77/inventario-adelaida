@@ -1422,7 +1422,8 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.06-ESTABLE-04.2';
+const VERSION_SISTEMA_UI='2026.10.06-ESTABLE-04.2.1';
+const VERSION_CODE_ESPERADA='2026.10.04-PRODUCCION-02';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -2053,10 +2054,10 @@ function verificarVersionSistema(){
   api('version',{},r=>{
     if(!r||!r.ok) return;
 
-    if(String(r.version||'')!==String(VERSION_SISTEMA_UI||'')){
+    if(String(r.version||'')!==String(VERSION_CODE_ESPERADA||'')){
       alert(
         'La interfaz y Code.gs no son de la misma versión. '+
-        'HTML: '+VERSION_SISTEMA_UI+' · Code.gs: '+String(r.version||'')+
+        'Interfaz: '+VERSION_SISTEMA_UI+' · Code.gs: '+String(r.version||'')+' · Esperado: '+VERSION_CODE_ESPERADA+
         '. Actualice ambos archivos.'
       );
     }
@@ -12529,7 +12530,7 @@ function esc(v){
 
 <script>
 (function(){
-  const APP_VERSION='2026.10.06-ESTABLE-04.2';
+  const APP_VERSION='2026.10.06-ESTABLE-04.2.1';
   window.APP_VERSION=APP_VERSION;
 
   if(!('serviceWorker' in navigator)) return;
