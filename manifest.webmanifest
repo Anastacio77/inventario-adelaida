@@ -1,0 +1,12 @@
+{
+  "name": "Comercial Adelaida - Punto de Venta",
+  "short_name": "Adelaida POS",
+  "description": "Punto de venta e inventario de Comercial Adelaida",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f4f6",
+  "theme_color": "#222222",
+  "lang": "es-GT",
+  "orientation": "any"
+}
