@@ -198,8 +198,9 @@ document.addEventListener('click',e=>{
       </div>
 
       <div id="pedidosEsperaPosBox" class="mensaje info" style="margin-bottom:10px">
-        <div class="fila" style="align-items:center">
-          <div style="flex:1"><b>Pedidos en espera</b> · puede cambiar entre clientes sin guardar todavía.</div>
+        <div class="fila" style="align-items:center;gap:6px;flex-wrap:wrap">
+          <div style="flex:1;min-width:210px"><b>Pedidos en espera</b> · puede cambiar entre clientes sin guardar todavía.</div>
+          <button class="btnMorado" type="button" onclick="ponerPedidoEnEsperaPos()">PONER EN ESPERA</button>
           <button class="btnGris" type="button" onclick="renderPedidosEsperaPos()">↻</button>
         </div>
         <div id="pedidosEsperaPosLista" style="margin-top:8px"></div>
@@ -1423,7 +1424,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.06-ESTABLE-04.3.0';
+const VERSION_SISTEMA_UI='2026.10.07-ESTABLE-04.3.1';
 const VERSION_CODE_ESPERADA='2026.10.06-PRODUCCION-03';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
@@ -12837,7 +12838,7 @@ function esc(v){
 
 <script>
 (function(){
-  const APP_VERSION='2026.10.06-ESTABLE-04.3.0';
+  const APP_VERSION='2026.10.07-ESTABLE-04.3.1';
   window.APP_VERSION=APP_VERSION;
 
   if(!('serviceWorker' in navigator)) return;
