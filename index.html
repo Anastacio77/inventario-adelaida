@@ -1422,7 +1422,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.06-ESTABLE-04.2.2';
+const VERSION_SISTEMA_UI='2026.10.06-ESTABLE-04.2.3';
 const VERSION_CODE_ESPERADA='2026.10.04-PRODUCCION-02';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
@@ -6065,6 +6065,181 @@ function cargarTraslados(sucursalSolicitada){
   );
 }
 
+function obtenerMetaProductoDocumento(item){
+  const codigo=String((item&&item.codigo)||'').trim();
+  if(!codigo) return item||{};
+
+  const fuentes=[
+    ...(CATALOGO_POS||[]),
+    ...(INVENTARIO_LISTA_CACHE||[]),
+    ...(STOCK_GLOBAL_CACHE||[])
+  ];
+
+  const meta=fuentes.find(p=>String(p.codigo||'').trim()===codigo)||{};
+
+  return {
+    ...meta,
+    ...(item||{}),
+    tipoIngreso:(item&&item.tipoIngreso)||meta.tipoIngreso||'',
+    escala:(item&&item.escala)||meta.escala||'',
+    marca:(item&&item.marca)||meta.marca||'',
+    modelo:(item&&item.modelo)||meta.modelo||'',
+    color:(item&&item.color)||meta.color||'',
+    talla:(item&&item.talla)||meta.talla||''
+  };
+}
+
+function escalaDocumentoProducto(p){
+  let escala=String(p.escala||'').trim();
+  const tipo=String(p.tipoIngreso||'').toUpperCase();
+
+  if(!escala && tipo==='CORRIDA'){
+    const talla=String(p.talla||'');
+    const encontrada=(ESCALAS||[]).find(e=>
+      (ESCALAS_MAP[e.nombre]||[]).map(String).includes(talla)
+    );
+    if(encontrada) escala=encontrada.nombre;
+  }
+
+  return escala;
+}
+
+function tablaProductosDocumento(items,opciones={}){
+  const mostrarCodigo=opciones.mostrarCodigo!==false;
+  const mostrarPrecio=opciones.mostrarPrecio===true;
+  const grupos={};
+
+  (items||[]).forEach(raw=>{
+    const p=obtenerMetaProductoDocumento(raw);
+    const tipo=String(p.tipoIngreso||'INDIVIDUAL').toUpperCase();
+    const escala=escalaDocumentoProducto(p);
+    const cant=Number(p.cantidad||0);
+    const precio=Number(p.precio||0);
+
+    const descripcion=
+      descripcionTicket(p)||
+      [
+        p.marca||'',
+        p.modelo||'',
+        p.color||''
+      ].filter(Boolean).join(' ')||
+      p.codigo||
+      'Producto';
+
+    const clave=[
+      descripcion,
+      tipo,
+      escala,
+      mostrarPrecio?precio:'',
+      mostrarCodigo?(p.codigo||''):''
+    ].join('||');
+
+    if(!grupos[clave]){
+      grupos[clave]={
+        descripcion,
+        tipo,
+        escala,
+        precio,
+        codigo:p.codigo||'',
+        cantidades:{},
+        cantidad:0,
+        total:0
+      };
+    }
+
+    const g=grupos[clave];
+    const talla=String(p.talla||'');
+    g.cantidades[talla]=(g.cantidades[talla]||0)+cant;
+    g.cantidad+=cant;
+    g.total+=(Number(p.subtotal)||precio*cant);
+  });
+
+  const escalasUsadas=[];
+  Object.values(grupos).forEach(g=>{
+    if(g.escala && !escalasUsadas.includes(g.escala)){
+      escalasUsadas.push(g.escala);
+    }
+  });
+
+  escalasUsadas.sort((a,b)=>{
+    const ia=ESCALAS.findIndex(x=>x.nombre===a);
+    const ib=ESCALAS.findIndex(x=>x.nombre===b);
+    if(ia<0&&ib<0) return String(a).localeCompare(String(b),undefined,{numeric:true});
+    if(ia<0) return 1;
+    if(ib<0) return -1;
+    return ia-ib;
+  });
+
+  let maxSlots=1;
+  escalasUsadas.forEach(e=>{
+    maxSlots=Math.max(maxSlots,(ESCALAS_MAP[e]||[]).length);
+  });
+
+  let encabezado='';
+  escalasUsadas.forEach(e=>{
+    const tallas=ESCALAS_MAP[e]||[];
+    encabezado+='<tr><th>'+esc(e)+'</th>';
+    for(let i=0;i<maxSlots;i++){
+      encabezado+='<th>'+esc(tallas[i]||'')+'</th>';
+    }
+    encabezado+='</tr>';
+  });
+
+  const filasEncabezado=1+escalasUsadas.length;
+  let filas='';
+
+  Object.values(grupos).forEach(g=>{
+    let nums='';
+
+    if(g.escala){
+      const tallas=ESCALAS_MAP[g.escala]||[];
+      nums+='<td><b>'+esc(g.escala)+'</b></td>';
+
+      for(let i=0;i<maxSlots;i++){
+        const talla=tallas[i];
+        nums+='<td>'+(talla?(g.cantidades[String(talla)]||''):'')+'</td>';
+      }
+    }else{
+      const tallasConCantidad=Object.entries(g.cantidades)
+        .filter(([,n])=>Number(n)>0);
+
+      nums+='<td><b>✓</b></td>';
+      nums+='<td><b>'+g.cantidad+'</b></td>';
+
+      for(let i=1;i<maxSlots;i++){
+        nums+='<td></td>';
+      }
+    }
+
+    filas+=
+      '<tr>'+
+        '<td><b>'+g.cantidad+'</b></td>'+
+        '<td class="descripcion">'+esc(g.descripcion)+'</td>'+
+        nums+
+        (mostrarCodigo?'<td>'+esc(g.codigo)+'</td>':'')+
+        (mostrarPrecio?'<td class="derecha">'+Q(g.precio)+'</td><td class="derecha"><b>'+Q(g.total)+'</b></td>':'')+
+      '</tr>';
+  });
+
+  const extraCols=(mostrarCodigo?1:0)+(mostrarPrecio?2:0);
+
+  return (
+    '<table class="ticketTabla">'+
+      '<thead>'+
+        '<tr>'+
+          '<th rowspan="'+filasEncabezado+'">CANT</th>'+
+          '<th rowspan="'+filasEncabezado+'">DESCRIPCIÓN</th>'+
+          '<th colspan="'+(maxSlots+1)+'">NUMERACIÓN</th>'+
+          (mostrarCodigo?'<th rowspan="'+filasEncabezado+'">CÓDIGO</th>':'')+
+          (mostrarPrecio?'<th rowspan="'+filasEncabezado+'">P/UNI</th><th rowspan="'+filasEncabezado+'">TOTAL</th>':'')+
+        '</tr>'+
+        encabezado+
+      '</thead>'+
+      '<tbody>'+filas+'</tbody>'+
+    '</table>'
+  );
+}
+
 function imprimirTraslado(t){
   if(!t){
     return alert('No hay datos del traslado para imprimir.');
@@ -6073,21 +6248,18 @@ function imprimirTraslado(t){
   const estado=String(t.estado||'').toUpperCase();
   const recibido=estado==='RECIBIDO';
 
-  const producto=[
-    t.marca||'',
-    t.modelo||'',
-    t.color||''
-  ].filter(Boolean).join(' ');
-
-  const descripcion=
-    producto||
-    t.codigo||
-    'Producto';
-
-  const numeracion=
-    t.talla
-      ? String(t.talla)
-      : '✓';
+  const items=(Array.isArray(t.items)&&t.items.length)
+    ? t.items
+    : [{
+        codigo:t.codigo||'',
+        marca:t.marca||'',
+        modelo:t.modelo||'',
+        color:t.color||'',
+        talla:t.talla||'',
+        tipoIngreso:t.tipoIngreso||'',
+        escala:t.escala||'',
+        cantidad:Number(t.cantidad||0)
+      }];
 
   const tempId='ticketTrasladoTemp';
   let temp=document.getElementById(tempId);
@@ -6114,32 +6286,13 @@ function imprimirTraslado(t){
     (recibido&&t.fechaRecepcion?'<div><b>Fecha de recepción:</b> '+esc(t.fechaRecepcion)+'</div>':'')+
     (recibido&&t.usuarioRecibe?'<div><b>Recibido por:</b> '+esc(t.usuarioRecibe)+'</div>':'')+
     '<hr>'+
-    '<table class="ticketTabla">'+
-      '<thead>'+
-        '<tr>'+
-          '<th>CANT</th>'+
-          '<th>DESCRIPCIÓN</th>'+
-          '<th>NUMERACIÓN</th>'+
-          '<th>CÓDIGO</th>'+
-        '</tr>'+
-      '</thead>'+
-      '<tbody>'+
-        '<tr>'+
-          '<td><b>'+Number(t.cantidad||0)+'</b></td>'+
-          '<td class="descripcion">'+esc(descripcion)+'</td>'+
-          '<td><b>'+esc(numeracion)+'</b></td>'+
-          '<td>'+esc(t.codigo||'')+'</td>'+
-        '</tr>'+
-      '</tbody>'+
-    '</table>'+
-    (t.nota?'<><hr><div><b>Nota:</b> '+esc(t.nota)+'</div>':'')+
+    tablaProductosDocumento(items,{mostrarCodigo:true,mostrarPrecio:false})+
+    (t.nota?'<hr><div><b>Nota:</b> '+esc(t.nota)+'</div>':'')+
     '<hr>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:42px">'+
       '<div class="centro" style="border-top:1px solid #222;padding-top:6px">Entrega / Despacha</div>'+
       '<div class="centro" style="border-top:1px solid #222;padding-top:6px">Recibe</div>'+
     '</div>';
-
-  temp.innerHTML=temp.innerHTML.replace('<>','');
 
   imprimirTicket(tempId,'MEDIA');
 
@@ -12536,7 +12689,7 @@ function esc(v){
 
 <script>
 (function(){
-  const APP_VERSION='2026.10.06-ESTABLE-04.2.2';
+  const APP_VERSION='2026.10.06-ESTABLE-04.2.3';
   window.APP_VERSION=APP_VERSION;
 
   if(!('serviceWorker' in navigator)) return;
