@@ -1422,7 +1422,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.06-ESTABLE-04.2.1';
+const VERSION_SISTEMA_UI='2026.10.06-ESTABLE-04.2.2';
 const VERSION_CODE_ESPERADA='2026.10.04-PRODUCCION-02';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
@@ -6073,75 +6073,81 @@ function imprimirTraslado(t){
   const estado=String(t.estado||'').toUpperCase();
   const recibido=estado==='RECIBIDO';
 
-  const w=window.open('','_blank');
-
-  if(!w){
-    return alert('El navegador bloqueó la ventana de impresión.');
-  }
-
   const producto=[
     t.marca||'',
     t.modelo||'',
-    t.color||'',
-    t.talla ? 'Talla '+t.talla : ''
-  ].filter(Boolean).join(' · ');
+    t.color||''
+  ].filter(Boolean).join(' ');
 
-  const filas=[
-    ['N.º traslado',t.numeroTraslado||''],
-    ['Fecha de despacho',t.fecha||''],
-    ['Origen',t.origen||''],
-    ['Destino',t.destino||''],
-    ['Producto',producto],
-    ['Código',t.codigo||''],
-    ['Cantidad',Number(t.cantidad||0)],
-    ['Estado',recibido?'RECIBIDO':'EN TRÁNSITO'],
-    ['Despachado por',t.usuario||''],
-    ['Nota',t.nota||'']
-  ];
+  const descripcion=
+    producto||
+    t.codigo||
+    'Producto';
 
-  if(recibido){
-    filas.push(['Fecha de recepción',t.fechaRecepcion||'']);
-    filas.push(['Recibido por',t.usuarioRecibe||'']);
+  const numeracion=
+    t.talla
+      ? String(t.talla)
+      : '✓';
+
+  const tempId='ticketTrasladoTemp';
+  let temp=document.getElementById(tempId);
+
+  if(!temp){
+    temp=document.createElement('div');
+    temp.id=tempId;
+    temp.className='ticket';
+    temp.style.display='none';
+    document.body.appendChild(temp);
   }
 
-  const cuerpo=filas.map(f=>
-    '<tr><th>'+esc(f[0])+'</th><td>'+esc(f[1])+'</td></tr>'
-  ).join('');
+  temp.innerHTML=
+    '<h2>COMERCIAL ADELAIDA</h2>'+
+    '<div class="centro">Zapatería</div>'+
+    '<div class="centro"><b>COMPROBANTE DE TRASLADO</b></div>'+
+    '<hr>'+
+    '<div><b>Traslado:</b> '+esc(t.numeroTraslado||'')+'</div>'+
+    '<div><b>Fecha:</b> '+esc(t.fecha||'')+'</div>'+
+    '<div><b>Origen:</b> '+esc(t.origen||'')+'</div>'+
+    '<div><b>Destino:</b> '+esc(t.destino||'')+'</div>'+
+    '<div><b>Estado:</b> '+esc(recibido?'RECIBIDO':'EN TRÁNSITO')+'</div>'+
+    (t.usuario?'<div><b>Despachado por:</b> '+esc(t.usuario)+'</div>':'')+
+    (recibido&&t.fechaRecepcion?'<div><b>Fecha de recepción:</b> '+esc(t.fechaRecepcion)+'</div>':'')+
+    (recibido&&t.usuarioRecibe?'<div><b>Recibido por:</b> '+esc(t.usuarioRecibe)+'</div>':'')+
+    '<hr>'+
+    '<table class="ticketTabla">'+
+      '<thead>'+
+        '<tr>'+
+          '<th>CANT</th>'+
+          '<th>DESCRIPCIÓN</th>'+
+          '<th>NUMERACIÓN</th>'+
+          '<th>CÓDIGO</th>'+
+        '</tr>'+
+      '</thead>'+
+      '<tbody>'+
+        '<tr>'+
+          '<td><b>'+Number(t.cantidad||0)+'</b></td>'+
+          '<td class="descripcion">'+esc(descripcion)+'</td>'+
+          '<td><b>'+esc(numeracion)+'</b></td>'+
+          '<td>'+esc(t.codigo||'')+'</td>'+
+        '</tr>'+
+      '</tbody>'+
+    '</table>'+
+    (t.nota?'<><hr><div><b>Nota:</b> '+esc(t.nota)+'</div>':'')+
+    '<hr>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:42px">'+
+      '<div class="centro" style="border-top:1px solid #222;padding-top:6px">Entrega / Despacha</div>'+
+      '<div class="centro" style="border-top:1px solid #222;padding-top:6px">Recibe</div>'+
+    '</div>';
 
-  w.document.open();
-  w.document.write(
-    '<!doctype html><html><head><meta charset="utf-8">'+
-    '<title>Traslado '+esc(t.numeroTraslado||'')+'</title>'+
-    '<style>'+
-      '@page{size:letter portrait;margin:12mm}'+
-      '*{box-sizing:border-box}'+
-      'body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;font-size:12px}'+
-      '.cab{text-align:center;margin-bottom:14px}'+
-      '.cab h1{font-size:18px;margin:0 0 4px}'+
-      '.cab h2{font-size:15px;margin:0}'+
-      'table{width:100%;border-collapse:collapse;margin-top:14px}'+
-      'th,td{border:1px solid #555;padding:8px;vertical-align:top}'+
-      'th{width:32%;text-align:left;background:#f2f2f2}'+
-      '.estado{text-align:center;font-size:14px;font-weight:700;margin:12px 0}'+
-      '.firmas{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:55px}'+
-      '.firma{text-align:center;border-top:1px solid #111;padding-top:6px}'+
-    '</style></head><body>'+
-      '<div class="cab">'+
-        '<h1>COMERCIAL ADELAIDA</h1>'+
-        '<h2>COMPROBANTE DE TRASLADO</h2>'+
-      '</div>'+
-      '<div class="estado">'+esc(recibido?'RECIBIDO':'EN TRÁNSITO')+'</div>'+
-      '<table><tbody>'+cuerpo+'</tbody></table>'+
-      '<div class="firmas">'+
-        '<div class="firma">Entrega / Despacha</div>'+
-        '<div class="firma">Recibe</div>'+
-      '</div>'+
-      '<script>window.onload=function(){setTimeout(function(){window.print();},150)};<\/script>'+
-    '</body></html>'
-  );
-  w.document.close();
+  temp.innerHTML=temp.innerHTML.replace('<>','');
+
+  imprimirTicket(tempId,'MEDIA');
+
+  setTimeout(()=>{
+    const el=document.getElementById(tempId);
+    if(el) el.remove();
+  },4000);
 }
-
 
 function confirmarRecibidoTraslado(numeroTraslado,destinoTraslado){
   if(!numeroTraslado) return;
@@ -12530,7 +12536,7 @@ function esc(v){
 
 <script>
 (function(){
-  const APP_VERSION='2026.10.06-ESTABLE-04.2.1';
+  const APP_VERSION='2026.10.06-ESTABLE-04.2.2';
   window.APP_VERSION=APP_VERSION;
 
   if(!('serviceWorker' in navigator)) return;
