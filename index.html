@@ -1431,7 +1431,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.07-ESTABLE-04.3.2';
+const VERSION_SISTEMA_UI='2026.10.07-ESTABLE-04.3.3';
 const VERSION_CODE_ESPERADA='2026.10.07-PRODUCCION-04';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
@@ -4622,118 +4622,76 @@ function imprimirTicket(id,formato='MEDIA'){
   const el=$(id);
 
   if(!el){
-    return;
+    return alert('No se encontró el documento para imprimir.');
   }
 
-  const media=
-    formato==='MEDIA';
+  const media=formato==='MEDIA';
 
-  const iframe=
-    document.createElement(
-      'iframe'
-    );
+  let portal=document.getElementById('portalImpresionAdelaida');
+  if(portal) portal.remove();
 
-  iframe.style.position=
-    'fixed';
+  portal=document.createElement('div');
+  portal.id='portalImpresionAdelaida';
+  portal.innerHTML='<div class="ticket">'+el.innerHTML+'</div>';
+  document.body.appendChild(portal);
 
-  iframe.style.left=
-    '-10000px';
+  let style=document.getElementById('estiloImpresionAdelaida');
+  if(style) style.remove();
 
-  iframe.style.top=
-    '0';
+  style=document.createElement('style');
+  style.id='estiloImpresionAdelaida';
+  style.textContent=
+    '@media screen{#portalImpresionAdelaida{display:none!important}}'+
+    '@media print{'+
+      '@page{size:'+(media?'8.5in 5.5in':'8.5in 11in')+
+      ';margin:'+(media?'0.12in':'0.25in')+'}'+
+      'html,body{margin:0!important;padding:0!important;background:#fff!important;overflow:visible!important}'+
+      'body>*{display:none!important}'+
+      '#portalImpresionAdelaida{display:block!important;position:static!important;width:'+
+        (media?'8.26in':'8in')+
+        '!important;min-height:0!important;max-height:none!important;overflow:visible!important;margin:0!important;padding:0!important;font-family:monospace!important;color:#000!important;background:#fff!important}'+
+      '#portalImpresionAdelaida *{visibility:visible!important}'+
+      '#portalImpresionAdelaida .ticket{width:100%!important;font-family:monospace!important}'+
+      '#portalImpresionAdelaida .ticket h2{text-align:center!important;margin:0!important}'+
+      '#portalImpresionAdelaida .ticket hr{border:0!important;border-top:1px dashed #333!important}'+
+      '#portalImpresionAdelaida .ticketTabla{width:100%!important;border-collapse:collapse!important}'+
+      '#portalImpresionAdelaida .ticketTabla th,#portalImpresionAdelaida .ticketTabla td{border:1px solid #222!important;padding:3px!important;text-align:center!important;font-size:11px!important;vertical-align:middle!important}'+
+      '#portalImpresionAdelaida .ticketTabla .descripcion{text-align:left!important}'+
+      '#portalImpresionAdelaida .ticketTabla .derecha{text-align:right!important}'+
+      '#portalImpresionAdelaida .lineaTotal{display:flex!important;justify-content:space-between!important;margin-top:5px!important}'+
+      '#portalImpresionAdelaida .centro{text-align:center!important}'+
+    '}';
 
-  iframe.style.width=
-    '816px';
+  document.head.appendChild(style);
 
-  iframe.style.height=
-    media
-    ?
-    '528px'
-    :
-    '1056px';
+  let limpiado=false;
+  const limpiar=()=>{
+    if(limpiado) return;
+    limpiado=true;
+    window.removeEventListener('afterprint',limpiar);
+    setTimeout(()=>{
+      const p=document.getElementById('portalImpresionAdelaida');
+      const s=document.getElementById('estiloImpresionAdelaida');
+      if(p) p.remove();
+      if(s) s.remove();
+    },250);
+  };
 
-  iframe.style.border=
-    '0';
+  window.addEventListener('afterprint',limpiar,{once:true});
 
-  document.body.appendChild(
-    iframe
-  );
-
-  const doc=
-    iframe.contentDocument||
-    iframe.contentWindow.document;
-
-  doc.open();
-
-  doc.write(
-    '<!DOCTYPE html>'+
-    '<html>'+
-    '<head>'+
-    '<meta charset="UTF-8">'+
-    '<style>'+
-    '@page{size:'+
-    (
-      media
-      ?
-      '8.5in 5.5in'
-      :
-      '8.5in 11in'
-    )+
-    ';margin:'+
-    (
-      media
-      ?
-      '0.12in'
-      :
-      '0.25in'
-    )+
-    '}'+
-    'html,body{width:'+
-    (
-      media
-      ?
-      '8.26in'
-      :
-      '8in'
-    )+
-    ';min-height:0;max-height:none;overflow:visible;margin:0;font-family:monospace}'+
-    '.ticket{width:100%;font-family:monospace}'+
-    '.ticket h2{text-align:center;margin:0}'+
-    '.ticket hr{border:0;border-top:1px dashed #333}'+
-    '.ticketTabla{width:100%;border-collapse:collapse}'+
-    '.ticketTabla th,.ticketTabla td{border:1px solid #222;padding:3px;text-align:center;font-size:11px;vertical-align:middle}'+
-    '.ticketTabla .descripcion{text-align:left}'+
-    '.ticketTabla .derecha{text-align:right}'+
-    '.lineaTotal{display:flex;justify-content:space-between;margin-top:5px}'+
-    '.centro{text-align:center}'+
-    '</style>'+
-    '</head>'+
-    '<body>'+
-    '<div class="ticket">'+
-    el.innerHTML+
-    '</div>'+
-    '</body>'+
-    '</html>'
-  );
-
-  doc.close();
-
-  setTimeout(
-    ()=>{
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-    },
-    500
-  );
-
-  setTimeout(
-    ()=>{
-      iframe.remove();
-    },
-    3000
-  );
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      try{
+        window.focus();
+        window.print();
+      }catch(err){
+        limpiar();
+        alert('No se pudo abrir la impresión en este dispositivo. Intente desde el menú Compartir → Imprimir.');
+      }
+      setTimeout(limpiar,5000);
+    });
+  });
 }
-
 async function toggleCam(){
   if(scannerPos){
     try{
@@ -12871,7 +12829,7 @@ function esc(v){
 
 <script>
 (function(){
-  const APP_VERSION='2026.10.07-ESTABLE-04.3.2';
+  const APP_VERSION='2026.10.07-ESTABLE-04.3.3';
   window.APP_VERSION=APP_VERSION;
 
   if(!('serviceWorker' in navigator)) return;
