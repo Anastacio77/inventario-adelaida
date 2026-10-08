@@ -814,14 +814,21 @@ document.addEventListener('click',e=>{
         <div id="sugerenciasTras" class="listaSugerencias oculto"></div>
       </div>
 
-      <label>Sucursal destino</label>
-      <select id="trasDestino"></select>
+      <div class="fila" style="align-items:end;gap:8px;margin-top:10px">
+        <div style="width:160px;max-width:42%">
+          <label>Cantidad</label>
+          <input id="trasCantidad" type="number" min="1" value="1">
+        </div>
+        <button class="btnVerde" type="button" style="flex:1" onclick="agregarReferenciaTraslado()">+ Agregar al traslado</button>
+      </div>
 
-      <label>Cantidad</label>
-      <input id="trasCantidad" type="number" min="1" value="1">
+      <div id="listaItemsTraslado" style="margin-top:12px"></div>
+
+      <label>Sucursal destino</label>
+      <select id="trasDestino" onchange="TRASLADO_SOLICITUD_ID=''"></select>
 
       <label>Nota</label>
-      <textarea id="trasNota"></textarea>
+      <textarea id="trasNota" oninput="TRASLADO_SOLICITUD_ID=''"></textarea>
 
       <button id="btnDespacharTraslado" class="btnAzul w100" style="margin-top:12px" onclick="hacerTraslado()">Despachar traslado</button>
 
@@ -1424,8 +1431,8 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.07-ESTABLE-04.3.1';
-const VERSION_CODE_ESPERADA='2026.10.06-PRODUCCION-03';
+const VERSION_SISTEMA_UI='2026.10.07-ESTABLE-04.3.2';
+const VERSION_CODE_ESPERADA='2026.10.07-PRODUCCION-04';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -5695,248 +5702,271 @@ function guardarCorrida(){
 }
 
 
+
 let PRODUCTOS_TRASLADO_ORIGEN=[];
 let PRODUCTOS_TRASLADO_SUCURSAL='';
 let PRODUCTOS_TRASLADO_TS=0;
+let ITEMS_TRASLADO=[];
+let ULTIMO_TRASLADO_IMPRESION=null;
+let TRASLADO_SOLICITUD_ID='';
+let TRASLADO_ENVIANDO=false;
 
 function cargarProductosTrasladoOrigen(forzar=false){
   const sel=$('trasProductoSelect');
   if(!sel || !TOKEN) return;
-
-  const vigente=
-    PRODUCTOS_TRASLADO_ORIGEN.length &&
+  const vigente=PRODUCTOS_TRASLADO_ORIGEN.length &&
     PRODUCTOS_TRASLADO_SUCURSAL===SUCURSAL &&
     (Date.now()-PRODUCTOS_TRASLADO_TS)<10000;
-
-  if(vigente && !forzar){
-    llenarProductosTrasladoOrigen();
-    return;
-  }
+  if(vigente && !forzar){ llenarProductosTrasladoOrigen(); return; }
 
   sel.innerHTML='<option value="">Cargando productos de '+esc(SUCURSAL)+'…</option>';
   sel.disabled=true;
+  if($('trasProductoInfo')) $('trasProductoInfo').textContent='Consultando existencia disponible en '+SUCURSAL+'…';
 
-  if($('trasProductoInfo')){
-    $('trasProductoInfo').textContent='Consultando existencia disponible en '+SUCURSAL+'…';
-  }
-
-  api(
-    'inventariolista',
-    {sucursal:SUCURSAL,q:''},
-    r=>{
-      sel.disabled=false;
-
-      if(!r||!r.ok){
-        sel.innerHTML='<option value="">No se pudieron cargar los productos</option>';
-        if($('trasProductoInfo')){
-          $('trasProductoInfo').textContent=(r&&r.error)||'No se pudo consultar el inventario de origen.';
-        }
-        return;
-      }
-
-      PRODUCTOS_TRASLADO_ORIGEN=(r.productos||[])
-        .filter(p=>Number(p.existencia||0)>0)
-        .sort((a,b)=>{
-          const aa=[a.marca||'',a.modelo||'',a.color||'',a.talla||''].join(' ');
-          const bb=[b.marca||'',b.modelo||'',b.color||'',b.talla||''].join(' ');
-          return aa.localeCompare(bb,undefined,{numeric:true,sensitivity:'base'});
-        });
-
-      PRODUCTOS_TRASLADO_SUCURSAL=SUCURSAL;
-      PRODUCTOS_TRASLADO_TS=Date.now();
-
-      llenarProductosTrasladoOrigen();
+  api('inventariolista',{sucursal:SUCURSAL,q:''},r=>{
+    sel.disabled=false;
+    if(!r||!r.ok){
+      sel.innerHTML='<option value="">No se pudieron cargar los productos</option>';
+      if($('trasProductoInfo')) $('trasProductoInfo').textContent=(r&&r.error)||'No se pudo consultar el inventario de origen.';
+      return;
     }
-  );
+    PRODUCTOS_TRASLADO_ORIGEN=(r.productos||[])
+      .filter(p=>Number(p.existencia||0)>0)
+      .sort((a,b)=>{
+        const aa=[a.marca||'',a.modelo||'',a.color||'',a.talla||''].join(' ');
+        const bb=[b.marca||'',b.modelo||'',b.color||'',b.talla||''].join(' ');
+        return aa.localeCompare(bb,undefined,{numeric:true,sensitivity:'base'});
+      });
+    PRODUCTOS_TRASLADO_SUCURSAL=SUCURSAL;
+    PRODUCTOS_TRASLADO_TS=Date.now();
+    llenarProductosTrasladoOrigen();
+    renderItemsTraslado();
+  });
 }
 
 function llenarProductosTrasladoOrigen(){
   const sel=$('trasProductoSelect');
   if(!sel) return;
-
   const actual=$('trasCodigo') ? $('trasCodigo').value.trim() : '';
-
   sel.innerHTML='';
   sel.add(new Option('Seleccione un producto con existencia',''));
 
   PRODUCTOS_TRASLADO_ORIGEN.forEach(p=>{
-    const texto=[
-      p.marca||'',
-      p.modelo||'',
-      p.color||'',
-      p.talla ? 'Talla '+p.talla : '',
-      'Existencia '+Number(p.existencia||0)
-    ].filter(Boolean).join(' · ');
-
+    const ya=ITEMS_TRASLADO.filter(x=>String(x.codigo||'')===String(p.codigo||''))
+      .reduce((s,x)=>s+Number(x.cantidad||0),0);
+    const disp=Math.max(0,Number(p.existencia||0)-ya);
+    if(disp<=0) return;
+    const texto=[p.marca||'',p.modelo||'',p.color||'',p.talla ? 'Talla '+p.talla : '','Disponible '+disp]
+      .filter(Boolean).join(' · ');
     const o=new Option(texto,String(p.codigo||''));
     o.dataset.existencia=String(Number(p.existencia||0));
+    o.dataset.disponible=String(disp);
     o.dataset.marca=String(p.marca||'');
     o.dataset.modelo=String(p.modelo||'');
     o.dataset.color=String(p.color||'');
     o.dataset.talla=String(p.talla||'');
+    o.dataset.tipoIngreso=String(p.tipoIngreso||'');
+    o.dataset.escala=String(p.escala||'');
     sel.add(o);
   });
 
-  if(actual && [...sel.options].some(o=>o.value===actual)){
-    sel.value=actual;
-  }
-
+  if(actual && [...sel.options].some(o=>o.value===actual)) sel.value=actual;
   if($('trasProductoInfo')){
-    $('trasProductoInfo').textContent=
-      PRODUCTOS_TRASLADO_ORIGEN.length
-        ? PRODUCTOS_TRASLADO_ORIGEN.length+' referencias con existencia disponibles en '+SUCURSAL+'.'
-        : 'No hay productos con existencia disponible en '+SUCURSAL+'.';
+    $('trasProductoInfo').textContent=PRODUCTOS_TRASLADO_ORIGEN.length
+      ? PRODUCTOS_TRASLADO_ORIGEN.length+' referencias con existencia disponibles en '+SUCURSAL+'.'
+      : 'No hay productos con existencia disponible en '+SUCURSAL+'.';
   }
+}
+
+function metaProductoTraslado_(codigo){
+  return PRODUCTOS_TRASLADO_ORIGEN.find(p=>String(p.codigo||'').trim()===String(codigo||'').trim())||null;
 }
 
 function seleccionarProductoTraslado(){
   TRASLADO_SOLICITUD_ID='';
   const sel=$('trasProductoSelect');
   if(!sel || !sel.value) return;
-
   const op=sel.options[sel.selectedIndex];
   $('trasCodigo').value=sel.value;
-
   if($('trasProductoInfo')){
-    $('trasProductoInfo').innerHTML=
-      '<b>'+esc([
-        op.dataset.marca||'',
-        op.dataset.modelo||'',
-        op.dataset.color||'',
-        op.dataset.talla ? 'Talla '+op.dataset.talla : ''
-      ].filter(Boolean).join(' · '))+'</b>'+
-      ' · Disponible: <b>'+esc(op.dataset.existencia||'0')+'</b> en '+esc(SUCURSAL);
+    $('trasProductoInfo').innerHTML='<b>'+esc([
+      op.dataset.marca||'',op.dataset.modelo||'',op.dataset.color||'',
+      op.dataset.talla ? 'Talla '+op.dataset.talla : ''
+    ].filter(Boolean).join(' · '))+'</b> · Disponible para agregar: <b>'+
+    esc(op.dataset.disponible||op.dataset.existencia||'0')+'</b> en '+esc(SUCURSAL);
   }
-
-  const max=Number(op.dataset.existencia||0);
+  const max=Number(op.dataset.disponible||op.dataset.existencia||0);
   if($('trasCantidad') && max>0){
     $('trasCantidad').max=String(max);
-    if(Number($('trasCantidad').value||0)>max){
-      $('trasCantidad').value=max;
-    }
+    if(Number($('trasCantidad').value||0)>max) $('trasCantidad').value=max;
   }
 }
 
+function agregarReferenciaTraslado(mostrarMensaje=true){
+  const codigo=String($('trasCodigo').value||'').trim();
+  const cantidad=Math.floor(Number($('trasCantidad').value||0));
+  if(!codigo){
+    if(mostrarMensaje) msg('mensajeTraslado','Seleccione o escriba un producto para agregar.','error');
+    return false;
+  }
+  if(!Number.isInteger(cantidad)||cantidad<=0){
+    if(mostrarMensaje) msg('mensajeTraslado','Cantidad inválida.','error');
+    return false;
+  }
+  const p=metaProductoTraslado_(codigo);
+  if(!p){
+    if(mostrarMensaje) msg('mensajeTraslado','El producto no está disponible en el inventario de origen.','error');
+    return false;
+  }
+  const ya=ITEMS_TRASLADO.filter(x=>String(x.codigo||'')===codigo)
+    .reduce((s,x)=>s+Number(x.cantidad||0),0);
+  const disponible=Number(p.existencia||0)-ya;
+  if(cantidad>disponible){
+    if(mostrarMensaje) msg('mensajeTraslado','Existencia insuficiente para '+codigo+'. Disponible para agregar: '+Math.max(0,disponible)+'.','error');
+    return false;
+  }
+  const existente=ITEMS_TRASLADO.find(x=>String(x.codigo||'')===codigo);
+  if(existente) existente.cantidad=Number(existente.cantidad||0)+cantidad;
+  else ITEMS_TRASLADO.push({
+    codigo:String(p.codigo||codigo),marca:String(p.marca||''),modelo:String(p.modelo||''),
+    color:String(p.color||''),talla:String(p.talla||''),tipoIngreso:String(p.tipoIngreso||''),
+    escala:String(p.escala||''),cantidad
+  });
+  TRASLADO_SOLICITUD_ID='';
+  $('trasCodigo').value='';
+  $('trasCantidad').value=1;
+  $('trasCantidad').removeAttribute('max');
+  if($('trasProductoSelect')) $('trasProductoSelect').value='';
+  if($('trasProductoInfo')) $('trasProductoInfo').textContent='Referencia agregada. Puede agregar otra.';
+  renderItemsTraslado();
+  llenarProductosTrasladoOrigen();
+  if(mostrarMensaje) msg('mensajeTraslado','Referencia agregada al traslado.','ok');
+  return true;
+}
 
-let ULTIMO_TRASLADO_IMPRESION=null;
-let TRASLADO_SOLICITUD_ID='';
-let TRASLADO_ENVIANDO=false;
+function quitarReferenciaTraslado(indice){
+  if(indice<0 || indice>=ITEMS_TRASLADO.length) return;
+  ITEMS_TRASLADO.splice(indice,1);
+  TRASLADO_SOLICITUD_ID='';
+  renderItemsTraslado();
+  llenarProductosTrasladoOrigen();
+}
+
+function vaciarItemsTraslado(){
+  ITEMS_TRASLADO=[];
+  TRASLADO_SOLICITUD_ID='';
+  renderItemsTraslado();
+  llenarProductosTrasladoOrigen();
+}
+
+function renderItemsTraslado(){
+  const box=$('listaItemsTraslado');
+  const btn=$('btnDespacharTraslado');
+  if(!box) return;
+  const total=ITEMS_TRASLADO.reduce((s,x)=>s+Number(x.cantidad||0),0);
+  if(btn && !TRASLADO_ENVIANDO){
+    btn.textContent=ITEMS_TRASLADO.length
+      ? 'Despachar traslado · '+ITEMS_TRASLADO.length+' ref. · '+total+' unidades'
+      : 'Despachar traslado';
+  }
+  if(!ITEMS_TRASLADO.length){
+    box.innerHTML='<div class="sub">Aún no hay referencias agregadas al traslado.</div>';
+    return;
+  }
+  let h='<div class="fila" style="align-items:center;margin-bottom:6px">'+
+    '<div style="flex:1"><b>Referencias del traslado</b> · '+ITEMS_TRASLADO.length+' referencias · '+total+' unidades</div>'+
+    '<button class="btnGris" type="button" onclick="vaciarItemsTraslado()">Vaciar</button></div>'+
+    '<div style="overflow:auto"><table class="tabla"><thead><tr><th>Cant.</th><th>Producto</th><th>Código</th><th></th></tr></thead><tbody>';
+  ITEMS_TRASLADO.forEach((x,i)=>{
+    const prod=[x.marca,x.modelo,x.color,x.talla?'Talla '+x.talla:''].filter(Boolean).join(' · ');
+    h+='<tr><td><b>'+Number(x.cantidad||0)+'</b></td><td>'+esc(prod||x.codigo||'Producto')+
+      '</td><td>'+esc(x.codigo||'')+'</td><td><button class="btnRojo" type="button" onclick="quitarReferenciaTraslado('+i+')">Quitar</button></td></tr>';
+  });
+  h+='</tbody></table></div>';
+  box.innerHTML=h;
+}
 
 function imprimirUltimoTraslado(){
-  if(!ULTIMO_TRASLADO_IMPRESION){
-    return alert('No hay un traslado reciente para imprimir.');
-  }
+  if(!ULTIMO_TRASLADO_IMPRESION) return alert('No hay un traslado reciente para imprimir.');
   imprimirTraslado(ULTIMO_TRASLADO_IMPRESION);
 }
 
 function hacerTraslado(){
-  if(TRASLADO_ENVIANDO){
-    return;
+  if(TRASLADO_ENVIANDO) return;
+
+  if(!ITEMS_TRASLADO.length && String($('trasCodigo').value||'').trim()){
+    if(!agregarReferenciaTraslado(false)){
+      return msg('mensajeTraslado','Revise el producto y la cantidad antes de despachar.','error');
+    }
+  }
+  if(!ITEMS_TRASLADO.length){
+    return msg('mensajeTraslado','Agregue al menos una referencia al traslado.','error');
   }
 
-  const codigo=$('trasCodigo').value.trim();
+  const destino=String($('trasDestino').value||'').trim();
+  if(!destino || destino===String(SUCURSAL||'').trim()){
+    return msg('mensajeTraslado','Seleccione una sucursal destino diferente al origen.','error');
+  }
 
+  const itemsEnvio=ITEMS_TRASLADO.map(x=>({codigo:String(x.codigo||''),cantidad:Number(x.cantidad||0)}));
   const trasladoFormulario={
-    codigo,
-    origen:SUCURSAL,
-    destino:$('trasDestino').value,
-    cantidad:Number($('trasCantidad').value||0),
+    items:ITEMS_TRASLADO.map(x=>({...x})),origen:SUCURSAL,destino,
+    cantidad:ITEMS_TRASLADO.reduce((s,x)=>s+Number(x.cantidad||0),0),
     nota:$('trasNota').value||''
   };
 
-  if(!codigo){
-    return msg('mensajeTraslado','Ingrese un producto.','error');
-  }
-
   if(!TRASLADO_SOLICITUD_ID){
-    TRASLADO_SOLICITUD_ID=
-      'TSOL-'+Date.now()+'-'+Math.random().toString(36).slice(2,10).toUpperCase();
+    TRASLADO_SOLICITUD_ID='TSOL-'+Date.now()+'-'+Math.random().toString(36).slice(2,10).toUpperCase();
   }
 
   TRASLADO_ENVIANDO=true;
-
   const btn=$('btnDespacharTraslado');
-  if(btn){
-    btn.disabled=true;
-    btn.textContent='Despachando…';
-  }
+  if(btn){ btn.disabled=true; btn.textContent='Despachando…'; }
 
-  msg(
-    'mensajeTraslado',
-    'Registrando traslado. No vuelva a presionar el botón…',
-    'info'
-  );
+  msg('mensajeTraslado','Registrando '+ITEMS_TRASLADO.length+' referencias en un solo traslado. No vuelva a presionar el botón…','info');
 
-  api(
-    'traslado',
-    {
-      origen:SUCURSAL,
-      destino:$('trasDestino').value,
-      codigo,
-      cantidad:$('trasCantidad').value,
-      nota:$('trasNota').value,
-      idSolicitud:TRASLADO_SOLICITUD_ID
-    },
-    r=>{
-      TRASLADO_ENVIANDO=false;
-
-      if(btn){
-        btn.disabled=false;
-        btn.textContent='Despachar traslado';
-      }
-
-      if(!r||!r.ok){
-        return msg(
-          'mensajeTraslado',
-          (r&&r.error)||'No se pudo conectar. Puede intentar nuevamente; el sistema evitará duplicar el traslado.',
-          'error'
-        );
-      }
-
-      $('trasCodigo').value='';
-      $('trasCantidad').value=1;
-      $('trasCantidad').removeAttribute('max');
-      $('trasNota').value='';
-      if($('trasProductoSelect')) $('trasProductoSelect').value='';
-
-      PRODUCTOS_TRASLADO_TS=0;
-      cargarResumen();
-      cargarProductosTrasladoOrigen(true);
-      cargarTraslados();
-
-      ULTIMO_TRASLADO_IMPRESION={
-        numeroTraslado:r.numeroTraslado||'',
-        fecha:new Date().toLocaleString(),
-        codigo:r.codigo||trasladoFormulario.codigo,
-        marca:'',
-        modelo:'',
-        color:'',
-        talla:'',
-        origen:r.origen||trasladoFormulario.origen,
-        destino:r.destino||trasladoFormulario.destino,
-        cantidad:Number(r.cantidad||trasladoFormulario.cantidad||0),
-        usuario:(SESION&&SESION.nombre)||'',
-        nota:trasladoFormulario.nota,
-        estado:r.estado||'EN TRANSITO',
-        fechaRecepcion:'',
-        usuarioRecibe:''
-      };
-
-      if($('btnImprimirUltimoTraslado')){
-        $('btnImprimirUltimoTraslado').classList.remove('oculto');
-      }
-
-      msg(
-        'mensajeTraslado',
-        r.duplicadoEvitado
-          ? 'Este traslado ya había sido registrado. Se recuperó el mismo traslado '+r.numeroTraslado+' sin duplicarlo.'
-          : 'Traslado '+r.numeroTraslado+' despachado · estado: EN TRÁNSITO. El destino debe confirmar recibido.',
-        'ok'
-      );
-
-      TRASLADO_SOLICITUD_ID='';
+  api('traslado',{
+    origen:SUCURSAL,destino,items:JSON.stringify(itemsEnvio),
+    nota:$('trasNota').value,idSolicitud:TRASLADO_SOLICITUD_ID
+  },r=>{
+    TRASLADO_ENVIANDO=false;
+    if(btn) btn.disabled=false;
+    if(!r||!r.ok){
+      renderItemsTraslado();
+      return msg('mensajeTraslado',(r&&r.error)||'No se pudo conectar. Puede intentar nuevamente; el sistema evitará duplicar el traslado.','error');
     }
-  );
+
+    const itemsImpresion=(Array.isArray(r.items)&&r.items.length)?r.items:trasladoFormulario.items;
+    $('trasCodigo').value='';
+    $('trasCantidad').value=1;
+    $('trasCantidad').removeAttribute('max');
+    $('trasNota').value='';
+    if($('trasProductoSelect')) $('trasProductoSelect').value='';
+
+    ITEMS_TRASLADO=[];
+    PRODUCTOS_TRASLADO_TS=0;
+    renderItemsTraslado();
+    cargarResumen();
+    cargarProductosTrasladoOrigen(true);
+    cargarTraslados();
+
+    ULTIMO_TRASLADO_IMPRESION={
+      numeroTraslado:r.numeroTraslado||'',fecha:new Date().toLocaleString(),items:itemsImpresion,
+      origen:r.origen||trasladoFormulario.origen,destino:r.destino||trasladoFormulario.destino,
+      cantidad:Number(r.cantidad||trasladoFormulario.cantidad||0),
+      usuario:(SESION&&SESION.nombre)||'',nota:trasladoFormulario.nota,
+      estado:r.estado||'EN TRANSITO',fechaRecepcion:'',usuarioRecibe:''
+    };
+
+    if($('btnImprimirUltimoTraslado')) $('btnImprimirUltimoTraslado').classList.remove('oculto');
+    msg('mensajeTraslado',
+      r.duplicadoEvitado
+        ? 'Este traslado ya había sido registrado. Se recuperó el mismo traslado '+r.numeroTraslado+' sin duplicarlo.'
+        : 'Traslado '+r.numeroTraslado+' despachado con '+itemsImpresion.length+' referencias · estado: EN TRÁNSITO.',
+      'ok'
+    );
+    TRASLADO_SOLICITUD_ID='';
+  });
 }
 
 function cargarTraslados(sucursalSolicitada){
@@ -5988,12 +6018,15 @@ function cargarTraslados(sucursalSolicitada){
         '</tr></thead><tbody>';
 
       lista.forEach(t=>{
-        const producto=[
-          t.marca||'',
-          t.modelo||'',
-          t.color||'',
-          t.talla ? 'Talla '+t.talla : ''
-        ].filter(Boolean).join(' · ');
+        const itemsTras=Array.isArray(t.items)&&t.items.length?t.items:[t];
+        const producto=itemsTras.length>1
+          ? itemsTras.length+' referencias'
+          : [
+              itemsTras[0].marca||'',
+              itemsTras[0].modelo||'',
+              itemsTras[0].color||'',
+              itemsTras[0].talla ? 'Talla '+itemsTras[0].talla : ''
+            ].filter(Boolean).join(' · ');
 
         let accion='';
 
@@ -6044,7 +6077,7 @@ function cargarTraslados(sucursalSolicitada){
             '<td>'+esc(producto)+'</td>'+
             '<td>'+esc(t.origen||'')+'</td>'+
             '<td>'+esc(t.destino||'')+'</td>'+
-            '<td><b>'+Number(t.cantidad||0)+'</b></td>'+
+            '<td><b>'+Number(t.cantidad||itemsTras.reduce((s,x)=>s+Number(x.cantidad||0),0))+'</b></td>'+
             '<td id="trasEstado_'+esc(clave)+'">'+badge+'</td>'+
             '<td id="trasRecepcion_'+esc(clave)+'">'+accion+'</td>'+
             '<td><button class="btnNegro" type="button" onclick=\''+
@@ -6289,7 +6322,7 @@ function imprimirTraslado(t){
     (recibido&&t.fechaRecepcion?'<div><b>Fecha de recepción:</b> '+esc(t.fechaRecepcion)+'</div>':'')+
     (recibido&&t.usuarioRecibe?'<div><b>Recibido por:</b> '+esc(t.usuarioRecibe)+'</div>':'')+
     '<hr>'+
-    tablaProductosDocumento(items,{mostrarCodigo:true,mostrarPrecio:false})+
+    tablaProductosDocumento(items,{mostrarCodigo:false,mostrarPrecio:false})+
     (t.nota?'<hr><div><b>Nota:</b> '+esc(t.nota)+'</div>':'')+
     '<hr>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:42px">'+
@@ -12838,7 +12871,7 @@ function esc(v){
 
 <script>
 (function(){
-  const APP_VERSION='2026.10.07-ESTABLE-04.3.1';
+  const APP_VERSION='2026.10.07-ESTABLE-04.3.2';
   window.APP_VERSION=APP_VERSION;
 
   if(!('serviceWorker' in navigator)) return;
