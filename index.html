@@ -1431,7 +1431,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.07-ESTABLE-04.3.3';
+const VERSION_SISTEMA_UI='2026.10.07-ESTABLE-04.3.4';
 const VERSION_CODE_ESPERADA='2026.10.07-PRODUCCION-04';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
@@ -4618,6 +4618,29 @@ function pedidoHTML(v,id){
     (v.nota?'<div style="margin-top:6px"><b>Nota:</b> '+esc(v.nota)+'</div>':'');
 }
 
+function cerrarVistaPreviaImpresion(){
+  const capa=document.getElementById('vistaPreviaImpresionMovil');
+  if(capa) capa.remove();
+
+  const portal=document.getElementById('portalImpresionAdelaida');
+  if(portal) portal.remove();
+
+  const estilo=document.getElementById('estiloImpresionAdelaida');
+  if(estilo) estilo.remove();
+}
+
+function ejecutarImpresionMovil(){
+  try{
+    window.focus();
+    window.print();
+  }catch(err){
+    alert(
+      'Este navegador no abrió la impresión automáticamente. '+
+      'Use el menú Compartir del teléfono y seleccione Imprimir.'
+    );
+  }
+}
+
 function imprimirTicket(id,formato='MEDIA'){
   const el=$(id);
 
@@ -4627,18 +4650,14 @@ function imprimirTicket(id,formato='MEDIA'){
 
   const media=formato==='MEDIA';
 
-  let portal=document.getElementById('portalImpresionAdelaida');
-  if(portal) portal.remove();
+  cerrarVistaPreviaImpresion();
 
-  portal=document.createElement('div');
+  const portal=document.createElement('div');
   portal.id='portalImpresionAdelaida';
   portal.innerHTML='<div class="ticket">'+el.innerHTML+'</div>';
   document.body.appendChild(portal);
 
-  let style=document.getElementById('estiloImpresionAdelaida');
-  if(style) style.remove();
-
-  style=document.createElement('style');
+  const style=document.createElement('style');
   style.id='estiloImpresionAdelaida';
   style.textContent=
     '@media screen{#portalImpresionAdelaida{display:none!important}}'+
@@ -4660,38 +4679,47 @@ function imprimirTicket(id,formato='MEDIA'){
       '#portalImpresionAdelaida .ticketTabla .derecha{text-align:right!important}'+
       '#portalImpresionAdelaida .lineaTotal{display:flex!important;justify-content:space-between!important;margin-top:5px!important}'+
       '#portalImpresionAdelaida .centro{text-align:center!important}'+
+      '#vistaPreviaImpresionMovil{display:none!important}'+
     '}';
-
   document.head.appendChild(style);
 
-  let limpiado=false;
-  const limpiar=()=>{
-    if(limpiado) return;
-    limpiado=true;
-    window.removeEventListener('afterprint',limpiar);
-    setTimeout(()=>{
-      const p=document.getElementById('portalImpresionAdelaida');
-      const s=document.getElementById('estiloImpresionAdelaida');
-      if(p) p.remove();
-      if(s) s.remove();
-    },250);
-  };
+  const esMovil=
+    /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'') ||
+    (window.matchMedia && window.matchMedia('(max-width: 900px)').matches);
 
-  window.addEventListener('afterprint',limpiar,{once:true});
+  if(!esMovil){
+    try{
+      window.focus();
+      window.print();
+    }catch(err){
+      alert('No se pudo abrir la impresión.');
+    }
+    setTimeout(cerrarVistaPreviaImpresion,3000);
+    return;
+  }
 
-  requestAnimationFrame(()=>{
-    requestAnimationFrame(()=>{
-      try{
-        window.focus();
-        window.print();
-      }catch(err){
-        limpiar();
-        alert('No se pudo abrir la impresión en este dispositivo. Intente desde el menú Compartir → Imprimir.');
-      }
-      setTimeout(limpiar,5000);
-    });
-  });
+  const capa=document.createElement('div');
+  capa.id='vistaPreviaImpresionMovil';
+  capa.style.cssText=
+    'position:fixed;inset:0;z-index:999999;background:#f5f5f5;'+
+    'display:flex;flex-direction:column;overflow:hidden;';
+
+  capa.innerHTML=
+    '<div style="background:#fff;border-bottom:1px solid #ddd;padding:10px;display:flex;gap:8px;align-items:center;position:sticky;top:0;z-index:2">'+
+      '<button type="button" onclick="cerrarVistaPreviaImpresion()" '+
+        'style="border:0;background:#e9e9ee;padding:12px 16px;border-radius:10px;font-weight:700">← VOLVER</button>'+
+      '<button type="button" onclick="ejecutarImpresionMovil()" '+
+        'style="border:0;background:#1677ff;color:#fff;padding:12px 18px;border-radius:10px;font-weight:800;flex:1">🖨 IMPRIMIR AHORA</button>'+
+    '</div>'+
+    '<div style="flex:1;overflow:auto;padding:10px;background:#ddd">'+
+      '<div style="background:white;max-width:900px;margin:0 auto;padding:12px;box-shadow:0 1px 8px rgba(0,0,0,.18);font-family:monospace">'+
+        el.innerHTML+
+      '</div>'+
+    '</div>';
+
+  document.body.appendChild(capa);
 }
+
 async function toggleCam(){
   if(scannerPos){
     try{
@@ -12829,7 +12857,7 @@ function esc(v){
 
 <script>
 (function(){
-  const APP_VERSION='2026.10.07-ESTABLE-04.3.3';
+  const APP_VERSION='2026.10.07-ESTABLE-04.3.4';
   window.APP_VERSION=APP_VERSION;
 
   if(!('serviceWorker' in navigator)) return;
