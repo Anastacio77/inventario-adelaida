@@ -1474,7 +1474,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.10-CARGA-VERIFICADA-06';
+const VERSION_SISTEMA_UI='2026.10.10-MASIVO-RAPIDO-07';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -12425,7 +12425,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.10-CARGA-VERIFICADA-06';
+  const APP_VERSION='2026.10.10-MASIVO-RAPIDO-07';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
@@ -12569,8 +12569,28 @@ function bmCompletar(r){
 async function bmConsultar(){
   const r=await bmCall('masivoestado',{id:BM.id,sucursal:BM.sucursal,modo:BM.opciones.modo});
   if(r.estado==='COMPLETADO'){bmCompletar(r.resultado);return true;}
+  BM.preparadas=r.preparadas||[];
   if(r.estado==='EN_PROCESO')throw Error('La carga sigue en proceso o requiere revisión. Conserve el ID '+BM.id+' y consulte esta misma carga nuevamente.');
   return false;
+}
+async function bmPrepararGrupos(){
+  const listas=new Set(BM.preparadas||[]);
+  const pendientes=BM.filas.map((fila,indice)=>({fila,indice})).filter(x=>!listas.has(x.indice));
+  while(pendientes.length){
+    const grupo=[];
+    while(pendientes.length&&grupo.length<5){
+      const x=pendientes[0];
+      if(grupo.length&&encodeURIComponent(JSON.stringify(grupo.concat(x))).length>4500)break;
+      grupo.push(pendientes.shift());
+    }
+    bmMsg('Preparando '+grupo.length+' filas juntas… '+listas.size+' de '+BM.filas.length+' listas.');
+    let r;
+    for(let intento=0;intento<3;intento++){
+      try{r=await bmCall('masivopreparargrupo',{id:BM.id,filas:JSON.stringify(grupo),sucursal:BM.sucursal,modo:BM.opciones.modo});break;}
+      catch(e){if(intento===2||!/Tiempo agotado|No se pudo conectar/.test(e.message))throw e;bmMsg('Reintentando el mismo grupo sin duplicar filas…');}
+    }
+    grupo.forEach(x=>listas.add(x.indice));BM.preparadas=Array.from(listas);bmDraft();
+  }
 }
 async function bmGuardar(){
   if(BM_BUSY||BM.finalizado)return;
@@ -12578,8 +12598,8 @@ async function bmGuardar(){
     if(!BM.enviado){const filas=bmValidar();if(!filas.length)throw Error('Agregue filas.');const opts={modo:$('bmModo').value,lote:$('bmLote').value,nota:$('bmNota').value,proveedorId:$('bmProveedor').value,condicionPago:$('bmPago').value,diasCredito:$('bmDias').value,flete:$('bmFlete').value};if(opts.modo==='COMPRA'&&!opts.proveedorId)throw Error('Seleccione proveedor.');BM.filas=filas;BM.id='IM-'+(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2));BM.sucursal=SUCURSAL;BM.opciones=opts;BM.enviado=true;bmDraft();}
     if(SUCURSAL!==BM.sucursal)throw Error('Vuelva a la sucursal '+BM.sucursal+' para continuar.');
     BM_BUSY=true;bmRender();
-    if(BM.confirmado){bmMsg('Consultando el resultado de la misma carga…');if(await bmConsultar())return;}
-    for(let i=0;i<BM.filas.length;i++){bmMsg('Validando fila '+(i+1)+' de '+BM.filas.length+'…');await bmCall('masivopreparar',{id:BM.id,indice:i,fila:JSON.stringify(BM.filas[i]),sucursal:BM.sucursal,modo:BM.opciones.modo});}
+    bmMsg('Consultando filas pendientes…');if(await bmConsultar())return;
+    await bmPrepararGrupos();
     BM.confirmado=true;bmDraft();
     bmMsg('Guardando carga '+BM.id+'… Mantenga esta ventana abierta.');
     try{
