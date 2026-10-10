@@ -440,7 +440,7 @@ document.addEventListener('click',e=>{
       <p>Importe Excel/CSV o agregue varios modelos por talla. Revise la tabla antes de guardar. M&#225;ximo 300 referencias por carga.</p>
       <div class="grid2">
         <div><label>Destino</label><input id="bmDestino" readonly onfocus="this.value=SUCURSAL" placeholder="Se usa la sucursal seleccionada"></div>
-        <div><label>Operaci&#243;n</label><select id="bmModo" onchange="bmModoUI()"><option value="INICIAL">Existencia inicial / anterior: sumar al inventario</option><option value="COMPRA">Mercanc&#237;a nueva: crear orden de compra</option></select></div>
+        <div><label>Operaci&#243;n</label><select id="bmModo" onchange="bmModoUI()"><option value="CATALOGO">Catálogo maestro: crear productos sin existencias</option><option value="INICIAL">Existencia inicial / anterior: sumar al inventario</option><option value="COMPRA">Mercanc&#237;a nueva: crear orden de compra</option></select></div>
         <div><label>Lote com&#250;n (existencia inicial)</label><input id="bmLote" placeholder="Autom&#225;tico si queda vac&#237;o"></div>
         <div><label>Observaci&#243;n</label><input id="bmNota" maxlength="200"></div>
       </div>
@@ -1474,7 +1474,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.09-PRECIOS-NUEVO-04';
+const VERSION_SISTEMA_UI='2026.10.10-CATALOGO-MASIVO-05';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -12425,7 +12425,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.09-PRECIOS-NUEVO-04';
+  const APP_VERSION='2026.10.10-CATALOGO-MASIVO-05';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
@@ -12473,7 +12473,8 @@ function bmKey(){return 'adelaida-ingreso-masivo-'+TOKEN.slice(0,16)+'-'+SUCURSA
 function bmDraft(){try{localStorage.setItem(bmKey(),JSON.stringify(BM));}catch(e){bmMsg('No se pudo guardar el borrador local. Mantenga esta ventana abierta.',true);}}
 function bmRecuperar(){if(BM_BUSY)return;try{const v=JSON.parse(localStorage.getItem(bmKey())||'null');if(!v)return bmMsg('No hay carga guardada para esta sesi\u00f3n y sucursal.');BM=v;bmRender();bmMsg(BM.finalizado?'Carga ya completada. Inicie una nueva para otro ingreso.':'Carga recuperada. Use Guardar para continuar con el mismo identificador.');}catch(e){bmMsg('No se pudo recuperar el borrador.',true);}}
 function bmNueva(){if(BM_BUSY)return;if(BM.enviado&&!BM.finalizado&&BM.confirmado)return bmMsg('Primero reanude y confirme la carga pendiente; no la duplique.',true);BM={filas:[],id:'',enviado:false,finalizado:false,sucursal:'',opciones:null};bmDraft();bmRender();bmMsg('Nueva carga lista.');}
-function bmModoUI(){const c=$('bmModo').value==='COMPRA';$('bmCompra').classList.toggle('oculto',!c);$('bmExplica').textContent=c?'Se crear\u00e1 una orden pendiente. Rec\u00edbala desde Compras para sumar mercanc\u00eda y registrar su pago o cr\u00e9dito.':'Se sumar\u00e1n las cantidades como EXISTENCIA ANTERIOR, conservando los lotes. Los productos nuevos se crean desde Bodega Principal.';if(c)bmProveedores();}
+function bmModoUI(){const modo=$('bmModo').value,c=modo==='COMPRA';$('bmCompra').classList.toggle('oculto',!c);$('bmLote').disabled=modo==='CATALOGO';$('bmExplica').textContent=modo==='CATALOGO'?'Crea referencias en el catálogo maestro desde Bodega Principal. No agrega existencias ni crea compras. La cantidad se ignora; los productos existentes se conservan sin modificar.':c?'Se creará una orden pendiente en la sucursal seleccionada. Recíbala desde Compras para sumar mercancía.':'Se sumarán las cantidades como EXISTENCIA ANTERIOR. Los productos nuevos se crean desde Bodega Principal.';if(c)bmProveedores();}
+
 function bmProveedores(){api('proveedores',{q:''},r=>{if(!r.ok)return bmMsg(r.error,true);$('bmProveedor').innerHTML='<option value="">Seleccione</option>'+(r.proveedores||[]).map(x=>'<option value="'+esc(x.proveedorId)+'">'+esc(x.nombre)+'</option>').join('');});}
 function bmEscalas(){api('escalas',{},r=>{if(!r.ok)return bmMsg(r.error,true);window.BM_ESCALAS=(r.escalas||[]).filter(e=>e.activa!=='NO');$('bmEscala').innerHTML='<option value="">Seleccione</option>'+BM_ESCALAS.map(e=>'<option>'+esc(e.nombre)+'</option>').join('');});}
 function bmTallas(){const e=(window.BM_ESCALAS||[]).find(e=>e.nombre===$('bmEscala').value);if(e)$('bmTallas').value=e.tallas.join(',');}
@@ -12490,7 +12491,7 @@ function bmMatriz(a){
   if(a.length<2)throw Error('Incluya encabezados y al menos una fila.');
   const aliases={existencia:'cantidad',unidades:'cantidad',preciobase:'precio',precioventa:'precio',costounitario:'costo',tipoingreso:'tipo',stockminimo:'stockMinimo',articulo:'categoria'};
   const heads=a[0].map(h=>aliases[bmHeader(h)]||BM_COLS.find(k=>bmHeader(k)===bmHeader(h))||'');
-  ['marca','modelo','color','talla','cantidad','costo','precio'].forEach(k=>{if(!heads.includes(k))throw Error('Falta columna '+k+'.');});
+  ['marca','modelo','color','talla','costo','precio',...($('bmModo').value==='CATALOGO'?[]:['cantidad'])].forEach(k=>{if(!heads.includes(k))throw Error('Falta columna '+k+'.');});
   if(heads.filter(Boolean).length!==new Set(heads.filter(Boolean)).size)throw Error('Encabezados duplicados.');
   return a.slice(1).filter(r=>r.some(v=>String(v??'').trim())).map(r=>{const x={};heads.forEach((h,i)=>{if(h)x[h]=r[i]??'';});x.tipo=String(x.tipo||'INDIVIDUAL').trim().toUpperCase();x.escala=String(x.escala||'').trim().toUpperCase();return x;});
 }
@@ -12543,9 +12544,9 @@ async function bmXLSX(buffer){
 }
 
 async function bmImportar(input){try{const f=input.files[0];if(!f)return;if(BM.enviado||BM_BUSY)throw Error('Termine la carga pendiente primero.');if(f.size>5*1024*1024)throw Error('Archivo demasiado grande (m\u00e1ximo 5 MB).');let rows;if(/\.xlsx$/.test(f.name.toLowerCase())){rows=await bmXLSX(await f.arrayBuffer());}else if(/\.xls$/.test(f.name.toLowerCase()))throw Error('Guarde el libro antiguo .xls como .xlsx o CSV.');else rows=bmCSV(await f.text());bmAppend(bmMatriz(rows));bmMsg('Archivo agregado. Revise la vista previa antes de guardar.');}catch(e){bmMsg(e.message,true);}finally{input.value='';}}
-function bmAgregarModelo(){try{const tallas=$('bmTallas').value.split(',').map(s=>s.trim()).filter(Boolean),q=$('bmCantidades').value.split(',').map(s=>s.trim());if(!tallas.length||!q[0]||(q.length!==1&&q.length!==tallas.length))throw Error('Indique una cantidad para todas las tallas o una cantidad por talla.');const tipo=$('bmTipo').value,escala=tipo==='CORRIDA'?$('bmEscala').value:'';if(tipo==='CORRIDA'&&!escala)throw Error('Seleccione una escala.');bmAppend(tallas.map((t,i)=>({marca:$('bmMarca').value,modelo:$('bmModelo').value,color:$('bmColor').value,talla:t,cantidad:q.length===1?q[0]:q[i],costo:$('bmCosto').value,precio:$('bmPrecio').value,tipo,escala,stockMinimo:2})));bmMsg('Modelo agregado. Puede agregar el siguiente o editar cantidades.');}catch(e){bmMsg(e.message,true);}}
+function bmAgregarModelo(){try{const tallas=$('bmTallas').value.split(',').map(s=>s.trim()).filter(Boolean),q=$('bmCantidades').value.split(',').map(s=>s.trim());if(!tallas.length||($('bmModo').value!=='CATALOGO'&&(!q[0]||(q.length!==1&&q.length!==tallas.length))))throw Error('Indique una cantidad para todas las tallas o una cantidad por talla.');const tipo=$('bmTipo').value,escala=tipo==='CORRIDA'?$('bmEscala').value:'';if(tipo==='CORRIDA'&&!escala)throw Error('Seleccione una escala.');bmAppend(tallas.map((t,i)=>({marca:$('bmMarca').value,modelo:$('bmModelo').value,color:$('bmColor').value,talla:t,cantidad:$('bmModo').value==='CATALOGO'?0:(q.length===1?q[0]:q[i]),costo:$('bmCosto').value,precio:$('bmPrecio').value,tipo,escala,stockMinimo:2})));bmMsg('Modelo agregado. Puede agregar el siguiente o editar cantidades.');}catch(e){bmMsg(e.message,true);}}
 function bmCodigo(x){const c=v=>String(v||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]/g,'');return c(x.modelo)+'-'+c(x.color).slice(0,2)+'-'+c(x.talla);}
-function bmValidar(){const seen=new Set();return BM.filas.map((r,i)=>{const x={};BM_COLS.forEach(k=>x[k]=String(r[k]??'').trim());x.tipo=(x.tipo||'INDIVIDUAL').toUpperCase();x.escala=x.tipo==='CORRIDA'?x.escala.toUpperCase():'';['cantidad','costo','precio','stockMinimo'].forEach(k=>{x[k]=bmNumero(x[k]);if(!Number.isFinite(x[k])||x[k]<0)throw Error('Fila '+(i+1)+': '+k+' inv\u00e1lido.');});if(!Number.isSafeInteger(x.cantidad)||x.cantidad<=0)throw Error('Fila '+(i+1)+': cantidad entera positiva requerida.');['marca','modelo','color','talla'].forEach(k=>{if(!x[k])throw Error('Fila '+(i+1)+': falta '+k+'.');});if(!['INDIVIDUAL','CORRIDA'].includes(x.tipo)||(x.tipo==='CORRIDA'&&!x.escala))throw Error('Fila '+(i+1)+': tipo o escala inv\u00e1lido.');const cod=bmCodigo(x);if(seen.has(cod))throw Error('C\u00f3digo repetido '+cod+'. Combine las cantidades en una sola fila.');seen.add(cod);return x;});}
+function bmValidar(){const seen=new Set();return BM.filas.map((r,i)=>{const x={};BM_COLS.forEach(k=>x[k]=String(r[k]??'').trim());x.tipo=(x.tipo||'INDIVIDUAL').toUpperCase();x.escala=x.tipo==='CORRIDA'?x.escala.toUpperCase():'';['cantidad','costo','precio','stockMinimo'].forEach(k=>{x[k]=bmNumero(x[k]);if(!Number.isFinite(x[k])||x[k]<0)throw Error('Fila '+(i+1)+': '+k+' inv\u00e1lido.');});if($('bmModo').value==='CATALOGO')x.cantidad=0;if(!Number.isSafeInteger(x.cantidad)||($('bmModo').value!=='CATALOGO'&&x.cantidad<=0))throw Error('Fila '+(i+1)+': cantidad entera positiva requerida.');['marca','modelo','color','talla'].forEach(k=>{if(!x[k])throw Error('Fila '+(i+1)+': falta '+k+'.');});if(!['INDIVIDUAL','CORRIDA'].includes(x.tipo)||(x.tipo==='CORRIDA'&&!x.escala))throw Error('Fila '+(i+1)+': tipo o escala inv\u00e1lido.');const cod=bmCodigo(x);if(seen.has(cod))throw Error('C\u00f3digo repetido '+cod+'. Combine las cantidades en una sola fila.');seen.add(cod);return x;});}
 function bmRender(){
   $('bmDestino').value=SUCURSAL;
   const optMap={modo:'bmModo',lote:'bmLote',nota:'bmNota',proveedorId:'bmProveedor',condicionPago:'bmPago',diasCredito:'bmDias',flete:'bmFlete'};
@@ -12566,7 +12567,7 @@ async function bmGuardar(){
     if(!BM.enviado){const filas=bmValidar();if(!filas.length)throw Error('Agregue filas.');const opts={modo:$('bmModo').value,lote:$('bmLote').value,nota:$('bmNota').value,proveedorId:$('bmProveedor').value,condicionPago:$('bmPago').value,diasCredito:$('bmDias').value,flete:$('bmFlete').value};if(opts.modo==='COMPRA'&&!opts.proveedorId)throw Error('Seleccione proveedor.');BM.filas=filas;BM.id='IM-'+(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2));BM.sucursal=SUCURSAL;BM.opciones=opts;BM.enviado=true;bmDraft();}
     if(SUCURSAL!==BM.sucursal)throw Error('Vuelva a la sucursal '+BM.sucursal+' para continuar.');
     BM_BUSY=true;bmRender();
-    for(let i=0;i<BM.filas.length;i++){bmMsg('Validando fila '+(i+1)+' de '+BM.filas.length+'\u2026');await bmCall('masivopreparar',{id:BM.id,indice:i,fila:JSON.stringify(BM.filas[i]),sucursal:BM.sucursal});}
+    for(let i=0;i<BM.filas.length;i++){bmMsg('Validando fila '+(i+1)+' de '+BM.filas.length+'\u2026');await bmCall('masivopreparar',{id:BM.id,indice:i,fila:JSON.stringify(BM.filas[i]),sucursal:BM.sucursal,modo:BM.opciones.modo});}
     BM.confirmado=true;bmDraft();
     bmMsg('Guardando carga '+BM.id+'\u2026 Mantenga esta ventana abierta.');
     const r=await bmCall('masivoconfirmar',{...BM.opciones,id:BM.id,total:BM.filas.length,sucursal:BM.sucursal});BM.finalizado=true;bmDraft();bmMsg(r.mensaje+' '+r.referencias+' referencias, '+r.unidades+' unidades.'+(r.numeroCompra?' Orden: '+r.numeroCompra: '')+' ID: '+BM.id);cargarResumen();
