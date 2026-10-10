@@ -445,7 +445,7 @@ document.addEventListener('click',e=>{
         <div><label>Observaci&#243;n</label><input id="bmNota" maxlength="200"></div>
       </div>
       <div id="bmCompra" class="oculto grid2"><div><label>Flete Q (solo costo)</label><input id="bmFlete" type="number" min="0" step="0.01" value="0"></div>
-        <div><label>Proveedor</label><select id="bmProveedor"></select><button onclick="bmProveedores()">Cargar proveedores</button></div>
+        <div><label>Proveedor</label><select id="bmProveedor" onchange="bmCargarModelosProveedor()"></select><button onclick="bmProveedores()">Cargar proveedores</button></div>
         <div><label>Condici&#243;n de pago</label><select id="bmPago"><option value="CONTADO">Contado</option><option value="CREDITO">Cr&#233;dito</option></select><label>D&#237;as de cr&#233;dito</label><input id="bmDias" type="number" min="1" value="30"></div>
       </div>
       <p id="bmExplica">Se sumar&#225;n las cantidades como EXISTENCIA ANTERIOR, conservando los lotes. Los productos nuevos se crean desde Bodega Principal.</p>
@@ -1199,6 +1199,7 @@ document.addEventListener('click',e=>{
   </div>
 
   <div id="vistaCompras" class="vistaApp oculto">
+    <div class="card"><h3>Importaci&#243;n masiva de compras</h3><p>Cargue XML, Excel o CSV y revise productos antes de crear la orden.</p><button class="btnAzul" onclick="bmAbrirCompras()">Importaci&#243;n masiva</button></div><div id="bmEnCompras"></div>
     <div class="card">
       <h3 style="margin-top:0">Proveedores</h3>
       <div class="grid2">
@@ -1474,7 +1475,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.10-XML-11';
+const VERSION_SISTEMA_UI='2026.10.10-COMPRAS-12';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -1766,6 +1767,7 @@ function volverLogin(){
 }
 
 function vista(v){
+  if(v==='nuevo'&&$('masivoPanel'))$('vistaNuevo').prepend($('masivoPanel'));
   ocultarVistas();
   const el=$('vista'+v.charAt(0).toUpperCase()+v.slice(1));
   if(el) el.classList.remove('oculto');
@@ -12425,7 +12427,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.10-XML-11';
+  const APP_VERSION='2026.10.10-COMPRAS-12';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
@@ -12475,7 +12477,45 @@ function bmRecuperar(){if(BM_BUSY)return;try{const v=JSON.parse(localStorage.get
 function bmNueva(){if(BM_BUSY)return;if(BM.enviado&&!BM.finalizado&&BM.confirmado)return bmMsg('Primero reanude y confirme la carga pendiente; no la duplique.',true);BM={filas:[],id:'',enviado:false,finalizado:false,sucursal:'',opciones:null};bmDraft();bmRender();bmMsg('Nueva carga lista.');}
 function bmModoUI(){const modo=$('bmModo').value,c=modo==='COMPRA';$('bmCompra').classList.toggle('oculto',!c);$('bmLote').disabled=modo==='CATALOGO';$('bmExplica').textContent=modo==='CATALOGO'?'Crea referencias en el cat\u00e1logo maestro desde Bodega Principal. No agrega existencias ni crea compras. La cantidad se ignora; los productos existentes se conservan sin modificar.':c?'Se crear\u00e1 una orden pendiente en la sucursal seleccionada. Rec\u00edbala desde Compras para sumar mercanc\u00eda.':'Se sumar\u00e1n las cantidades como EXISTENCIA ANTERIOR. Los productos nuevos se crean desde Bodega Principal.';if(c)bmProveedores();}
 
-function bmProveedores(){api('proveedores',{q:''},r=>{if(!r.ok)return bmMsg(r.error,true);$('bmProveedor').innerHTML='<option value="">Seleccione</option>'+(r.proveedores||[]).map(x=>'<option value="'+esc(x.proveedorId)+'">'+esc(x.nombre)+'</option>').join('');});}
+function bmProveedores(){api('proveedores',{q:''},r=>{if(!r.ok)return bmMsg(r.error,true);const elegido=$('bmProveedor').value||$('compProveedor').value; $('bmProveedor').innerHTML='<option value="">Seleccione</option>'+(r.proveedores||[]).map(x=>'<option value="'+esc(x.proveedorId)+'">'+esc(x.nombre)+'</option>').join('');if(Array.from($('bmProveedor').options).some(o=>o.value===elegido))$('bmProveedor').value=elegido;bmCargarModelosProveedor();});}
+let BM_CATALOGO_PROVEEDOR=[],BM_PROVEEDOR_CARGADO='';
+function bmAbrirCompras(){
+ vista('compras');$('bmEnCompras').append($('masivoPanel'));
+ if(!BM.enviado){$('bmModo').value='COMPRA';bmModoUI();}bmRender();$('masivoPanel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function bmCargarModelosProveedor(){
+ const proveedor=$('bmProveedor').value;BM_CATALOGO_PROVEEDOR=[];BM_PROVEEDOR_CARGADO='';bmRender();
+ if(!proveedor||BM.enviado)return;
+ try{const r=await bmCall('productoscompra',{proveedorId:proveedor});if($('bmProveedor').value!==proveedor)return;
+ BM_CATALOGO_PROVEEDOR=(r.productos||[]).filter(p=>p.proveedorId===proveedor);BM_PROVEEDOR_CARGADO=proveedor;bmRender();
+ if(!BM_CATALOGO_PROVEEDOR.length)bmMsg('Este proveedor no tiene productos asociados. Puede escribir los c\u00f3digos manualmente; asocie el proveedor al producto en el cat\u00e1logo.');
+ }catch(e){bmMsg(e.message,true);}
+}
+function bmOpcionesProveedor(x,k){
+ if(!['modelo','color','talla'].includes(k)||!x.xml||!BM_PROVEEDOR_CARGADO||BM_PROVEEDOR_CARGADO!==$('bmProveedor').value)return [];
+ let lista=BM_CATALOGO_PROVEEDOR;
+ if(k==='modelo')return Array.from(new Set(lista.map(p=>JSON.stringify([p.marca,p.modelo])))).map(v=>({value:v,label:JSON.parse(v).join(' / ')}));
+ lista=lista.filter(p=>p.marca===x.marca&&p.modelo===x.modelo);
+ if(k==='talla')lista=lista.filter(p=>p.color===x.color);
+ return Array.from(new Set(lista.map(p=>p[k]))).map(v=>({value:v,label:v}));
+}
+function bmCampoProveedor(x,i,k,locked){
+ const opciones=bmOpcionesProveedor(x,k);if(!opciones.length)return '';
+ const actual=k==='modelo'?JSON.stringify([x.marca,x.modelo||'']):String(x[k]||'');
+ const valores=opciones.map(o=>o.value);if(actual&&!valores.includes(actual))opciones.unshift({value:actual,label:(k==='modelo'?(x.modelo||'Por seleccionar'):actual)+' (actual)'});
+ return '<select style="min-width:130px" '+(locked?'disabled':'')+' aria-label="'+k+' fila '+(i+1)+'" onchange="bmElegirProveedor('+i+',\''+k+'\',this.value)"><option value="">Seleccione</option>'+opciones.map(o=>'<option value="'+esc(o.value)+'" '+(o.value===actual?'selected':'')+'>'+esc(o.label)+'</option>').join('')+'</select>';
+}
+function bmElegirProveedor(i,k,v){
+ if(BM.enviado||BM_BUSY)return;const x=BM.filas[i];
+ if(k==='modelo'){if(!v)return;const [marca,modelo]=JSON.parse(v);x.marca=marca;x.modelo=modelo;}
+ else x[k]=v;
+ const base=BM_CATALOGO_PROVEEDOR.filter(p=>p.marca===x.marca&&p.modelo===x.modelo);
+ const colores=Array.from(new Set(base.map(p=>p.color)));if(!colores.includes(x.color))x.color=colores.length===1?colores[0]:'';
+ const tallas=Array.from(new Set(base.filter(p=>p.color===x.color).map(p=>p.talla)));if(!tallas.includes(x.talla))x.talla=tallas.length===1?tallas[0]:'';
+ const matches=base.filter(p=>p.color===x.color&&p.talla===x.talla);x.codigo='';
+ if(matches.length===1){const p=matches[0];Object.assign(x,{codigo:p.codigo,marca:p.marca,modelo:p.modelo,color:p.color,talla:p.talla,categoria:p.categoria,precio:p.precio,tipo:p.tipoIngreso,escala:p.escala});}
+ bmDraft();bmRender();
+}
 function bmEscalas(){api('escalas',{},r=>{if(!r.ok)return bmMsg(r.error,true);window.BM_ESCALAS=(r.escalas||[]).filter(e=>e.activa!=='NO');$('bmEscala').innerHTML='<option value="">Seleccione</option>'+BM_ESCALAS.map(e=>'<option>'+esc(e.nombre)+'</option>').join('');});}
 function bmTallas(){const e=(window.BM_ESCALAS||[]).find(e=>e.nombre===$('bmEscala').value);if(e)$('bmTallas').value=e.tallas.join(',');}
 function bmCSV(text,delimiter){
@@ -12605,7 +12645,7 @@ function bmRender(){
   $('bmGuardar').textContent=BM.enviado?'Reanudar / consultar la misma carga':'Validar y guardar carga';
   $('bmResumen').textContent=BM.filas.length+' referencias \u00b7 '+BM.filas.reduce((s,x)=>s+(Number.isFinite(bmNumero(x.cantidad))?bmNumero(x.cantidad):0),0)+' unidades'+(BM.id?' \u00b7 ID '+BM.id:'');
   const locked=BM.enviado||BM_BUSY;
-  $('bmTabla').innerHTML=BM.filas.length?'<table><thead><tr><th>#</th><th>C\u00f3digo / descripci\u00f3n XML</th>'+BM_COLS.map(k=>'<th>'+esc(k)+'</th>').join('')+'<th></th></tr></thead><tbody>'+BM.filas.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+(x.xml?'<input '+(locked?'disabled':'')+' aria-label="Codigo XML fila '+(i+1)+'" value="'+esc(x.codigo||'')+'" onchange="bmEditar('+i+',\'codigo\',this.value)"><small>'+esc(x.descripcion||'')+(x.codigoOrigen&&!x.codigo?' | C\u00f3digo XML no vinculado: '+esc(x.codigoOrigen):'')+'</small>':esc(bmCodigo(x)))+'</td>'+BM_COLS.map(k=>'<td><input style="min-width:90px" '+(locked?'disabled':'')+' aria-label="'+k+' fila '+(i+1)+'" value="'+esc(x[k]??'')+'" onchange="bmEditar('+i+',\''+k+'\',this.value)"></td>').join('')+'<td><button '+(locked?'disabled':'')+' onclick="bmEliminar('+i+')">Quitar</button></td></tr>').join('')+'</tbody></table>':'';
+  $('bmTabla').innerHTML=BM.filas.length?'<table><thead><tr><th>#</th><th>C\u00f3digo / descripci\u00f3n XML</th>'+BM_COLS.map(k=>'<th>'+esc(k)+'</th>').join('')+'<th></th></tr></thead><tbody>'+BM.filas.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+(x.xml?'<input '+(locked?'disabled':'')+' aria-label="Codigo XML fila '+(i+1)+'" value="'+esc(x.codigo||'')+'" onchange="bmEditar('+i+',\'codigo\',this.value)"><small>'+esc(x.descripcion||'')+(x.codigoOrigen&&!x.codigo?' | C\u00f3digo XML no vinculado: '+esc(x.codigoOrigen):'')+'</small>':esc(bmCodigo(x)))+'</td>'+BM_COLS.map(k=>'<td>'+(bmCampoProveedor(x,i,k,locked)||'<input style="min-width:90px" '+(locked?'disabled':'')+' aria-label="'+k+' fila '+(i+1)+'" value="'+esc(x[k]??'')+'" onchange="bmEditar('+i+',\''+k+'\',this.value)">')+'</td>').join('')+'<td><button '+(locked?'disabled':'')+' onclick="bmEliminar('+i+')">Quitar</button></td></tr>').join('')+'</tbody></table>':'';
 }
 function bmEditar(i,k,v){if(BM.enviado||BM_BUSY)return;BM.filas[i][k]=v;bmDraft();bmRender();}
 function bmEliminar(i){if(BM.enviado||BM_BUSY)return;BM.filas.splice(i,1);bmDraft();bmRender();}
