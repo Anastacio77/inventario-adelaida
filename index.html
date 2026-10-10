@@ -453,7 +453,7 @@ document.addEventListener('click',e=>{
         <p>Una fila por talla. Columnas: marca, modelo, color, talla, cantidad, costo, precio, tipo, escala, categoria, ubicacion, stockMinimo, lote. Tipo: INDIVIDUAL o CORRIDA.</p>
         <button onclick="bmPlantilla()">Descargar plantilla CSV para Excel</button>
         <input id="bmArchivo" type="file" accept=".xml,.csv,.tsv,.xlsx" onchange="bmImportar(this)">
-        <p>XML FEL: seleccione orden de compra. Los c&#243;digos quedan en blanco para ingresarlos manualmente; deben existir en el cat&#225;logo.</p><textarea id="bmPegado" rows="3" placeholder="Pegue aqu&#237; la tabla de Excel con encabezados"></textarea>
+        <p>XML FEL: seleccione orden de compra. Los c&#243;digos del XML se incluyen si coinciden con el cat&#225;logo. Los faltantes o no encontrados quedan en blanco para ingresarlos manualmente.</p><textarea id="bmPegado" rows="3" placeholder="Pegue aqu&#237; la tabla de Excel con encabezados"></textarea>
         <button onclick="bmPegar()">Agregar tabla pegada a la vista previa</button>
       </details>
       <details><summary><b>2. Agregar modelos y corridas</b></summary>
@@ -1474,7 +1474,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.10-XML-09';
+const VERSION_SISTEMA_UI='2026.10.10-XML-10';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -12425,7 +12425,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.10-XML-09';
+  const APP_VERSION='2026.10.10-XML-10';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
@@ -12558,12 +12558,22 @@ function bmXML(text){
   if(item.getAttribute('BienOServicio')!=='B')throw Error('L\u00ednea '+(i+1)+': servicio; importe solo productos.');
   const cantidad=Number(value(item,'Cantidad')),total=Number(value(item,'Total'));
   if(!Number.isSafeInteger(cantidad)||cantidad<=0||!Number.isFinite(total)||total<0)throw Error('Cantidad o total inv\u00e1lido en l\u00ednea '+(i+1)+'.');
-  return {xml:true,codigo:'',descripcion:value(item,'Descripcion'),cantidad,costo:total/cantidad,precio:0,tipo:'INDIVIDUAL',stockMinimo:0};
+  const nombres=['CodigoProducto','CodigoArticulo','Codigo'];
+  const codigos=nombres.flatMap(n=>Array.from(item.getElementsByTagNameNS('*',n)).map(e=>e.textContent.trim()).concat(item.getAttribute(n)||[])).map(c=>String(c).trim()).filter(Boolean);
+  const distintos=Array.from(new Set(codigos.map(c=>c.toUpperCase())));
+  const codigoOrigen=distintos.length===1?distintos[0]:'';
+  return {xml:true,codigo:'',codigoOrigen,descripcion:value(item,'Descripcion'),cantidad,costo:total/cantidad,precio:0,tipo:'INDIVIDUAL',stockMinimo:0};
  });
  const total=Number(value(doc,'GranTotal')),sum=filas.reduce((a,x)=>a+x.cantidad*x.costo,0);
  if(!Number.isFinite(total)||Math.abs(total-sum)>0.02)throw Error('El total del XML no coincide con sus productos.');
  const em=nodes(doc,'Emisor')[0];
  return {filas,nota:'XML FEL '+value(doc,'NumeroAutorizacion')+' | '+(em?.getAttribute('NombreComercial')||''),total};
+}
+async function bmCodigosXML(filas){
+ if(!filas.some(x=>x.codigoOrigen))return 0;
+ bmMsg('Comprobando los c\u00f3digos del XML en el cat\u00e1logo...');
+ const r=await bmCall('masivovalidarxml',{codigos:JSON.stringify(filas.map(x=>x.codigoOrigen||'')),sucursal:SUCURSAL,consultar:'SI'});
+ let incluidos=0;filas.forEach((x,i)=>{const p=r.productos[i];if(p){Object.assign(x,p);incluidos++;}});return incluidos;
 }
 async function bmResolverXML(){
  const filas=BM.filas.filter(x=>x.xml);if(!filas.length)return;
@@ -12573,7 +12583,7 @@ async function bmResolverXML(){
  const r=await bmCall('masivovalidarxml',{codigos:JSON.stringify(filas.map(x=>x.codigo)),sucursal:SUCURSAL});
  filas.forEach((x,i)=>Object.assign(x,r.productos[i]));bmDraft();bmRender();
 }
-async function bmImportar(input){try{const f=input.files[0];if(!f)return;if(BM.enviado||BM_BUSY)throw Error('Termine la carga pendiente primero.');if(f.size>5*1024*1024)throw Error('Archivo demasiado grande (m\u00e1ximo 5 MB).');if(/\.xml$/.test(f.name.toLowerCase())){if($('bmModo').value!=='COMPRA')throw Error('Seleccione Mercanc\u00eda nueva: crear orden de compra antes de importar el XML.');const xml=bmXML(await f.text());bmAppend(xml.filas);$('bmNota').value=xml.nota.slice(0,200);bmMsg('XML agregado: '+xml.filas.length+' l\u00edneas, total Q'+xml.total.toFixed(2)+'. Complete los c\u00f3digos y seleccione el proveedor.');return;}let rows;if(/\.xlsx$/.test(f.name.toLowerCase())){rows=await bmXLSX(await f.arrayBuffer());}else if(/\.xls$/.test(f.name.toLowerCase()))throw Error('Guarde el libro antiguo .xls como .xlsx o CSV.');else rows=bmCSV(await f.text());bmAppend(bmMatriz(rows));bmMsg('Archivo agregado. Revise la vista previa antes de guardar.');}catch(e){bmMsg(e.message,true);}finally{input.value='';}}
+async function bmImportar(input){try{const f=input.files[0];if(!f)return;if(BM.enviado||BM_BUSY)throw Error('Termine la carga pendiente primero.');if(f.size>5*1024*1024)throw Error('Archivo demasiado grande (m\u00e1ximo 5 MB).');if(/\.xml$/.test(f.name.toLowerCase())){if($('bmModo').value!=='COMPRA')throw Error('Seleccione Mercanc\u00eda nueva: crear orden de compra antes de importar el XML.');BM_BUSY=true;bmRender();const xml=bmXML(await f.text());const incluidos=await bmCodigosXML(xml.filas);BM_BUSY=false;bmAppend(xml.filas);$('bmNota').value=xml.nota.slice(0,200);bmMsg('XML agregado: '+xml.filas.length+' l\u00edneas, total Q'+xml.total.toFixed(2)+'. '+incluidos+' c\u00f3digos incluidos del cat\u00e1logo. Complete los campos vac\u00edos y seleccione el proveedor.');return;}let rows;if(/\.xlsx$/.test(f.name.toLowerCase())){rows=await bmXLSX(await f.arrayBuffer());}else if(/\.xls$/.test(f.name.toLowerCase()))throw Error('Guarde el libro antiguo .xls como .xlsx o CSV.');else rows=bmCSV(await f.text());bmAppend(bmMatriz(rows));bmMsg('Archivo agregado. Revise la vista previa antes de guardar.');}catch(e){bmMsg(e.message,true);}finally{BM_BUSY=false;bmRender();input.value='';}}
 function bmAgregarModelo(){try{const tallas=$('bmTallas').value.split(',').map(s=>s.trim()).filter(Boolean),q=$('bmCantidades').value.split(',').map(s=>s.trim());if(!tallas.length||($('bmModo').value!=='CATALOGO'&&(!q[0]||(q.length!==1&&q.length!==tallas.length))))throw Error('Indique una cantidad para todas las tallas o una cantidad por talla.');const tipo=$('bmTipo').value,escala=tipo==='CORRIDA'?$('bmEscala').value:'';if(tipo==='CORRIDA'&&!escala)throw Error('Seleccione una escala.');bmAppend(tallas.map((t,i)=>({marca:$('bmMarca').value,modelo:$('bmModelo').value,color:$('bmColor').value,talla:t,cantidad:$('bmModo').value==='CATALOGO'?0:(q.length===1?q[0]:q[i]),costo:$('bmCosto').value,precio:$('bmPrecio').value,tipo,escala,stockMinimo:2})));bmMsg('Modelo agregado. Puede agregar el siguiente o editar cantidades.');}catch(e){bmMsg(e.message,true);}}
 function bmCodigo(x){if(x.xml)return String(x.codigo||'').trim().toUpperCase();const c=v=>String(v||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]/g,'');return c(x.modelo)+'-'+c(x.color).slice(0,2)+'-'+c(x.talla);}
 function bmValidar(){const seen=new Set();return BM.filas.map((r,i)=>{const x={};BM_COLS.forEach(k=>x[k]=String(r[k]??'').trim());if(r.xml){x.xml=true;x.codigo=String(r.codigo||'').trim().toUpperCase();x.descripcion=r.descripcion;if(!x.codigo)throw Error('Fila '+(i+1)+': falta c\u00f3digo.');}x.tipo=(x.tipo||'INDIVIDUAL').toUpperCase();x.escala=x.tipo==='CORRIDA'?x.escala.toUpperCase():'';['cantidad','costo','precio','stockMinimo'].forEach(k=>{x[k]=bmNumero(x[k]);if(!Number.isFinite(x[k])||x[k]<0)throw Error('Fila '+(i+1)+': '+k+' inv\u00e1lido.');});if($('bmModo').value==='CATALOGO')x.cantidad=0;if(!Number.isSafeInteger(x.cantidad)||($('bmModo').value!=='CATALOGO'&&x.cantidad<=0))throw Error('Fila '+(i+1)+': cantidad entera positiva requerida.');['marca','modelo','color','talla'].forEach(k=>{if(!x[k])throw Error('Fila '+(i+1)+': falta '+k+'.');});if(!['INDIVIDUAL','CORRIDA'].includes(x.tipo)||(x.tipo==='CORRIDA'&&!x.escala))throw Error('Fila '+(i+1)+': tipo o escala inv\u00e1lido.');const cod=bmCodigo(x);if(seen.has(cod))throw Error('C\u00f3digo repetido '+cod+'. Combine las cantidades en una sola fila.');seen.add(cod);return x;});}
@@ -12586,7 +12596,7 @@ function bmRender(){
   $('bmGuardar').textContent=BM.enviado?'Reanudar / consultar la misma carga':'Validar y guardar carga';
   $('bmResumen').textContent=BM.filas.length+' referencias \u00b7 '+BM.filas.reduce((s,x)=>s+(Number.isFinite(bmNumero(x.cantidad))?bmNumero(x.cantidad):0),0)+' unidades'+(BM.id?' \u00b7 ID '+BM.id:'');
   const locked=BM.enviado||BM_BUSY;
-  $('bmTabla').innerHTML=BM.filas.length?'<table><thead><tr><th>#</th><th>C\u00f3digo / descripci\u00f3n XML</th>'+BM_COLS.map(k=>'<th>'+esc(k)+'</th>').join('')+'<th></th></tr></thead><tbody>'+BM.filas.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+(x.xml?'<input '+(locked?'disabled':'')+' aria-label="Codigo XML fila '+(i+1)+'" value="'+esc(x.codigo||'')+'" onchange="bmEditar('+i+',\'codigo\',this.value)"><small>'+esc(x.descripcion||'')+'</small>':esc(bmCodigo(x)))+'</td>'+BM_COLS.map(k=>'<td><input style="min-width:90px" '+(locked?'disabled':'')+' aria-label="'+k+' fila '+(i+1)+'" value="'+esc(x[k]??'')+'" onchange="bmEditar('+i+',\''+k+'\',this.value)"></td>').join('')+'<td><button '+(locked?'disabled':'')+' onclick="bmEliminar('+i+')">Quitar</button></td></tr>').join('')+'</tbody></table>':'';
+  $('bmTabla').innerHTML=BM.filas.length?'<table><thead><tr><th>#</th><th>C\u00f3digo / descripci\u00f3n XML</th>'+BM_COLS.map(k=>'<th>'+esc(k)+'</th>').join('')+'<th></th></tr></thead><tbody>'+BM.filas.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+(x.xml?'<input '+(locked?'disabled':'')+' aria-label="Codigo XML fila '+(i+1)+'" value="'+esc(x.codigo||'')+'" onchange="bmEditar('+i+',\'codigo\',this.value)"><small>'+esc(x.descripcion||'')+(x.codigoOrigen&&!x.codigo?' | C\u00f3digo XML no vinculado: '+esc(x.codigoOrigen):'')+'</small>':esc(bmCodigo(x)))+'</td>'+BM_COLS.map(k=>'<td><input style="min-width:90px" '+(locked?'disabled':'')+' aria-label="'+k+' fila '+(i+1)+'" value="'+esc(x[k]??'')+'" onchange="bmEditar('+i+',\''+k+'\',this.value)"></td>').join('')+'<td><button '+(locked?'disabled':'')+' onclick="bmEliminar('+i+')">Quitar</button></td></tr>').join('')+'</tbody></table>':'';
 }
 function bmEditar(i,k,v){if(BM.enviado||BM_BUSY)return;BM.filas[i][k]=v;bmDraft();bmRender();}
 function bmEliminar(i){if(BM.enviado||BM_BUSY)return;BM.filas.splice(i,1);bmDraft();bmRender();}
