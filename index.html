@@ -468,7 +468,7 @@ document.addEventListener('click',e=>{
         </div>
         <button onclick="bmAgregarModelo()">Agregar modelo a la vista previa</button>
       </details>
-      <h4>3. Vista previa editable</h4>
+      <details id="bmPreciosPanel"><summary><b>Precios de venta para referencias nuevas del cat&#225;logo</b></summary><p>Las reglas se aplican a las referencias nuevas de esta carga. Porcentaje y costo directo usan el costo de cada fila. Los productos existentes conservan sus precios.</p><button onclick="bmCargarPrecios()">Cargar opciones de precios</button><div id="bmCantidadPrecios"></div><div id="bmPreciosFilas"></div><p id="bmPreciosEstado"></p></details><h4>3. Vista previa editable</h4>
       <p id="bmResumen">Sin filas.</p><div style="overflow:auto;max-height:480px" id="bmTabla"></div>
       <button id="bmGuardar" class="btnVerde" onclick="bmGuardar()">Validar y guardar carga</button>
       <button id="bmNuevo" onclick="bmNueva()">Nueva carga / limpiar</button>
@@ -1475,7 +1475,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.10-COMPRAS-12';
+const VERSION_SISTEMA_UI='2026.10.10-PRECIOS-MASIVOS-13';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -12427,7 +12427,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.10-COMPRAS-12';
+  const APP_VERSION='2026.10.10-PRECIOS-MASIVOS-13';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
@@ -12475,8 +12475,32 @@ function bmKey(){return 'adelaida-ingreso-masivo-'+TOKEN.slice(0,16)+'-'+SUCURSA
 function bmDraft(){try{localStorage.setItem(bmKey(),JSON.stringify(BM));}catch(e){bmMsg('No se pudo guardar el borrador local. Mantenga esta ventana abierta.',true);}}
 function bmRecuperar(){if(BM_BUSY)return;try{const v=JSON.parse(localStorage.getItem(bmKey())||'null');if(!v)return bmMsg('No hay carga guardada para esta sesi\u00f3n y sucursal.');BM=v;bmRender();bmMsg(BM.finalizado?'Carga ya completada. Inicie una nueva para otro ingreso.':'Carga recuperada. Use Guardar para continuar con el mismo identificador.');}catch(e){bmMsg('No se pudo recuperar el borrador.',true);}}
 function bmNueva(){if(BM_BUSY)return;if(BM.enviado&&!BM.finalizado&&BM.confirmado)return bmMsg('Primero reanude y confirme la carga pendiente; no la duplique.',true);BM={filas:[],id:'',enviado:false,finalizado:false,sucursal:'',opciones:null};bmDraft();bmRender();bmMsg('Nueva carga lista.');}
-function bmModoUI(){const modo=$('bmModo').value,c=modo==='COMPRA';$('bmCompra').classList.toggle('oculto',!c);$('bmLote').disabled=modo==='CATALOGO';$('bmExplica').textContent=modo==='CATALOGO'?'Crea referencias en el cat\u00e1logo maestro desde Bodega Principal. No agrega existencias ni crea compras. La cantidad se ignora; los productos existentes se conservan sin modificar.':c?'Se crear\u00e1 una orden pendiente en la sucursal seleccionada. Rec\u00edbala desde Compras para sumar mercanc\u00eda.':'Se sumar\u00e1n las cantidades como EXISTENCIA ANTERIOR. Los productos nuevos se crean desde Bodega Principal.';if(c)bmProveedores();}
+function bmModoUI(){const modo=$('bmModo').value,c=modo==='COMPRA';$('bmCompra').classList.toggle('oculto',!c);$('bmLote').disabled=modo==='CATALOGO';$('bmExplica').textContent=modo==='CATALOGO'?'Crea referencias en el cat\u00e1logo maestro desde Bodega Principal. No agrega existencias ni crea compras. La cantidad se ignora; los productos existentes se conservan sin modificar.':c?'Se crear\u00e1 una orden pendiente en la sucursal seleccionada. Rec\u00edbala desde Compras para sumar mercanc\u00eda.':'Se sumar\u00e1n las cantidades como EXISTENCIA ANTERIOR. Los productos nuevos se crean desde Bodega Principal.';$('bmPreciosPanel').classList.toggle('oculto',modo!=='CATALOGO');if(c)bmProveedores();}
 
+let BM_NIVELES=[];
+async function bmCargarPrecios(){
+ if(BM.enviado||BM_BUSY)return;
+ try{const r=await bmCall('nivelesprecios',{});BM_NIVELES=r.niveles||[];
+ const prev=BM.precios||[];BM.precios=BM_NIVELES.map(n=>prev.find(x=>x.id===n.id)||{id:n.id,modo:n.id==='P1'?'ORIGINAL':'SIN_CONFIGURAR',valor:0,costoReferencia:''});bmDraft();bmRenderPrecios();
+ }catch(e){bmMsg(e.message,true);}
+}
+async function bmCantidadPrecios(){
+ if(BM.enviado||BM_BUSY)return;
+ try{await bmCall('guardarnivelesprecios',{cantidad:$('bmNumeroPrecios').value});await bmCargarPrecios();}catch(e){bmMsg(e.message,true);}
+}
+function bmEditarPrecio(i,k,v){if(BM.enviado||BM_BUSY)return;BM.precios[i][k]=v;bmDraft();}
+function bmRenderPrecios(){
+ const locked=BM.enviado||BM_BUSY;
+ $('bmPreciosPanel').classList.toggle('oculto',$('bmModo').value!=='CATALOGO');
+ $('bmCantidadPrecios').innerHTML=SESION&&SESION.rol==='ADMIN'?'<label>Cantidad de niveles (aplica a todo el sistema)</label><input id="bmNumeroPrecios" type="number" min="1" max="100" value="'+(BM_NIVELES.length||1)+'" '+(locked?'disabled':'')+'><button '+(locked?'disabled':'')+' onclick="bmCantidadPrecios()">Aplicar cantidad</button>':'';
+ $('bmPreciosFilas').innerHTML=(BM.precios||[]).map((p,i)=>'<div class="card"><b>'+esc((BM_NIVELES.find(n=>n.id===p.id)||{}).nombre||p.id)+'</b><label>Calculo</label><select '+(locked?'disabled':'')+' onchange="bmEditarPrecio('+i+',\'modo\',this.value)">'+[['ORIGINAL','Precio base de cada fila'],['SIN_CONFIGURAR','Sin configurar'],['FIJO','Precio fijo Q'],['COSTO','Costo de cada fila'],['PORCENTAJE','Porcentaje sobre costo']].map(o=>'<option value="'+o[0]+'" '+(p.modo===o[0]?'selected':'')+'>'+o[1]+'</option>').join('')+'</select><label>Valor (Q o porcentaje)</label><input type="number" min="0" step="0.01" '+(locked?'disabled':'')+' value="'+esc(p.valor)+'" onchange="bmEditarPrecio('+i+',\'valor\',this.value)"><label>Costo de referencia Q (vacio = costo de cada fila)</label><input type="number" min="0" step="0.01" '+(locked?'disabled':'')+' value="'+esc(p.costoReferencia)+'" onchange="bmEditarPrecio('+i+',\'costoReferencia\',this.value)"></div>').join('');
+ $('bmPreciosEstado').textContent=(BM.precios||[]).length?'Reglas guardadas en el borrador; se aplicaran al crear las referencias nuevas.':'Sin reglas adicionales: se conserva el precio base de la columna precio.';
+}
+function bmLeerPrecios(){return (BM.precios||[]).map(p=>{
+ const valor=Number(p.valor||0),costoReferencia=p.costoReferencia===''||p.costoReferencia==null?'':Number(p.costoReferencia);
+ if(!Number.isFinite(valor)||valor<0||(costoReferencia!==''&&(!Number.isFinite(costoReferencia)||costoReferencia<0)))throw Error('Precios: ingrese valores no negativos.');
+ return {id:p.id,modo:p.modo,valor,costoReferencia};
+ });}
 function bmProveedores(){api('proveedores',{q:''},r=>{if(!r.ok)return bmMsg(r.error,true);const elegido=$('bmProveedor').value||$('compProveedor').value; $('bmProveedor').innerHTML='<option value="">Seleccione</option>'+(r.proveedores||[]).map(x=>'<option value="'+esc(x.proveedorId)+'">'+esc(x.nombre)+'</option>').join('');if(Array.from($('bmProveedor').options).some(o=>o.value===elegido))$('bmProveedor').value=elegido;bmCargarModelosProveedor();});}
 let BM_CATALOGO_PROVEEDOR=[],BM_PROVEEDOR_CARGADO='';
 function bmAbrirCompras(){
@@ -12637,6 +12661,7 @@ function bmAgregarModelo(){try{const tallas=$('bmTallas').value.split(',').map(s
 function bmCodigo(x){if(x.xml)return String(x.codigo||'').trim().toUpperCase();const c=v=>String(v||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]/g,'');return c(x.modelo)+'-'+c(x.color).slice(0,2)+'-'+c(x.talla);}
 function bmValidar(){const seen=new Set();return BM.filas.map((r,i)=>{const x={};BM_COLS.forEach(k=>x[k]=String(r[k]??'').trim());if(r.xml){x.xml=true;x.codigo=String(r.codigo||'').trim().toUpperCase();x.descripcion=r.descripcion;if(!x.codigo)throw Error('Fila '+(i+1)+': falta c\u00f3digo.');}x.tipo=(x.tipo||'INDIVIDUAL').toUpperCase();x.escala=x.tipo==='CORRIDA'?x.escala.toUpperCase():'';['cantidad','costo','precio','stockMinimo'].forEach(k=>{x[k]=bmNumero(x[k]);if(!Number.isFinite(x[k])||x[k]<0)throw Error('Fila '+(i+1)+': '+k+' inv\u00e1lido.');});if($('bmModo').value==='CATALOGO')x.cantidad=0;if(!Number.isSafeInteger(x.cantidad)||($('bmModo').value!=='CATALOGO'&&x.cantidad<=0))throw Error('Fila '+(i+1)+': cantidad entera positiva requerida.');['marca','modelo','color','talla'].forEach(k=>{if(!x[k])throw Error('Fila '+(i+1)+': falta '+k+'.');});if(!['INDIVIDUAL','CORRIDA'].includes(x.tipo)||(x.tipo==='CORRIDA'&&!x.escala))throw Error('Fila '+(i+1)+': tipo o escala inv\u00e1lido.');const cod=bmCodigo(x);if(seen.has(cod))throw Error('C\u00f3digo repetido '+cod+'. Combine las cantidades en una sola fila.');seen.add(cod);return x;});}
 function bmRender(){
+  bmRenderPrecios();
   $('bmDestino').value=SUCURSAL;
   const optMap={modo:'bmModo',lote:'bmLote',nota:'bmNota',proveedorId:'bmProveedor',condicionPago:'bmPago',diasCredito:'bmDias',flete:'bmFlete'};
   Object.entries(optMap).forEach(([k,id])=>{if(BM.enviado&&BM.opciones&&id!=='bmProveedor')$(id).value=BM.opciones[k];$(id).disabled=BM.enviado||BM_BUSY;});
@@ -12684,7 +12709,7 @@ async function bmPrepararGrupos(){
 async function bmGuardar(){
   if(BM_BUSY||BM.finalizado)return;
   try{
-    if(!BM.enviado){BM_BUSY=true;bmRender();await bmResolverXML();const filas=bmValidar();if(!filas.length)throw Error('Agregue filas.');const opts={modo:$('bmModo').value,lote:$('bmLote').value,nota:$('bmNota').value,proveedorId:$('bmProveedor').value,condicionPago:$('bmPago').value,diasCredito:$('bmDias').value,flete:$('bmFlete').value};if(opts.modo==='COMPRA'&&!opts.proveedorId)throw Error('Seleccione proveedor.');BM.filas=filas;BM.id='IM-'+(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2));BM.sucursal=SUCURSAL;BM.opciones=opts;BM.enviado=true;bmDraft();}
+    if(!BM.enviado){BM_BUSY=true;bmRender();await bmResolverXML();const filas=bmValidar();if(!filas.length)throw Error('Agregue filas.');const opts={modo:$('bmModo').value,lote:$('bmLote').value,nota:$('bmNota').value,proveedorId:$('bmProveedor').value,condicionPago:$('bmPago').value,diasCredito:$('bmDias').value,flete:$('bmFlete').value,precios:$('bmModo').value==='CATALOGO'?JSON.stringify(bmLeerPrecios()):'[]'};if(opts.modo==='COMPRA'&&!opts.proveedorId)throw Error('Seleccione proveedor.');BM.filas=filas;BM.id='IM-'+(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2));BM.sucursal=SUCURSAL;BM.opciones=opts;BM.enviado=true;bmDraft();}
     if(SUCURSAL!==BM.sucursal)throw Error('Vuelva a la sucursal '+BM.sucursal+' para continuar.');
     BM_BUSY=true;bmRender();
     bmMsg('Consultando filas pendientes\u2026');if(await bmConsultar())return;
