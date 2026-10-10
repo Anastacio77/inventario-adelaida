@@ -25,6 +25,8 @@ document.addEventListener('click',e=>{
   }
 });
 
+
+
 </script>
 <style>
 *{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f4f4f6;color:#202124}.app{max-width:960px;margin:auto;padding:14px}.card,.header{background:#fff;border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 3px 14px rgba(0,0,0,.06)}h1{margin:0;font-size:24px}.sub{color:#666;margin-top:4px}.tabs{
@@ -360,7 +362,7 @@ document.addEventListener('click',e=>{
       <button class="btnAzul w100" style="margin-top:12px" onclick="abrirTrazabilidadProducto()">&#128270; Ver trazabilidad y lotes</button>
 
       <div id="atributosProductoBox" style="margin-top:12px">
-        <h4>Atributos comerciales</h4>
+        <h4>Precios de venta</h4><button onclick="cargarPreciosEditor()">Consultar precios</button><div id="preciosEditor"></div><button onclick="guardarPreciosEditor()">Guardar precios del producto</button><div id="nivelesEditor"></div><div id="preciosMensaje"></div><h4>Atributos comerciales</h4>
         <div class="grid2">
           <div><label>Estilo</label><input id="aEstilo" placeholder="Casual, deportivo, bota..."></div>
           <div><label>Material</label><input id="aMaterial" placeholder="Cuero, sint&#233;tico, hule..."></div>
@@ -442,7 +444,7 @@ document.addEventListener('click',e=>{
         <div><label>Lote com&#250;n (existencia inicial)</label><input id="bmLote" placeholder="Autom&#225;tico si queda vac&#237;o"></div>
         <div><label>Observaci&#243;n</label><input id="bmNota" maxlength="200"></div>
       </div>
-      <div id="bmCompra" class="oculto grid2">
+      <div id="bmCompra" class="oculto grid2"><div><label>Flete Q (solo costo)</label><input id="bmFlete" type="number" min="0" step="0.01" value="0"></div>
         <div><label>Proveedor</label><select id="bmProveedor"></select><button onclick="bmProveedores()">Cargar proveedores</button></div>
         <div><label>Condici&#243;n de pago</label><select id="bmPago"><option value="CONTADO">Contado</option><option value="CREDITO">Cr&#233;dito</option></select><label>D&#237;as de cr&#233;dito</label><input id="bmDias" type="number" min="1" value="30"></div>
       </div>
@@ -493,6 +495,14 @@ document.addEventListener('click',e=>{
         &#9989; INVENTARIABLE &#183; Esta referencia maneja existencia propia.
       </div>
 
+      <div id="preciosNuevoBox" class="card" style="margin-top:12px">
+        <h3>Precios de venta del producto nuevo</h3>
+        <p>Configure los precios antes de crear la referencia. Para corrida, se aplican a todas sus tallas; los porcentajes usan el costo de cada talla.</p>
+        <div id="preciosNuevoCantidadBox" class="oculto"><label>Cantidad de precios para el catalogo</label><input id="preciosNuevoCantidad" type="number" min="1" max="100" value="1"><button type="button" onclick="aplicarCantidadPreciosNuevo()">Aplicar cantidad de precios</button></div>
+        <button type="button" onclick="cargarPreciosNuevo(true)">Cargar / actualizar opciones de precios</button>
+        <div id="preciosNuevoFilas"></div><div id="preciosNuevoMensaje"></div>
+        <small>Precio original conserva el campo Precio base. Costo de referencia vacio usa el costo del producto, que incorpora flete al recibir compras.</small>
+      </div>
       <div id="individualBox">
         <div class="grid2">
 
@@ -1228,6 +1238,7 @@ document.addEventListener('click',e=>{
         </div>
         <div><label>Cantidad</label><input id="compCantidad" type="number" min="1" value="1"></div>
         <div><label>Costo unitario</label><input id="compCosto" type="number" min="0" step="0.01"></div>
+        <div><label>Flete Q (solo costo del producto)</label><input id="compFlete" type="number" min="0" step="0.01" value="0"><small>Se reparte por unidades. No aumenta el pago al proveedor.</small></div>
         <div><label>Otros costos Q</label><input id="compOtros" type="number" min="0" step="0.01" value="0"></div>
       </div>
       <button class="btnGris w100" style="margin-top:8px" onclick="agregarItemCompra()">+ Agregar talla / producto</button>
@@ -1463,7 +1474,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.09-INGRESO-MASIVO-02';
+const VERSION_SISTEMA_UI='2026.10.09-PRECIOS-NUEVO-04';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -1766,6 +1777,8 @@ function vista(v){
   if(['pos','inventario','traslados'].includes(v)){
     precargarCatalogoPos(false);
   }
+
+  if(v==='nuevo') cargarPreciosNuevo();
 
   if(v==='inventario'){
     cargarCurvas();
@@ -3591,6 +3604,7 @@ function renderCarrito(){
   const l=$('carritoLista');
 
   l.innerHTML='';
+  cargarPreciosCarrito();
 
   let pares=0;
   let sub=0;
@@ -3665,7 +3679,7 @@ function renderCarrito(){
       '</div>'+
       '<div class="fila" style="align-items:end;margin-top:9px">'+
         '<div style="flex:1">'+
-          '<label style="margin-top:0">Precio base</label>'+
+          selectorPrecioHTML(x,i)+'<label style="margin-top:0">Precio base</label>'+
           '<b>'+
           Q(pb)+
           '</b>'+
@@ -3951,7 +3965,7 @@ function cobrar(){
   if(!confirm('\u00bfCobrar '+Q(t.total)+'?')) return;
 
   api('venta',{
-    items:JSON.stringify(carrito.map(x=>({codigo:x.codigo,cantidad:x.cantidad,precioVenta:Number(x.precioVenta??x.precio)||0}))),
+    items:JSON.stringify(carrito.map(x=>({codigo:x.codigo,cantidad:x.cantidad,precioVenta:Number(x.precioVenta??x.precio)||0,precioNivelId:x.precioNivelId||''}))),
     cliente:$('posCliente').value,nit:$('posNit').value,metodo:$('posMetodo').value,
     moneda:$('posMoneda').value,efectivoDivisa:ef,cambioMoneda:$('posCambioMoneda').value,
     descuento:t.desc,nota:$('posNota').value,vendedor:$('posVendedor').value,tipoDocumento:$('posTipoDocumento').value
@@ -4979,6 +4993,8 @@ function codigoAuto(){
 }
 
 function guardarProducto(){
+  let preciosNuevos;
+  try{preciosNuevos=JSON.stringify(leerPreciosNuevo());}catch(e){return msg('mensajeNuevo',e.message,'error');}
   api(
     'crear',
     {
@@ -4988,7 +5004,7 @@ function guardarProducto(){
       color:$('nColor').value,
       talla:$('nTalla').value,
       costo:$('nCosto').value,
-      precio:$('nPrecio').value,
+      precio:$('nPrecio').value,preciosNuevos,
       existencia:0,
       catalogo:'SI',
       stockMinimo:$('nStockMinimo').value,
@@ -5596,6 +5612,8 @@ function volverEditarCorrida(){
 }
 
 function guardarCorrida(){
+  let preciosNuevos;
+  try{preciosNuevos=JSON.stringify(leerPreciosNuevo());}catch(e){return msg('mensajeCorrida',e.message,'error');}
   if(!corridaBorrador.length){
     return msg(
       'mensajeCorrida',
@@ -5630,7 +5648,7 @@ function guardarCorrida(){
       proveedorId:$('cProveedor').value,
       nota:$('cNota').value,
       catalogo:'SI',
-      filas:JSON.stringify(corridaBorrador)
+      filas:JSON.stringify(corridaBorrador),preciosNuevos
     },
     r=>{
       if(!r.ok){
@@ -7663,7 +7681,7 @@ function guardarReservaPos(){
   }
 
   api('reservarpedido',{
-    items:JSON.stringify(carrito.map(x=>({codigo:x.codigo,cantidad:x.cantidad,precioVenta:Number(x.precioVenta??x.precio)||0}))),
+    items:JSON.stringify(carrito.map(x=>({codigo:x.codigo,cantidad:x.cantidad,precioVenta:Number(x.precioVenta??x.precio)||0,precioNivelId:x.precioNivelId||''}))),
     cliente,nit:$('posNit').value,descuento:t.desc,nota:$('posNota').value,
     vendedor:$('posVendedor').value,duracion,unidadDuracion:$('resUnidad').value,
     anticipo,metodoAnticipo:$('resMetodo').value
@@ -7685,7 +7703,7 @@ function guardarPedido(){
   if(!carrito.length) return msg('mensajePos','Carrito vac\u00edo.','error');
   const t=total();
   api('guardarpedido',{
-    items:JSON.stringify(carrito.map(x=>({codigo:x.codigo,cantidad:x.cantidad,precioVenta:Number(x.precioVenta??x.precio)||0}))),
+    items:JSON.stringify(carrito.map(x=>({codigo:x.codigo,cantidad:x.cantidad,precioVenta:Number(x.precioVenta??x.precio)||0,precioNivelId:x.precioNivelId||''}))),
     cliente:$('posCliente').value,nit:$('posNit').value,descuento:t.desc,nota:$('posNota').value,vendedor:$('posVendedor').value
   },r=>{
     if(!r.ok) return msg('mensajePos',r.error,'error');
@@ -8112,6 +8130,7 @@ let MODELO_CURVA_SELECCIONADO=null;
 const COMPRAS_RECIBIENDO=new Set();
 
 function cargarAtributosProducto(){
+  cargarPreciosEditor();
   if(!productoActual||!productoActual.codigo) return;
   api('atributos',{codigo:productoActual.codigo},r=>{
     if(!r||!r.ok) return;
@@ -9348,7 +9367,7 @@ function crearCompraUI(){
     proveedorId:$('compProveedor').value,
     condicionPago:$('compCondicionPago').value,
     diasCredito:$('compDiasCredito').value,
-    otrosCostos:$('compOtros').value,
+    otrosCostos:$('compOtros').value,flete:$('compFlete').value,
     nota:$('compNota').value,
     items:JSON.stringify(COMPRA_ITEMS),
     claveSolicitud
@@ -9870,7 +9889,7 @@ function ticketCompraHTML(r,id){
     total:Number(r.total)||0,
     etiquetaSubtotal:'Subtotal productos',
     etiquetaDescuento:'Descuento',
-    etiquetaTotal:'TOTAL COMPRA',
+    etiquetaTotal:'TOTAL PROVEEDOR',
     etiquetaPago:'Condici\u00f3n',
     metodoPago:r.condicionPago||'',
     etiquetaCliente:'Proveedor',
@@ -9880,6 +9899,7 @@ function ticketCompraHTML(r,id){
 
   const ticket=$(id);
 
+  if(ticket && Number(r.flete)>0){ticket.innerHTML+='<div>Flete (solo costo): <b>'+Q(r.flete)+'</b></div><small>Distribuido por unidades; excluido del total del proveedor.</small>';}
   if(ticket && Number(r.otrosCostos)>0){
     const totales=ticket.querySelector('.totales');
 
@@ -10011,6 +10031,7 @@ function exportarCompraCSV(){
 
   filas.push([]);
   filas.push(['Subtotal',Number(r.subtotal)||0]);
+  filas.push(['Flete (solo costo, excluido del proveedor)',Number(r.flete)||0]);
   filas.push(['Otros costos',Number(r.otrosCostos)||0]);
   filas.push(['TOTAL',Number(r.total)||0]);
   filas.push(['Nota',r.nota||'']);
@@ -12404,7 +12425,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.09-INGRESO-MASIVO-02';
+  const APP_VERSION='2026.10.09-PRECIOS-NUEVO-04';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
@@ -12527,7 +12548,7 @@ function bmCodigo(x){const c=v=>String(v||'').trim().toUpperCase().normalize('NF
 function bmValidar(){const seen=new Set();return BM.filas.map((r,i)=>{const x={};BM_COLS.forEach(k=>x[k]=String(r[k]??'').trim());x.tipo=(x.tipo||'INDIVIDUAL').toUpperCase();x.escala=x.tipo==='CORRIDA'?x.escala.toUpperCase():'';['cantidad','costo','precio','stockMinimo'].forEach(k=>{x[k]=bmNumero(x[k]);if(!Number.isFinite(x[k])||x[k]<0)throw Error('Fila '+(i+1)+': '+k+' inv\u00e1lido.');});if(!Number.isSafeInteger(x.cantidad)||x.cantidad<=0)throw Error('Fila '+(i+1)+': cantidad entera positiva requerida.');['marca','modelo','color','talla'].forEach(k=>{if(!x[k])throw Error('Fila '+(i+1)+': falta '+k+'.');});if(!['INDIVIDUAL','CORRIDA'].includes(x.tipo)||(x.tipo==='CORRIDA'&&!x.escala))throw Error('Fila '+(i+1)+': tipo o escala inv\u00e1lido.');const cod=bmCodigo(x);if(seen.has(cod))throw Error('C\u00f3digo repetido '+cod+'. Combine las cantidades en una sola fila.');seen.add(cod);return x;});}
 function bmRender(){
   $('bmDestino').value=SUCURSAL;
-  const optMap={modo:'bmModo',lote:'bmLote',nota:'bmNota',proveedorId:'bmProveedor',condicionPago:'bmPago',diasCredito:'bmDias'};
+  const optMap={modo:'bmModo',lote:'bmLote',nota:'bmNota',proveedorId:'bmProveedor',condicionPago:'bmPago',diasCredito:'bmDias',flete:'bmFlete'};
   Object.entries(optMap).forEach(([k,id])=>{if(BM.enviado&&BM.opciones&&id!=='bmProveedor')$(id).value=BM.opciones[k];$(id).disabled=BM.enviado||BM_BUSY;});
   $('bmCompra').classList.toggle('oculto',$('bmModo').value!=='COMPRA');
   $('bmGuardar').disabled=BM_BUSY||BM.finalizado||!BM.filas.length;
@@ -12542,7 +12563,7 @@ function bmCall(a,p){return new Promise((resolve,reject)=>api(a,p,r=>r.ok?resolv
 async function bmGuardar(){
   if(BM_BUSY||BM.finalizado)return;
   try{
-    if(!BM.enviado){const filas=bmValidar();if(!filas.length)throw Error('Agregue filas.');const opts={modo:$('bmModo').value,lote:$('bmLote').value,nota:$('bmNota').value,proveedorId:$('bmProveedor').value,condicionPago:$('bmPago').value,diasCredito:$('bmDias').value};if(opts.modo==='COMPRA'&&!opts.proveedorId)throw Error('Seleccione proveedor.');BM.filas=filas;BM.id='IM-'+(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2));BM.sucursal=SUCURSAL;BM.opciones=opts;BM.enviado=true;bmDraft();}
+    if(!BM.enviado){const filas=bmValidar();if(!filas.length)throw Error('Agregue filas.');const opts={modo:$('bmModo').value,lote:$('bmLote').value,nota:$('bmNota').value,proveedorId:$('bmProveedor').value,condicionPago:$('bmPago').value,diasCredito:$('bmDias').value,flete:$('bmFlete').value};if(opts.modo==='COMPRA'&&!opts.proveedorId)throw Error('Seleccione proveedor.');BM.filas=filas;BM.id='IM-'+(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2));BM.sucursal=SUCURSAL;BM.opciones=opts;BM.enviado=true;bmDraft();}
     if(SUCURSAL!==BM.sucursal)throw Error('Vuelva a la sucursal '+BM.sucursal+' para continuar.');
     BM_BUSY=true;bmRender();
     for(let i=0;i<BM.filas.length;i++){bmMsg('Validando fila '+(i+1)+' de '+BM.filas.length+'\u2026');await bmCall('masivopreparar',{id:BM.id,indice:i,fila:JSON.stringify(BM.filas[i]),sucursal:BM.sucursal});}
@@ -12552,6 +12573,45 @@ async function bmGuardar(){
   }catch(e){bmMsg(e.message+' Si se cort\u00f3 la conexi\u00f3n, reanude esta misma carga para evitar duplicados.',true);}finally{BM_BUSY=false;bmRender();}
 }
 function bmPlantilla(){const csv='\uFEFF'+BM_COLS.join(';')+'\r\nH\u00e9rcules;2323;Negro;37;2;50;75;CORRIDA;D;Botas;A1;2;\r\nH\u00e9rcules;2323;Negro;38;3;50;75;CORRIDA;D;Botas;A1;2;\r\nRoy;2925;Negro;40;1;120;200;INDIVIDUAL;;Zapatos;A2;2;\r\n';const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='Plantilla_Ingreso_Masivo.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+
+function selectorPrecioHTML(x,i){
+ if(!x.preciosVenta)return '<small>Cargando precios...</small>';
+ return '<label>Elegir precio</label><select onchange="elegirPrecioPOS('+i+',this.value)">'+x.preciosVenta.filter(p=>p.precio!==null).map(p=>'<option value="'+esc(p.id)+'" '+((x.precioNivelId||'P1')===p.id?'selected':'')+'>'+esc(p.nombre)+' - '+Q(p.precio)+'</option>').join('')+'</select>';
+}
+function cargarPreciosCarrito(){carrito.forEach(x=>{if(x.preciosVenta||x.preciosCargando)return;x.preciosCargando=true;api('preciosproducto',{codigo:x.codigo},r=>{x.preciosCargando=false;if(!r.ok){x.preciosVenta=[];msg('mensajePos',r.error,'error');return;}x.preciosVenta=r.precios;if(carrito.includes(x)){const n=r.precios.find(p=>p.id===(x.precioNivelId||'P1')&&p.precio!==null);if(n){if(!x.precioNivelId)x.precioVenta=n.precio;x.precioBase=n.precio;x.precioNivelId=n.id;if(Number(x.precioVenta)<n.precio)x.precioVenta=n.precio;}renderCarrito();}});});}
+function elegirPrecioPOS(i,id){const x=carrito[i],p=x.preciosVenta.find(n=>n.id===id);if(!p||p.precio===null)return;x.precioNivelId=id;x.precioBase=p.precio;x.precioVenta=p.precio;renderCarrito();}
+function cargarPreciosEditor(){if(!productoActual||!productoActual.codigo)return;api('preciosproducto',{codigo:productoActual.codigo},r=>{if(!r.ok)return msg('preciosMensaje',r.error,'error');$('preciosEditor').innerHTML='<p>Costo actual: '+Q(r.costo)+'. Porcentaje = costo x (1 + porcentaje / 100).</p>'+r.precios.map(p=>'<div class="precioNivelFila" data-id="'+esc(p.id)+'"><b>'+esc(p.nombre)+'</b><label>Calculo</label><select class="nivelModo">'+[['ORIGINAL','Precio original'],['SIN_CONFIGURAR','Sin configurar'],['FIJO','Precio fijo Q'],['COSTO','Costo directo'],['PORCENTAJE','Porcentaje sobre costo']].map(v=>'<option value="'+v[0]+'" '+(p.modo===v[0]?'selected':'')+'>'+v[1]+'</option>').join('')+'</select><label>Valor (Q o porcentaje)</label><input class="nivelValor" type="number" min="0" step="0.01" value="'+p.valor+'"><label>Costo de referencia Q (vacio = costo actual con flete)</label><input class="nivelCosto" type="number" min="0" step="0.01" value="'+(p.costoReferencia===null?'':p.costoReferencia)+'"><small>Precio calculado: '+(p.precio===null?'Sin configurar':Q(p.precio))+'</small></div>').join('');if(SESION.rol==='ADMIN')$('nivelesEditor').innerHTML='<label>Cantidad de precios (1 a 100)</label><input id="nivelCantidad" type="number" min="1" max="100" value="'+r.precios.length+'"><button onclick="guardarCantidadPrecios()">Aplicar cantidad de precios</button><small>La cantidad aplica a todos los productos. Configure sus valores por producto.</small>';});}
+function guardarPreciosEditor(){if(!productoActual)return;const precios=Array.from(document.querySelectorAll('.precioNivelFila')).map(e=>({id:e.dataset.id,modo:e.querySelector('.nivelModo').value,valor:e.querySelector('.nivelValor').value,costoReferencia:e.querySelector('.nivelCosto').value}));api('guardarpreciosproducto',{codigo:productoActual.codigo,precios:JSON.stringify(precios)},r=>{msg('preciosMensaje',r.ok?r.mensaje:r.error,r.ok?'ok':'error');if(r.ok){carrito.forEach(x=>{delete x.preciosVenta;});cargarPreciosEditor();renderCarrito();}});}
+function guardarCantidadPrecios(){api('guardarnivelesprecios',{cantidad:$('nivelCantidad').value},r=>{msg('preciosMensaje',r.ok?r.mensaje:r.error,r.ok?'ok':'error');if(r.ok){carrito.forEach(x=>{delete x.preciosVenta;});cargarPreciosEditor();renderCarrito();}});}
+
+
+let PRECIOS_NUEVO_LISTOS=false;
+function leerPreciosNuevo(){
+ if(!PRECIOS_NUEVO_LISTOS)throw Error('Cargue las opciones de precios antes de crear el producto.');
+ return Array.from(document.querySelectorAll('#preciosNuevoFilas .nuevoPrecioFila')).map(e=>{
+ const valor=Number(e.querySelector('.nuevoPrecioValor').value||0),ref=e.querySelector('.nuevoPrecioCosto').value;
+ if(!Number.isFinite(valor)||valor<0||(ref!==''&&(!Number.isFinite(Number(ref))||Number(ref)<0)))throw Error('Los valores de precios deben ser numeros no negativos.');
+ return {id:e.dataset.id,modo:e.querySelector('.nuevoPrecioModo').value,valor,costoReferencia:ref};
+ });
+}
+function pintarPreciosNuevo(niveles,anteriores){
+ const porId=new Map((anteriores||[]).map(x=>[x.id,x]));
+ $('preciosNuevoFilas').innerHTML=niveles.map(n=>{
+ const x=porId.get(n.id)||{modo:n.id==='P1'?'ORIGINAL':'SIN_CONFIGURAR',valor:0,costoReferencia:''};
+ return '<div class="nuevoPrecioFila card" data-id="'+esc(n.id)+'"><b>'+esc(n.nombre)+'</b><div class="grid2"><div><label>Calculo del precio</label><select class="nuevoPrecioModo">'+[['ORIGINAL','Precio base del formulario'],['SIN_CONFIGURAR','Sin configurar'],['FIJO','Precio fijo Q'],['COSTO','Costo directo'],['PORCENTAJE','Porcentaje sobre costo']].map(v=>'<option value="'+v[0]+'" '+(x.modo===v[0]?'selected':'')+'>'+v[1]+'</option>').join('')+'</select></div><div><label>Precio fijo Q / porcentaje</label><input class="nuevoPrecioValor" type="number" min="0" step="0.01" value="'+x.valor+'"></div><div><label>Costo de referencia Q (opcional)</label><input class="nuevoPrecioCosto" type="number" min="0" step="0.01" value="'+x.costoReferencia+'"></div></div></div>';
+ }).join('');
+ $('preciosNuevoCantidad').value=niveles.length;PRECIOS_NUEVO_LISTOS=true;
+ $('preciosNuevoCantidadBox').classList.toggle('oculto',!SESION||SESION.rol!=='ADMIN');
+}
+function cargarPreciosNuevo(forzar=false){
+ if(PRECIOS_NUEVO_LISTOS&&!forzar)return;
+ let anteriores=[];if(PRECIOS_NUEVO_LISTOS){try{anteriores=leerPreciosNuevo();}catch(e){return msg('preciosNuevoMensaje',e.message,'error');}}
+ api('nivelesprecios',{},r=>{if(!r.ok)return msg('preciosNuevoMensaje',r.error,'error');pintarPreciosNuevo(r.niveles,anteriores);msg('preciosNuevoMensaje','Opciones listas. Se guardan junto con el producto.','ok');});
+}
+function aplicarCantidadPreciosNuevo(){
+ let anteriores;try{anteriores=PRECIOS_NUEVO_LISTOS?leerPreciosNuevo():[];}catch(e){return msg('preciosNuevoMensaje',e.message,'error');}
+ api('guardarnivelesprecios',{cantidad:$('preciosNuevoCantidad').value},r=>{if(!r.ok)return msg('preciosNuevoMensaje',r.error,'error');pintarPreciosNuevo(r.niveles,anteriores);carrito.forEach(x=>{delete x.preciosVenta;});msg('preciosNuevoMensaje','Cantidad aplicada al catalogo. Complete los valores del producto nuevo.','ok');});
+}
 
 </script>
 </body>
