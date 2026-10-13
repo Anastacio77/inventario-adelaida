@@ -434,7 +434,7 @@ document.addEventListener('click',e=>{
 
   </div>
 
-  <div id="vistaNuevo" class="vistaApp oculto"><div class="card"><button id="exportarQRExcel" onclick="exportarProductosQRExcel()">Exportar productos a Excel con QR</button></div>
+  <div id="vistaNuevo" class="vistaApp oculto"><div class="card"><h3>Nombres de los precios de venta</h3><p>Ejemplo: Precio docena, Precio mayorista o Precio unidad. Los nombres aplican a todo el catalogo; no cambian los importes ni exigen una cantidad minima.</p><button onclick="cargarNombresPrecios()">Cargar nombres de precios</button><div id="nombresPreciosFilas"></div><button onclick="guardarNombresPrecios()">Guardar nombres</button><div id="nombresPreciosMensaje"></div></div><div class="card"><button id="exportarQRExcel" onclick="exportarProductosQRExcel()">Exportar productos a Excel con QR</button></div>
     <div class="card" id="masivoPanel">
       <h3>Ingreso masivo</h3>
       <p>Importe XML, Excel/CSV o agregue varios modelos por talla. Revise la tabla antes de guardar. M&#225;ximo 300 referencias por carga.</p>
@@ -1475,7 +1475,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.13-TRASLADOS-MULTIPLES-18';
+const VERSION_SISTEMA_UI='2026.10.13-NOMBRES-PRECIOS-19';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -12370,7 +12370,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.13-TRASLADOS-MULTIPLES-18';
+  const APP_VERSION='2026.10.13-NOMBRES-PRECIOS-19';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
@@ -12741,6 +12741,17 @@ async function exportarProductosQRExcel(){
  while(inicio<total){btn.textContent='Exportando '+inicio+' de '+(inicio?total:'...')+' productos';const r=await bmCall('exportarproductosqr',{inicio});headers=r.encabezados;total=r.total;if(r.filas.length===0&&inicio<total)throw Error('No se pudo completar la exportacion.');r.filas.forEach((x,i)=>{rows.push(x.valores);if(x.png)images.push({row:inicio+i+1,png:x.png,codigo:x.valores[0]});});inicio+=r.filas.length;}
  const blob=exLibro(headers,rows,images),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='Productos_Adelaida_Con_QR.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);msg('mensajeNuevo','Excel descargado con '+rows.length+' productos y '+images.length+' QR.','ok');
  }catch(e){msg('mensajeNuevo','No se pudo exportar: '+e.message,'error');}finally{EX_PRODUCTOS_BUSY=false;btn.disabled=false;btn.textContent='Exportar productos a Excel con QR';}
+}
+
+</script>
+
+<script>
+
+let NOMBRES_PRECIOS=[];
+async function cargarNombresPrecios(){try{const r=await bmCall('nivelesprecios',{});NOMBRES_PRECIOS=r.niveles||[];$('nombresPreciosFilas').innerHTML=NOMBRES_PRECIOS.map((n,i)=>'<label>'+esc(n.id)+'</label><input maxlength="60" aria-label="Nombre '+esc(n.id)+'" value="'+esc(n.nombre)+'" onchange="NOMBRES_PRECIOS['+i+'].nombre=this.value">').join('');}catch(e){msg('nombresPreciosMensaje',e.message,'error');}}
+async function guardarNombresPrecios(){
+ if(!SESION||SESION.rol!=='ADMIN')return msg('nombresPreciosMensaje','Solo el administrador puede cambiar nombres.','error');
+ try{if(!NOMBRES_PRECIOS.length)throw Error('Cargue los nombres primero.');const nombres=NOMBRES_PRECIOS.map(n=>String(n.nombre||'').trim());if(nombres.some(n=>!n||n.startsWith('=')))throw Error('Escriba un nombre valido para cada precio.');await bmCall('guardarnivelesprecios',{cantidad:nombres.length,nombres:JSON.stringify(nombres)});carrito.forEach(x=>{delete x.preciosVenta;});cargarPreciosCarrito();if(BM_NIVELES.length)await bmCargarPrecios();msg('nombresPreciosMensaje','Nombres guardados. Se muestran en los selectores de precios.','ok');}catch(e){msg('nombresPreciosMensaje',e.message,'error');}
 }
 
 </script>
