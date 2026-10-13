@@ -872,7 +872,7 @@ document.addEventListener('click',e=>{
       <label>Nota</label>
       <textarea id="trasNota"></textarea>
 
-      <button id="btnDespacharTraslado" class="btnAzul w100" style="margin-top:12px" onclick="hacerTraslado()">Despachar traslado</button>
+      <button type="button" onclick="agregarProductoTraslado()">Agregar producto al traslado</button><div id="trasListaProductos"></div><button id="btnDespacharTraslado" class="btnAzul w100" style="margin-top:12px" onclick="hacerTraslado()">Despachar traslado</button>
 
       <div id="mensajeTraslado"></div>
       <button id="btnImprimirUltimoTraslado" class="btnNegro w100 oculto" type="button" style="margin-top:10px" onclick="imprimirUltimoTraslado()">&#128424; Imprimir &#250;ltimo traslado</button>
@@ -1475,7 +1475,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.13-IMPRESION-MOVIL-17';
+const VERSION_SISTEMA_UI='2026.10.13-TRASLADOS-MULTIPLES-18';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -1767,6 +1767,7 @@ function volverLogin(){
 }
 
 function vista(v){
+  if(v==='traslados')recuperarListaTraslado();
   if(v==='nuevo'&&$('masivoPanel'))$('vistaNuevo').prepend($('masivoPanel'));
   ocultarVistas();
   const el=$('vista'+v.charAt(0).toUpperCase()+v.slice(1));
@@ -5833,117 +5834,41 @@ function imprimirUltimoTraslado(){
   imprimirTraslado(ULTIMO_TRASLADO_IMPRESION);
 }
 
+let TRAS_PRODUCTOS=[];
+function claveListaTraslado(){return 'adelaida-traslado-multiple-'+TOKEN.slice(0,16)+'-'+SUCURSAL;}
+function guardarListaTraslado(){try{localStorage.setItem(claveListaTraslado(),JSON.stringify({items:TRAS_PRODUCTOS,id:TRASLADO_SOLICITUD_ID,destino:$('trasDestino').value,nota:$('trasNota').value}));}catch(e){}}
+function recuperarListaTraslado(){if(TRASLADO_ENVIANDO||TRAS_PRODUCTOS.length)return;try{const d=JSON.parse(localStorage.getItem(claveListaTraslado())||'null');if(!d)return;TRAS_PRODUCTOS=d.items||[];TRASLADO_SOLICITUD_ID=d.id||'';$('trasDestino').value=d.destino||'';$('trasNota').value=d.nota||'';if(TRASLADO_SOLICITUD_ID)['trasDestino','trasNota','trasCodigo','trasCantidad','trasProductoSelect'].forEach(id=>$(id).disabled=true);renderProductosTraslado();}catch(e){}}
+
+function renderProductosTraslado(){
+ guardarListaTraslado();
+ $('trasListaProductos').innerHTML=TRAS_PRODUCTOS.length?'<table><thead><tr><th>Producto</th><th>Cantidad</th><th></th></tr></thead><tbody>'+TRAS_PRODUCTOS.map((x,i)=>'<tr><td>'+esc([x.marca,x.modelo,x.color,x.talla,x.codigo].filter(Boolean).join(' / '))+'</td><td><input type="number" min="1" value="'+x.cantidad+'" '+(TRASLADO_ENVIANDO||TRASLADO_SOLICITUD_ID?'disabled':'')+' onchange="editarCantidadTraslado('+i+',this.value)"></td><td><button '+(TRASLADO_ENVIANDO||TRASLADO_SOLICITUD_ID?'disabled':'')+' onclick="quitarProductoTraslado('+i+')">Quitar</button></td></tr>').join('')+'</tbody></table>':'';
+}
+function agregarProductoTraslado(){
+ if(TRASLADO_ENVIANDO||TRASLADO_SOLICITUD_ID)return msg('mensajeTraslado','Reintente el traslado pendiente antes de modificarlo.','error');
+ const codigo=$('trasCodigo').value.trim(),p=PRODUCTOS_TRASLADO_ORIGEN.find(x=>x.codigo===codigo),cantidad=Number($('trasCantidad').value);
+ if(!p||!Number.isSafeInteger(cantidad)||cantidad<=0)return msg('mensajeTraslado','Seleccione producto y cantidad valida.','error');
+ if(TRAS_PRODUCTOS.length&&TRAS_PRODUCTOS[0].origen!==SUCURSAL)return msg('mensajeTraslado','Vuelva a la sucursal origen de esta lista.','error');
+ const old=TRAS_PRODUCTOS.find(x=>x.codigo===codigo),n=cantidad+(old?old.cantidad:0);
+ if(n>Number(p.existencia))return msg('mensajeTraslado','Cantidad supera existencia disponible.','error');
+ if(old)old.cantidad=n;else{if(TRAS_PRODUCTOS.length>=50)return msg('mensajeTraslado','Maximo 50 referencias por traslado.','error');TRAS_PRODUCTOS.push({...p,cantidad,origen:SUCURSAL});}
+ $('trasCodigo').value='';$('trasProductoSelect').value='';$('trasCantidad').value=1;renderProductosTraslado();
+}
+function quitarProductoTraslado(i){if(TRASLADO_ENVIANDO||TRASLADO_SOLICITUD_ID)return;TRAS_PRODUCTOS.splice(i,1);renderProductosTraslado();}
+function editarCantidadTraslado(i,v){if(TRASLADO_ENVIANDO||TRASLADO_SOLICITUD_ID)return;const n=Number(v);if(Number.isSafeInteger(n)&&n>0&&n<=Number(TRAS_PRODUCTOS[i].existencia))TRAS_PRODUCTOS[i].cantidad=n;renderProductosTraslado();}
 function hacerTraslado(){
-  if(TRASLADO_ENVIANDO){
-    return;
-  }
-
-  const codigo=$('trasCodigo').value.trim();
-
-  const trasladoFormulario={
-    codigo,
-    origen:SUCURSAL,
-    destino:$('trasDestino').value,
-    cantidad:Number($('trasCantidad').value||0),
-    nota:$('trasNota').value||'',
-    producto:{...(PRODUCTOS_TRASLADO_ORIGEN.find(p=>String(p.codigo)===codigo)||{})}
-  };
-
-  if(!codigo){
-    return msg('mensajeTraslado','Ingrese un producto.','error');
-  }
-
-  if(!TRASLADO_SOLICITUD_ID){
-    TRASLADO_SOLICITUD_ID=
-      'TSOL-'+Date.now()+'-'+Math.random().toString(36).slice(2,10).toUpperCase();
-  }
-
-  TRASLADO_ENVIANDO=true;
-
-  const btn=$('btnDespacharTraslado');
-  if(btn){
-    btn.disabled=true;
-    btn.textContent='Despachando\u2026';
-  }
-
-  msg(
-    'mensajeTraslado',
-    'Registrando traslado. No vuelva a presionar el bot\u00f3n\u2026',
-    'info'
-  );
-
-  api(
-    'traslado',
-    {
-      origen:SUCURSAL,
-      destino:$('trasDestino').value,
-      codigo,
-      cantidad:$('trasCantidad').value,
-      nota:$('trasNota').value,
-      idSolicitud:TRASLADO_SOLICITUD_ID
-    },
-    r=>{
-      TRASLADO_ENVIANDO=false;
-
-      if(btn){
-        btn.disabled=false;
-        btn.textContent='Despachar traslado';
-      }
-
-      if(!r||!r.ok){
-        return msg(
-          'mensajeTraslado',
-          (r&&r.error)||'No se pudo conectar. Puede intentar nuevamente; el sistema evitar\u00e1 duplicar el traslado.',
-          'error'
-        );
-      }
-
-      $('trasCodigo').value='';
-      $('trasCantidad').value=1;
-      $('trasCantidad').removeAttribute('max');
-      $('trasNota').value='';
-      if($('trasProductoSelect')) $('trasProductoSelect').value='';
-
-      PRODUCTOS_TRASLADO_TS=0;
-      cargarResumen();
-      cargarProductosTrasladoOrigen(true);
-      cargarTraslados();
-
-      ULTIMO_TRASLADO_IMPRESION={
-        numeroTraslado:r.numeroTraslado||'',
-        fecha:new Date().toLocaleString(),
-        codigo:r.codigo||trasladoFormulario.codigo,
-        marca:trasladoFormulario.producto.marca||'',
-        modelo:trasladoFormulario.producto.modelo||'',
-        color:trasladoFormulario.producto.color||'',
-        talla:trasladoFormulario.producto.talla||'',
-        tipoIngreso:trasladoFormulario.producto.tipoIngreso||'INDIVIDUAL',
-        escala:trasladoFormulario.producto.escala||'',
-        origen:r.origen||trasladoFormulario.origen,
-        destino:r.destino||trasladoFormulario.destino,
-        cantidad:Number(r.cantidad||trasladoFormulario.cantidad||0),
-        usuario:(SESION&&SESION.nombre)||'',
-        nota:trasladoFormulario.nota,
-        estado:r.estado||'EN TRANSITO',
-        fechaRecepcion:'',
-        usuarioRecibe:''
-      };
-
-      if($('btnImprimirUltimoTraslado')){
-        $('btnImprimirUltimoTraslado').classList.remove('oculto');
-      }
-
-      msg(
-        'mensajeTraslado',
-        r.duplicadoEvitado
-          ? 'Este traslado ya hab\u00eda sido registrado. Se recuper\u00f3 el mismo traslado '+r.numeroTraslado+' sin duplicarlo.'
-          : 'Traslado '+r.numeroTraslado+' despachado \u00b7 estado: EN TR\u00c1NSITO. El destino debe confirmar recibido.',
-        'ok'
-      );
-
-      TRASLADO_SOLICITUD_ID='';
-    }
-  );
+ if(TRASLADO_ENVIANDO)return;
+ if(!TRAS_PRODUCTOS.length)agregarProductoTraslado();if(!TRAS_PRODUCTOS.length)return;
+ if(TRAS_PRODUCTOS[0].origen!==SUCURSAL)return msg('mensajeTraslado','Vuelva a la sucursal origen.','error');
+ if(!TRASLADO_SOLICITUD_ID)TRASLADO_SOLICITUD_ID='TSOL-'+Date.now()+'-'+Math.random().toString(36).slice(2,10);
+ const items=TRAS_PRODUCTOS.map(x=>({...x})),destino=$('trasDestino').value,nota=$('trasNota').value;
+ guardarListaTraslado();TRASLADO_ENVIANDO=true;['trasDestino','trasNota','trasCodigo','trasCantidad','trasProductoSelect'].forEach(id=>$(id).disabled=true);renderProductosTraslado();$('btnDespacharTraslado').disabled=true;
+ msg('mensajeTraslado','Despachando '+items.length+' referencias en un solo traslado...','info');
+ api('traslado',{origen:SUCURSAL,destino,nota,items:JSON.stringify(items.map(x=>({codigo:x.codigo,cantidad:x.cantidad}))),idSolicitud:TRASLADO_SOLICITUD_ID},r=>{
+ TRASLADO_ENVIANDO=false;$('btnDespacharTraslado').disabled=false;
+ if(!r||!r.ok){if(r&&!/Tiempo agotado|No se pudo conectar/.test(r.error||'')){TRASLADO_SOLICITUD_ID='';['trasDestino','trasNota','trasCodigo','trasCantidad','trasProductoSelect'].forEach(id=>$(id).disabled=false);}renderProductosTraslado();return msg('mensajeTraslado',(r&&r.error)||'No se pudo conectar. Reintente esta misma lista sin duplicarla.','error');}
+ ULTIMO_TRASLADO_IMPRESION={...r,items,nota,fecha:new Date().toLocaleString(),usuario:SESION.nombre||SESION.usuario};TRAS_PRODUCTOS=[];TRASLADO_SOLICITUD_ID='';
+ ['trasDestino','trasNota','trasCodigo','trasCantidad','trasProductoSelect'].forEach(id=>$(id).disabled=false);$('trasNota').value='';renderProductosTraslado();$('btnImprimirUltimoTraslado').classList.remove('oculto');PRODUCTOS_TRASLADO_TS=0;cargarResumen();cargarProductosTrasladoOrigen(true);cargarTraslados();msg('mensajeTraslado','Traslado '+r.numeroTraslado+': '+items.length+' referencias. Pendiente de recepcion en destino.','ok');
+ });
 }
 
 function cargarTraslados(sucursalSolicitada){
@@ -12445,7 +12370,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.13-IMPRESION-MOVIL-17';
+  const APP_VERSION='2026.10.13-TRASLADOS-MULTIPLES-18';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
