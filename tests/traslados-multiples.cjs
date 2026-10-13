@@ -1,0 +1,13 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert'),path=require('path');
+const html=fs.readFileSync(process.argv[2]||path.join(__dirname,'../index.html'),'utf8');const b=fs.readFileSync(process.argv[3]||path.join(__dirname,'../Code_Traslados_Multiples_18.gs'),'utf8');
+for(const m of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g))new vm.Script(m[1]);new vm.Script(b);
+assert(html.includes('Agregar producto al traslado'));assert(html.includes('items:JSON.stringify(items.map'));assert(html.includes('Array.isArray(t.items)'));
+let rows=[],calls=[],restored=false,locked=0;
+const c={auth_:()=>({usuario:'admin'}),sucursalUso_:(s,x)=>x,norm_:s=>String(s).toUpperCase(),num_:Number,LockService:{getDocumentLock:()=>({waitLock:()=>locked++,releaseLock:()=>locked--})},asegurarTrasladosRecepcion_:()=>({getDataRange:()=>({getValues:()=>[[],...rows]})}),trasladoSnapshots_:()=>[],trasladoRestaurar_:()=>{restored=true;calls=[];},op_:()=> 'TRAS-1',SpreadsheetApp:{flush:()=>{}},trasladoFila_:(token,p,internal)=>{calls.push({p,internal});return {ok:true}},recibirTrasladoFila_:(token,p,internal)=>{calls.push(internal.codigo);return {ok:true,estado:'RECIBIDO'}}};vm.createContext(c);
+vm.runInContext(b.slice(b.lastIndexOf('function traslado_(token,p){')),c);
+const p={origen:'Bodega Principal',destino:'Adelaida La Paz',idSolicitud:'TSOL-123-abc',items:JSON.stringify([{codigo:'A',cantidad:2},{codigo:'B',cantidad:3}])};
+let r=c.traslado_('token',p);assert.equal(r.cantidad,5);assert.equal(calls.length,2);assert.equal(calls[0].internal.numero,calls[1].internal.numero);assert.equal(locked,0);
+calls=[];rows=[Array(21).fill('')];Object.assign(rows[0],{1:'TRAS-1',2:'A',7:p.origen,8:p.destino,9:2,16:'EN TRANSITO',20:p.idSolicitud});r=c.traslado_('token',p);assert(r.duplicadoEvitado);assert.equal(calls.length,0);
+rows=[];c.trasladoFila_=()=>{throw Error('stock')};assert.throws(()=>c.traslado_('token',p));assert(restored);assert.equal(locked,0);
+rows=[Array(21).fill(''),Array(21).fill('')];rows.forEach((x,i)=>Object.assign(x,{1:'TRAS-1',2:i?'B':'A',8:p.destino}));calls=[];r=c.recibirTraslado_('token',{numeroTraslado:'TRAS-1',sucursal:p.destino});assert.equal(r.referencias,2);assert.deepEqual(calls,['A','B']);assert.equal(locked,0);
+console.log('OK multiple products, single number, duplicate retry, rollback and joint receipt');
