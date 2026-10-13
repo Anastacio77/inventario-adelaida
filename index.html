@@ -1475,7 +1475,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.13-DESCUENTO-ADMIN-16';
+const VERSION_SISTEMA_UI='2026.10.13-IMPRESION-MOVIL-17';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -4667,10 +4667,12 @@ function pedidoHTML(v,id){
 
 // Formato com\u00fan de impresi\u00f3n: ventas, pedidos, recibos y reportes.
 function imprimirDocumentoHTML(html,formato='MEDIA'){
+  const movil=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Macintosh/i.test(navigator.userAgent));
   const iframe=document.createElement('iframe');
+  iframe.title='Documento para imprimir';
   iframe.style.cssText='position:fixed;left:-10000px;top:0;width:793px;height:1056px;border:0';
   document.body.appendChild(iframe);
-  const doc=iframe.contentDocument||iframe.contentWindow.document;
+  let doc=iframe.contentDocument||iframe.contentWindow.document;
   doc.open();
   doc.write('<!doctype html><html lang="es"><head><meta charset="UTF-8">'+
     '<title>Comercial Adelaida</title><style id="papelDocumento"></style><style>'+ 
@@ -4688,13 +4690,28 @@ function imprimirDocumentoHTML(html,formato='MEDIA'){
     '.firma{flex:1;text-align:center;border-top:1px solid #111;padding-top:6px}'+
     '</style></head><body><div class="ticket">'+html+'</div></body></html>');
   doc.close();
-  const papel=doc.getElementById('papelDocumento');
+  let papel=doc.getElementById('papelDocumento');
   const ajustar=media=>{
     papel.textContent='@page{size:8.5in '+(media?'5.5in':'11in')+';margin:0.25in}html,body{width:8in}';
   };
   ajustar(formato==='MEDIA');
-  let eliminado=false;
-  const limpiar=()=>{if(!eliminado){eliminado=true;iframe.remove();}};
+  let eliminado=false,overlay=null,urlDocumento='';
+  const limpiar=()=>{if(!eliminado){eliminado=true;iframe.remove();if(overlay)overlay.remove();if(urlDocumento)URL.revokeObjectURL(urlDocumento);}};
+  const preparar=()=>{if(formato==='MEDIA'&&doc.querySelector('.ticket').scrollHeight>480)ajustar(false);};
+  if(movil){
+    overlay=document.createElement('div');overlay.setAttribute('role','dialog');overlay.setAttribute('aria-label','Vista de impresion');
+    overlay.style.cssText='position:fixed;inset:0;z-index:100000;background:#fff;display:flex;flex-direction:column';
+    const barra=document.createElement('div');barra.style.cssText='display:flex;flex-wrap:wrap;gap:8px;padding:12px;background:#eee';
+    const boton=(texto,accion)=>{const b=document.createElement('button');b.type='button';b.textContent=texto;b.style.cssText='padding:12px;font-size:16px';b.onclick=accion;barra.appendChild(b);};
+    boton('Imprimir',()=>{preparar();iframe.contentWindow.focus();try{iframe.contentWindow.print();}catch(e){alert('Abra el documento en otra pesta\u00f1a con el siguiente boton para imprimir.');}});
+    boton('Abrir en otra pesta\u00f1a',()=>{preparar();
+      const contenido=doc.documentElement.outerHTML.replace('</body>','<div class="controlImpresion" style="position:fixed;top:0;left:0;right:0;padding:12px;background:#eee"><button style="display:inline-block!important;padding:12px" onclick="window.print()">Imprimir</button></div><style>@media screen{body{padding-top:60px}}@media print{.controlImpresion{display:none!important}}</style></body>');
+      if(urlDocumento)URL.revokeObjectURL(urlDocumento);urlDocumento=URL.createObjectURL(new Blob(['<!doctype html>'+contenido],{type:'text/html'}));
+      const w=window.open(urlDocumento,'_blank');if(!w)alert('El navegador bloqueo la pesta\u00f1a. Permita abrir ventanas para imprimir.');
+    });
+    boton('Cerrar',limpiar);overlay.appendChild(barra);const copiaDocumento=doc.documentElement.outerHTML;iframe.style.cssText='width:100%;flex:1;min-height:0;border:0';overlay.appendChild(iframe);document.body.appendChild(overlay);doc=iframe.contentDocument||iframe.contentWindow.document;doc.open();doc.write('<!doctype html>'+copiaDocumento);doc.close();papel=doc.getElementById('papelDocumento');
+    setTimeout(preparar,500);return;
+  }
   iframe.contentWindow.addEventListener('afterprint',limpiar,{once:true});
   setTimeout(()=>{
     // Media carta pasa a carta cuando su contenido excede el \u00e1rea imprimible.
@@ -12428,7 +12445,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.13-DESCUENTO-ADMIN-16';
+  const APP_VERSION='2026.10.13-IMPRESION-MOVIL-17';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
