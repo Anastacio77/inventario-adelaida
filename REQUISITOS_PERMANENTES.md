@@ -1,0 +1,17 @@
+# Requisitos que deben conservarse
+
+Toda actualización debe partir de la última versión entregada, preservar las funciones existentes y mantener iguales las versiones de HTML y Apps Script.
+
+- Nueva compra: productos y corridas asociados al proveedor seleccionado primero. Cambiar de proveedor debe recalcular el orden. Asociaciones explícitas y compras históricas; no inferir la relación por marca.
+- Traslados: múltiples referencias en un número único, impresión completa, recepción conjunta, borrador, reintentos sin duplicación y reversión de fallos.
+- Conservar importación XML/Excel/CSV, catálogo sin stock, precios con nombres y porcentajes, flete separado del proveedor, descuento de administrador y exportación Excel con QR.
+- Mantener texto protegido y flujo de impresión móvil.
+
+Antes de entregar ejecutar:
+
+```sh
+node tests/prioridad-proveedor.cjs index.html
+node tests/traslados-multiples.cjs index.html /ruta/al/Code.gs
+```
+
+El archivo Apps Script se distribuye en el paquete privado; no publicar credenciales en GitHub. Verificar también la sintaxis de todos los scripts y entregar el paquete completo de Cloudflare y Apps Script.
