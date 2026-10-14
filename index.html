@@ -1475,7 +1475,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.13-PRECIOS-COMPRA-20';
+const VERSION_SISTEMA_UI='2026.10.14-PROVEEDOR-21';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -8830,48 +8830,12 @@ function cargarProductosCompra(forzar=false){
   );
 }
 
-function mostrarProductosCompraProveedor(){
-  const proveedorId=
-    $('compProveedor')
-      ? $('compProveedor').value
-      : '';
-
-  const productos=[...CATALOGO_COMPRA];
-
-  productos.sort((a,b)=>{
-    const ap=
-      proveedorId &&
-      String(a.proveedorId||'')===proveedorId
-        ? 0
-        : 1;
-
-    const bp=
-      proveedorId &&
-      String(b.proveedorId||'')===proveedorId
-        ? 0
-        : 1;
-
-    if(ap!==bp){
-      return ap-bp;
-    }
-
-    return (
-      String(a.marca||'')+' '+
-      String(a.modelo||'')+' '+
-      String(a.color||'')+' '+
-      String(a.talla||'')
-    ).localeCompare(
-      String(b.marca||'')+' '+
-      String(b.modelo||'')+' '+
-      String(b.color||'')+' '+
-      String(b.talla||''),
-      undefined,
-      {numeric:true,sensitivity:'base'}
-    );
-  });
-
-  llenarProductosCompra(productos);
-}
+function coincideProveedorCompra(p,id){return !!id&&(String(p.proveedorId||'')===String(id)||(p.proveedorIds||[]).map(String).includes(String(id)));}
+function ordenarProductosProveedor(productos,id){return [...productos].sort((a,b)=>{
+ const ap=coincideProveedorCompra(a,id)?0:1,bp=coincideProveedorCompra(b,id)?0:1;
+ return ap-bp||[a.marca,a.modelo,a.color,a.talla].join(' ').localeCompare([b.marca,b.modelo,b.color,b.talla].join(' '),undefined,{numeric:true,sensitivity:'base'});
+});}
+function mostrarProductosCompraProveedor(){const id=$('compProveedor')?$('compProveedor').value:'';llenarProductosCompra(ordenarProductosProveedor(CATALOGO_COMPRA,id));}
 
 function llenarProductosCompra(productos){
   const s=$('compCodigo');
@@ -8907,7 +8871,7 @@ function llenarProductosCompra(productos){
           .filter(Boolean)
           .join(' \u00b7 ');
 
-      const o=new Option(texto,p.codigo);
+      const o=new Option((coincideProveedorCompra(p,$('compProveedor').value)?'[Proveedor seleccionado] ':'')+texto,p.codigo);
       o.dataset.costo=String(Number(p.costo)||0);
       o.dataset.descripcion=[
         p.marca,p.modelo,p.color,p.talla
@@ -8958,6 +8922,7 @@ function llenarProductosCompra(productos){
 
     window.CORRIDAS_COMPRA
       .sort((a,b)=>
+        (Number(!a.productos.some(p=>coincideProveedorCompra(p,$('compProveedor').value)))-Number(!b.productos.some(p=>coincideProveedorCompra(p,$('compProveedor').value))))||
         (a.marca+' '+a.modelo+' '+a.color+' '+a.escala)
           .localeCompare(
             b.marca+' '+b.modelo+' '+b.color+' '+b.escala,
@@ -12370,7 +12335,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.13-PRECIOS-COMPRA-20';
+  const APP_VERSION='2026.10.14-PROVEEDOR-21';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
@@ -12454,7 +12419,7 @@ async function bmCargarModelosProveedor(){
  const proveedor=$('bmProveedor').value;BM_CATALOGO_PROVEEDOR=[];BM_PROVEEDOR_CARGADO='';bmRender();
  if(!proveedor||BM.enviado)return;
  try{const r=await bmCall('productoscompra',{proveedorId:proveedor});if($('bmProveedor').value!==proveedor)return;
- BM_CATALOGO_PROVEEDOR=(r.productos||[]).filter(p=>p.proveedorId===proveedor);BM_PROVEEDOR_CARGADO=proveedor;bmRender();
+ BM_CATALOGO_PROVEEDOR=(r.productos||[]).filter(p=>coincideProveedorCompra(p,proveedor));BM_PROVEEDOR_CARGADO=proveedor;bmRender();
  if(!BM_CATALOGO_PROVEEDOR.length)bmMsg('Este proveedor no tiene productos asociados. Puede escribir los c\u00f3digos manualmente; asocie el proveedor al producto en el cat\u00e1logo.');
  }catch(e){bmMsg(e.message,true);}
 }
