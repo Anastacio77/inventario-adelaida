@@ -1,4 +1,4 @@
-const CACHE_NAME = 'adelaida-pos-2026.10.14-CATALOGO-22';
+const CACHE_NAME = 'adelaida-pos-2026.10.14-RECUPERAR-ID-23';
 const CORE = ['./', './index.html', './manifest.webmanifest'];
 
 self.addEventListener('install', event => {
