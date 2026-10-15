@@ -437,6 +437,13 @@ document.addEventListener('click',e=>{
   <div id="vistaNuevo" class="vistaApp oculto"><div class="card"><h3>Nombres de los precios de venta</h3><p>Ejemplo: Precio docena, Precio mayorista o Precio unidad. Los nombres aplican a todo el catalogo; no cambian los importes ni exigen una cantidad minima.</p><button onclick="cargarNombresPrecios()">Cargar nombres de precios</button><div id="nombresPreciosFilas"></div><button onclick="guardarNombresPrecios()">Guardar nombres</button><div id="nombresPreciosMensaje"></div></div><div class="card"><button id="exportarQRExcel" onclick="exportarProductosQRExcel()">Exportar productos a Excel con QR</button></div>
     <div class="card" id="masivoPanel">
       <h3>Ingreso masivo</h3>
+      <details><summary><b>Actualizar precios de una carga ya completada (administrador)</b></summary>
+        <p>Aplica porcentajes sobre el costo de cada producto. Reemplaza solo los niveles elegidos de las referencias de ese ID, sin sumar inventario.</p>
+        <label>ID de carga completada</label><input id="pcId" placeholder="IM-...">
+        <button onclick="pcCargarNiveles()">Cargar niveles de precios</button><div id="pcNiveles"></div>
+        <button id="pcRevisar" onclick="pcPrecios(false)">Vista previa de precios</button>
+        <div id="pcResumen"></div><button id="pcAplicar" class="btnVerde" hidden onclick="pcPrecios(true)">Aplicar precios a la carga</button><div id="pcMensaje" role="status"></div>
+      </details>
       <p>Importe XML, Excel/CSV o agregue varios modelos por talla. Revise la tabla antes de guardar. M&#225;ximo 300 referencias por carga.</p>
       <div class="grid2">
         <div><label>Destino</label><input id="bmDestino" readonly onfocus="this.value=SUCURSAL" placeholder="Se usa la sucursal seleccionada"></div>
@@ -1475,7 +1482,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.14-RECUPERAR-ID-23';
+const VERSION_SISTEMA_UI='2026.10.14-PRECIOS-CARGA-24';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -12335,7 +12342,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.14-RECUPERAR-ID-23';
+  const APP_VERSION='2026.10.14-PRECIOS-CARGA-24';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
@@ -12379,6 +12386,32 @@ function esc(v){
 let BM={filas:[],id:'',enviado:false,finalizado:false,sucursal:'',opciones:null};let BM_BUSY=false;
 const BM_COLS=['marca','modelo','color','talla','cantidad','costo','precio','tipo','escala','categoria','ubicacion','stockMinimo','lote'];
 function bmMsg(t,error=false){$('bmMensaje').textContent=t;$('bmMensaje').className='mensaje '+(error?'error':'ok');}
+let PC_BUSY=false,PC_PREVIEW='';
+function pcInvalidar(){PC_PREVIEW='';$('pcAplicar').hidden=true;}
+function pcReglas(){return Array.from(document.querySelectorAll('#pcNiveles .pcFila')).filter(e=>e.querySelector('.pcUsar').checked).map(e=>({id:e.dataset.id,modo:'PORCENTAJE',valor:e.querySelector('.pcValor').value,costoReferencia:''}));}
+async function pcCargarNiveles(){
+ if(PC_BUSY)return;pcInvalidar();
+ try{
+  const r=await bmCall('nivelesprecios',{});
+  $('pcNiveles').innerHTML=r.niveles.map(n=>'<div class="pcFila" data-id="'+esc(n.id)+'"><label><input type="checkbox" class="pcUsar" style="width:auto" '+(['P1','P2','P3'].includes(n.id)?'checked':'')+' onchange="pcInvalidar()"> '+esc(n.nombre)+'</label><label>Porcentaje sobre costo</label><input class="pcValor" type="number" min="0" step="0.01" value="'+({P1:20,P2:40,P3:50}[n.id]||0)+'" oninput="pcInvalidar()"></div>').join('');
+  $('pcId').oninput=pcInvalidar;
+  msg('pcMensaje','Revise los nombres: docena 20%, base 40%, unitario 50%.','ok');
+ }catch(e){msg('pcMensaje',e.message,'error');}
+}
+async function pcPrecios(guardar){
+ if(PC_BUSY)return;
+ try{
+  const precios=JSON.stringify(pcReglas()),id=$('pcId').value.trim(),firma=JSON.stringify({id,precios,sucursal:SUCURSAL});
+  if(!id||precios==='[]')throw Error('Ingrese el ID y seleccione los niveles.');
+  if(guardar&&PC_PREVIEW!==firma)throw Error('Revise primero una vista previa con estos valores.');
+  PC_BUSY=true;$('pcRevisar').disabled=true;$('pcAplicar').disabled=true;
+  const r=await bmCall('precioscarga',{id,precios,sucursal:SUCURSAL,modo:'CATALOGO',guardar:guardar?'SI':'NO'});
+  $('pcResumen').innerHTML='<p><b>'+r.referencias+' referencias</b></p><p>'+r.niveles.map(n=>esc(n.nombre)+': '+n.porcentaje+'%').join(' | ')+'</p><table><thead><tr><th>Codigo</th><th>Costo</th><th>Precios por unidad</th></tr></thead><tbody>'+r.muestra.map(x=>'<tr><td>'+esc(x.codigo)+'</td><td>'+Q(x.costo)+'</td><td>'+x.precios.map(n=>esc(n.nombre)+': '+Q(n.precio)).join(' | ')+'</td></tr>').join('')+'</tbody></table>';
+  msg('pcMensaje',r.mensaje,'ok');
+  if(guardar){pcInvalidar();carrito.forEach(x=>delete x.preciosVenta);if(productoActual)cargarPreciosEditor();}
+  else{PC_PREVIEW=firma;$('pcAplicar').hidden=false;}
+ }catch(e){pcInvalidar();msg('pcMensaje',e.message,'error');}finally{PC_BUSY=false;$('pcRevisar').disabled=false;$('pcAplicar').disabled=false;}
+}
 function bmKey(){return 'adelaida-ingreso-masivo-'+TOKEN.slice(0,16)+'-'+SUCURSAL;}
 function bmDraft(){try{localStorage.setItem(bmKey(),JSON.stringify(BM));}catch(e){bmMsg('No se pudo guardar el borrador local. Mantenga esta ventana abierta.',true);}}
 async function bmRecuperar(){
