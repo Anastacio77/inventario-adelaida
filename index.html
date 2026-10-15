@@ -1475,7 +1475,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.14-PROVEEDOR-21';
+const VERSION_SISTEMA_UI='2026.10.14-CATALOGO-22';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -12335,7 +12335,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.14-PROVEEDOR-21';
+  const APP_VERSION='2026.10.14-CATALOGO-22';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
@@ -12592,7 +12592,7 @@ async function bmConsultar(){
   const r=await bmCall('masivoestado',{id:BM.id,sucursal:BM.sucursal,modo:BM.opciones.modo});
   if(r.estado==='COMPLETADO'){bmCompletar(r.resultado);return true;}
   BM.preparadas=r.preparadas||[];
-  if(r.estado==='EN_PROCESO')throw Error('La carga sigue en proceso o requiere revisi\u00f3n. Conserve el ID '+BM.id+' y consulte esta misma carga nuevamente.');
+  if(r.estado==='EN_PROCESO'&&BM.opciones.modo!=='CATALOGO')throw Error('La carga sigue en proceso o requiere revisi\u00f3n. Conserve el ID '+BM.id+' y consulte esta misma carga nuevamente.');
   return false;
 }
 async function bmPrepararGrupos(){
@@ -12625,7 +12625,12 @@ async function bmGuardar(){
     BM.confirmado=true;bmDraft();
     bmMsg('Guardando carga '+BM.id+'\u2026 Mantenga esta ventana abierta.');
     try{
-      const r=await bmCall('masivoconfirmar',{...BM.opciones,id:BM.id,total:BM.filas.length,sucursal:BM.sucursal});bmCompletar(r);
+      let r;
+      do{
+        r=await bmCall('masivoconfirmar',{...BM.opciones,id:BM.id,total:BM.filas.length,sucursal:BM.sucursal});
+        if(r.pendiente)bmMsg('Catalogo: '+r.procesadas+' de '+r.referencias+' referencias verificadas. Mantenga esta ventana abierta.');
+      }while(r.pendiente);
+      bmCompletar(r);
     }catch(e){
       if(!/Tiempo agotado|No se pudo conectar/.test(e.message))throw e;
       bmMsg('Se perdi\u00f3 la respuesta. Comprobando si la carga qued\u00f3 guardada\u2026');
