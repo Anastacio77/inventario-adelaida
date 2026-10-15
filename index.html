@@ -1475,7 +1475,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.14-CATALOGO-22';
+const VERSION_SISTEMA_UI='2026.10.14-RECUPERAR-ID-23';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -12335,7 +12335,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.14-CATALOGO-22';
+  const APP_VERSION='2026.10.14-RECUPERAR-ID-23';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
@@ -12381,7 +12381,19 @@ const BM_COLS=['marca','modelo','color','talla','cantidad','costo','precio','tip
 function bmMsg(t,error=false){$('bmMensaje').textContent=t;$('bmMensaje').className='mensaje '+(error?'error':'ok');}
 function bmKey(){return 'adelaida-ingreso-masivo-'+TOKEN.slice(0,16)+'-'+SUCURSAL;}
 function bmDraft(){try{localStorage.setItem(bmKey(),JSON.stringify(BM));}catch(e){bmMsg('No se pudo guardar el borrador local. Mantenga esta ventana abierta.',true);}}
-function bmRecuperar(){if(BM_BUSY)return;try{const v=JSON.parse(localStorage.getItem(bmKey())||'null');if(!v)return bmMsg('No hay carga guardada para esta sesi\u00f3n y sucursal.');BM=v;bmRender();bmMsg(BM.finalizado?'Carga ya completada. Inicie una nueva para otro ingreso.':'Carga recuperada. Use Guardar para continuar con el mismo identificador.');}catch(e){bmMsg('No se pudo recuperar el borrador.',true);}}
+async function bmRecuperar(){
+ if(BM_BUSY)return;
+ let v=null;try{v=JSON.parse(localStorage.getItem(bmKey())||'null');}catch(e){}
+ if(v&&v.id&&v.enviado&&!v.finalizado&&v.filas&&v.filas.length){BM=v;bmRender();bmMsg('Carga recuperada. Use Reanudar para continuar con el mismo identificador.');return;}
+ const id=prompt('ID de la carga pendiente (IM-...):',BM.id||'');if(!id||!id.trim())return;
+ BM_BUSY=true;
+ try{
+  bmMsg('Buscando la carga en el servidor...');
+  const r=await bmCall('masivorecuperar',{id:id.trim(),sucursal:SUCURSAL,modo:'CATALOGO'});
+  BM=r.carga;bmDraft();bmRender();
+  bmMsg(BM.finalizado?'Esta carga ya fue completada.':r.preciosRecuperados?'Carga recuperada del servidor. Pulse Reanudar / consultar la misma carga.':'Carga recuperada del servidor. Pulse Reanudar para completar el catalogo. Los porcentajes originales no estaban guardados en el servidor: revise los precios al terminar.');
+ }catch(e){bmMsg(e.message,true);}finally{BM_BUSY=false;bmRender();}
+}
 function bmNueva(){if(BM_BUSY)return;if(BM.enviado&&!BM.finalizado&&BM.confirmado)return bmMsg('Primero reanude y confirme la carga pendiente; no la duplique.',true);BM={filas:[],id:'',enviado:false,finalizado:false,sucursal:'',opciones:null};bmDraft();bmRender();bmMsg('Nueva carga lista.');}
 function bmModoUI(){const modo=$('bmModo').value,c=modo==='COMPRA';$('bmCompra').classList.toggle('oculto',!c);$('bmLote').disabled=modo==='CATALOGO';$('bmExplica').textContent=modo==='CATALOGO'?'Crea referencias en el cat\u00e1logo maestro desde Bodega Principal. No agrega existencias ni crea compras. La cantidad se ignora; los productos existentes se conservan sin modificar.':c?'Se crear\u00e1 una orden pendiente en la sucursal seleccionada. Rec\u00edbala desde Compras para sumar mercanc\u00eda.':'Se sumar\u00e1n las cantidades como EXISTENCIA ANTERIOR. Los productos nuevos se crean desde Bodega Principal.';$('bmPreciosPanel').classList.toggle('oculto',!['CATALOGO','COMPRA'].includes(modo));if(c)bmProveedores();}
 
