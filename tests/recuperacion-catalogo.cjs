@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
-const b=fs.readFileSync(process.argv[2]||'entrega/Code_Recuperacion_Catalogo_22.gs','utf8');
+const b=fs.readFileSync(process.argv[2]||'entrega/Code_Recuperacion_ID_23.gs','utf8');
 const source=b.slice(b.indexOf('function masivoEspacio_('),b.indexOf('function masivoConfirmar_('));
 class Sheet{
  constructor(rows){this.rows=rows;this.fail=false;}
@@ -26,3 +26,12 @@ t=scenario();t.log.rows[1][1]='other';assert.throws(()=>t.c.masivoCatalogoBloque
 t=scenario();let x=JSON.parse(t.log.rows[1][4]);x.cantidad=1;t.log.rows[1][4]=JSON.stringify(x);assert.throws(()=>t.c.masivoCatalogoBloque_(t.p),/sin existencias/);assert.equal(t.products.rows.length,99);
 t=scenario();t.products.rows[1][1]='OTHER';assert.throws(()=>t.c.masivoCatalogoBloque_(t.p),/incompatible/);assert.equal(t.products.rows.length,99);
 console.log('OK legacy partial recovery, batches, retry after interruption, preserved stock/prices, ownership and incompatible inputs');
+// Recovery must also work without any browser draft or previous session token.
+const recovery=b.slice(b.indexOf('function masivoRecuperar_('),b.indexOf('function masivoEspacio_('));
+t=scenario();t.c.SpreadsheetApp.getActiveSpreadsheet=()=>({getSheetByName:()=>t.log});vm.runInContext(recovery,t.c);
+r=t.c.masivoRecuperar_(t.p);assert.equal(r.carga.id,t.p.id);assert.equal(r.carga.filas.length,103);assert.equal(r.carga.opciones.modo,'CATALOGO');assert.equal(r.preciosRecuperados,false);assert.equal(r.carga.opciones.precios,'[]');
+t.c.masivoCatalogoBloque_(t.p);r=t.c.masivoRecuperar_(t.p);assert.equal(r.preciosRecuperados,true);assert.equal(r.carga.precios[0].valor,30);
+t.log.rows[1][1]='other';assert.throws(()=>t.c.masivoRecuperar_(t.p),/mismo usuario/);
+t.log.rows[1][1]='admin';t.log.rows[1][4]=JSON.stringify({...t.xs[0],cantidad:1});assert.throws(()=>t.c.masivoRecuperar_(t.p),/sin existencias/);
+assert.throws(()=>t.c.masivoRecuperar_({...t.p,id:'IM-not-existing'}),/No se encontro/);
+console.log('OK recovery by ID without browser draft, stored prices, ownership and catalog-only restriction');
