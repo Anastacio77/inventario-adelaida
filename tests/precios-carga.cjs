@@ -1,0 +1,11 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const b=fs.readFileSync(process.argv[2]||'entrega/Code_Precios_Carga_24.gs','utf8');const source=b.slice(b.indexOf('function preciosCarga_('),b.indexOf("PERMISO_ACCION.masivorecuperar='PRODUCTOS';"));
+let prices=[['OUTSIDE','P1','FIJO',999,''],['C1','P1','FIJO',0,''],['C1','P4','FIJO',777,'']],writes=0,locked=0,completed=true,owner=true,cost=135,admin=true;
+const hp={getLastRow:()=>prices.length+1,getRange:(row,col,n,m)=>({getValues:()=>prices.map(r=>r.slice()),setValues:r=>{prices=r.map(f=>f.slice());writes++;}})};
+const c={auth_:()=>{if(!admin)throw Error('ADMIN');},LockService:{getDocumentLock:()=>({waitLock(){locked++;},releaseLock(){locked--;}})},masivoRecuperar_:()=>{if(!owner)throw Error('usuario');return {carga:{finalizado:completed,filas:[{codigo:'C1'},{codigo:'C2'}]}};},validarPreciosNuevos_:JSON.parse,nivelesPrecios_:()=>['Docena','Base','Unitario'].map((nombre,i)=>({id:'P'+(i+1),nombre})),hoja_:()=>({getDataRange:()=>({getValues:()=>[[],['C1','','','','','',cost],['C2','','','','','',100]]})}),CONFIG:{PRODUCTOS:'P'},inventariableProducto_:()=> 'SI',preciosHojas_:()=>({p:hp}),masivoEspacio_:()=>{},SpreadsheetApp:{flush(){}}};vm.createContext(c);vm.runInContext(source,c);
+const p={precios:JSON.stringify([20,40,50].map((valor,i)=>({id:'P'+(i+1),modo:'PORCENTAJE',valor,costoReferencia:''}))),guardar:'NO'};
+let r=c.preciosCarga_(p);assert.deepEqual(Array.from(r.muestra[0].precios,x=>x.precio),[162,189,202.5]);assert.equal(writes,0);assert.equal(locked,0);
+r=c.preciosCarga_({...p,guardar:'SI'});assert.equal(r.referencias,2);assert.equal(writes,1);assert.equal(prices.length,8);assert.equal(prices[0][3],999);assert.equal(prices[2][3],777);assert.equal(prices.find(x=>x[0]==='C1'&&x[1]==='P2')[3],40);
+c.preciosCarga_({...p,guardar:'SI'});assert.equal(prices.length,8);
+completed=false;assert.throws(()=>c.preciosCarga_(p),/Complete/);completed=true;cost=0;assert.throws(()=>c.preciosCarga_(p),/costo/);cost=135;owner=false;assert.throws(()=>c.preciosCarga_(p),/usuario/);owner=true;admin=false;assert.throws(()=>c.preciosCarga_(p),/ADMIN/);assert.equal(locked,0);
+console.log('OK percentages 20/40/50, preview without write, preservation of other products/levels, repeat without duplicates, positive cost and authorization');
