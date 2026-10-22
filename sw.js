@@ -1,4 +1,4 @@
-const CACHE_NAME = 'adelaida-pos-2026.10.14-PRECIOS-CARGA-24';
+const CACHE_NAME = 'adelaida-pos-2026.10.22-SKU-COLORES-25';
 const CORE = ['./', './index.html', './manifest.webmanifest'];
 
 self.addEventListener('install', event => {
