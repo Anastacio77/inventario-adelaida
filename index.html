@@ -1490,7 +1490,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.23-COSTOS-COMPRA-26';
+const VERSION_SISTEMA_UI='2026.10.23-POS-UNITARIO-27';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -12350,7 +12350,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.23-COSTOS-COMPRA-26';
+  const APP_VERSION='2026.10.23-POS-UNITARIO-27';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
@@ -12736,11 +12736,17 @@ async function bmGuardar(){
 }
 function bmPlantilla(){const csv='\uFEFF'+BM_COLS.join(';')+'\r\nH\u00e9rcules;2323;Negro;37;2;50;75;CORRIDA;D;Botas;A1;2;\r\nH\u00e9rcules;2323;Negro;38;3;50;75;CORRIDA;D;Botas;A1;2;\r\nRoy;2925;Negro;40;1;120;200;INDIVIDUAL;;Zapatos;A2;2;\r\n';const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='Plantilla_Ingreso_Masivo.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 
+function precioPredeterminadoPOS(precios){
+ const disponibles=(precios||[]).filter(p=>p.precio!==null&&p.precio!==undefined);
+ const nombre=p=>String(p.nombre||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+ return disponibles.find(p=>/^(PRECIO\s+)?UNITARIO$/.test(nombre(p))||/^(PRECIO\s+)?(POR\s+)?UNIDAD$/.test(nombre(p)))||disponibles.find(p=>p.id==='P3')||disponibles.find(p=>p.id==='P1')||disponibles[0]||null;
+}
 function selectorPrecioHTML(x,i){
  if(!x.preciosVenta)return '<small>Cargando precios...</small>';
- return '<label>Elegir precio</label><select onchange="elegirPrecioPOS('+i+',this.value)">'+x.preciosVenta.filter(p=>p.precio!==null).map(p=>'<option value="'+esc(p.id)+'" '+((x.precioNivelId||'P1')===p.id?'selected':'')+'>'+esc(p.nombre)+' - '+Q(p.precio)+'</option>').join('')+'</select>';
+ const seleccionado=x.precioNivelId||(precioPredeterminadoPOS(x.preciosVenta)||{}).id;
+ return '<label>Elegir precio</label><select onchange="elegirPrecioPOS('+i+',this.value)">'+x.preciosVenta.filter(p=>p.precio!==null).map(p=>'<option value="'+esc(p.id)+'" '+(seleccionado===p.id?'selected':'')+'>'+esc(p.nombre)+' - '+Q(p.precio)+'</option>').join('')+'</select>';
 }
-function cargarPreciosCarrito(){carrito.forEach(x=>{if(x.preciosVenta||x.preciosCargando)return;x.preciosCargando=true;api('preciosproducto',{codigo:x.codigo},r=>{x.preciosCargando=false;if(!r.ok){x.preciosVenta=[];msg('mensajePos',r.error,'error');return;}x.preciosVenta=r.precios;if(carrito.includes(x)){const n=r.precios.find(p=>p.id===(x.precioNivelId||'P1')&&p.precio!==null);if(n){if(!x.precioNivelId)x.precioVenta=n.precio;x.precioBase=n.precio;x.precioNivelId=n.id;if(Number(x.precioVenta)<n.precio)x.precioVenta=n.precio;}renderCarrito();}});});}
+function cargarPreciosCarrito(){carrito.forEach(x=>{if(x.preciosVenta||x.preciosCargando)return;x.preciosCargando=true;api('preciosproducto',{codigo:x.codigo},r=>{x.preciosCargando=false;if(!r.ok){x.preciosVenta=[];msg('mensajePos',r.error,'error');return;}x.preciosVenta=r.precios;if(carrito.includes(x)){const n=x.precioNivelId?r.precios.find(p=>p.id===x.precioNivelId&&p.precio!==null):precioPredeterminadoPOS(r.precios);if(n){if(!x.precioNivelId)x.precioVenta=n.precio;x.precioBase=n.precio;x.precioNivelId=n.id;if(Number(x.precioVenta)<n.precio)x.precioVenta=n.precio;}renderCarrito();}});});}
 function elegirPrecioPOS(i,id){const x=carrito[i],p=x.preciosVenta.find(n=>n.id===id);if(!p||p.precio===null)return;x.precioNivelId=id;x.precioBase=p.precio;x.precioVenta=p.precio;renderCarrito();}
 function cargarPreciosEditor(){if(!productoActual||!productoActual.codigo)return;api('preciosproducto',{codigo:productoActual.codigo},r=>{if(!r.ok)return msg('preciosMensaje',r.error,'error');$('preciosEditor').innerHTML='<p>Costo actual: '+Q(r.costo)+'. Porcentaje = costo x (1 + porcentaje / 100).</p>'+r.precios.map(p=>'<div class="precioNivelFila" data-id="'+esc(p.id)+'"><b>'+esc(p.nombre)+'</b><label>Calculo</label><select class="nivelModo">'+[['ORIGINAL','Precio original'],['SIN_CONFIGURAR','Sin configurar'],['FIJO','Precio fijo Q'],['COSTO','Costo directo'],['PORCENTAJE','Porcentaje sobre costo']].map(v=>'<option value="'+v[0]+'" '+(p.modo===v[0]?'selected':'')+'>'+v[1]+'</option>').join('')+'</select><label>Valor (Q o porcentaje)</label><input class="nivelValor" type="number" min="0" step="0.01" value="'+p.valor+'"><label>Costo de referencia Q (vacio = costo actual con flete)</label><input class="nivelCosto" type="number" min="0" step="0.01" value="'+(p.costoReferencia===null?'':p.costoReferencia)+'"><small>Precio calculado: '+(p.precio===null?'Sin configurar':Q(p.precio))+'</small></div>').join('');if(SESION.rol==='ADMIN')$('nivelesEditor').innerHTML='<label>Cantidad de precios (1 a 100)</label><input id="nivelCantidad" type="number" min="1" max="100" value="'+r.precios.length+'"><button onclick="guardarCantidadPrecios()">Aplicar cantidad de precios</button><small>La cantidad aplica a todos los productos. Configure sus valores por producto.</small>';});}
 function guardarPreciosEditor(){if(!productoActual)return;const precios=Array.from(document.querySelectorAll('.precioNivelFila')).map(e=>({id:e.dataset.id,modo:e.querySelector('.nivelModo').value,valor:e.querySelector('.nivelValor').value,costoReferencia:e.querySelector('.nivelCosto').value}));api('guardarpreciosproducto',{codigo:productoActual.codigo,precios:JSON.stringify(precios)},r=>{msg('preciosMensaje',r.ok?r.mensaje:r.error,r.ok?'ok':'error');if(r.ok){carrito.forEach(x=>{delete x.preciosVenta;});cargarPreciosEditor();renderCarrito();}});}
