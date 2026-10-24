@@ -1,0 +1,8 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');const html=fs.readFileSync(process.argv[2]||'entrega/index.html','utf8');
+const precios=[{id:'P1',nombre:'Precio de docena',precio:162},{id:'P2',nombre:'Precio base',precio:189},{id:'P3',nombre:'Unitario',precio:202.5}];
+let renders=0;const c={carrito:[],api:(a,p,cb)=>cb({ok:true,precios}),renderCarrito:()=>renders++,esc:String,Q:String,msg:()=>{}};vm.createContext(c);vm.runInContext(html.slice(html.indexOf('function precioPredeterminadoPOS('),html.indexOf('function cargarPreciosEditor(')),c);
+assert.equal(c.precioPredeterminadoPOS(precios).id,'P3');assert.equal(c.precioPredeterminadoPOS([...precios,{id:'P9',nombre:'Precio unitario',precio:210}]).id,'P3');assert.equal(c.precioPredeterminadoPOS([{id:'P8',nombre:'Precio por unidad',precio:22},precios[0]]).id,'P8');assert.equal(c.precioPredeterminadoPOS([precios[0],{...precios[2],precio:null}]).id,'P1');assert.equal(c.precioPredeterminadoPOS([]),null);
+let x={codigo:'A',precioVenta:0};c.carrito.push(x);c.cargarPreciosCarrito();assert.equal(x.precioNivelId,'P3');assert.equal(x.precioBase,202.5);assert.equal(x.precioVenta,202.5);assert(c.selectorPrecioHTML(x,0).includes('value="P3" selected'));
+c.elegirPrecioPOS(0,'P1');assert.equal(x.precioNivelId,'P1');assert.equal(x.precioVenta,162);delete x.preciosVenta;c.cargarPreciosCarrito();assert.equal(x.precioNivelId,'P1');assert.equal(x.precioVenta,162);
+x={codigo:'B',precioNivelId:'P2',precioVenta:200};c.carrito.push(x);c.cargarPreciosCarrito();assert.equal(x.precioNivelId,'P2');assert.equal(x.precioVenta,200);assert(renders>0);
+console.log('OK unit price default applied to amount/base/selector, manual choice and existing order price preserved, missing-unit fallback');
