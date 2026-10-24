@@ -19,3 +19,5 @@ El archivo Apps Script se distribuye en el paquete privado; no publicar credenci
 - SKU: para referencias nuevas usar iniciales de palabras de color separadas por diagonal o espacios (Black/coral BC, Black gray BG). Una palabra mantiene dos letras. Conservar codigos y QR existentes y reutilizar la referencia exacta al importar. Mantener validacion cuando dos colores comparten iniciales; no combinar productos automaticamente.
 - Conservar catalogo por bloques de 25, recuperacion por ID desde servidor y actualizacion de precios de cargas completadas con vista previa y permisos de administrador.
 - Ejecutar tambien tests/sku-colores.cjs, tests/recuperacion-catalogo.cjs y tests/precios-carga.cjs con la ruta del Apps Script vigente.
+
+- Correccion de costos de compras recibidas: ADMIN, vista previa vigente, cantidades intactas, flete separado, conservar abonos, auditoria con plan anterior/nuevo, reintento sin duplicacion y reanudacion de pendientes. Detener ante lotes consumidos/trasladados o inconsistencias. Ejecutar tests/corregir-costos-compra.cjs con el GS vigente.
