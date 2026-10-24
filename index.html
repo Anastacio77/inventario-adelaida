@@ -1206,6 +1206,14 @@ document.addEventListener('click',e=>{
   </div>
 
   <div id="vistaCompras" class="vistaApp oculto">
+    <div class="card"><details><summary><b>Corregir costos de una compra recibida (administrador)</b></summary>
+      <p>Actualiza costos, lotes y cuenta por pagar, conservando cantidades, flete y abonos. Requiere que los lotes a corregir no hayan tenido salidas ni traslados. Los precios calculados por porcentaje usan el nuevo costo.</p>
+      <label>Numero de compra</label><input id="ccNumero" value="COM-20261023-180826-CDA256B2">
+      <button id="ccCargar" onclick="ccCargar()">Cargar orden para corregir costos</button>
+      <div id="ccTabla" style="overflow:auto"></div>
+      <button id="ccRevisar" onclick="ccProcesar(false)">Vista previa de correccion</button>
+      <div id="ccResumen"></div><button id="ccAplicar" class="btnVerde" hidden onclick="ccProcesar(true)">Aplicar correccion de costos</button><div id="ccMensaje" role="status"></div>
+    </details></div>
     <div class="card"><h3>Importaci&#243;n masiva de compras</h3><p>Cargue XML, Excel o CSV y revise productos antes de crear la orden.</p><button class="btnAzul" onclick="bmAbrirCompras()">Importaci&#243;n masiva</button></div><div id="bmEnCompras"></div>
     <div class="card">
       <h3 style="margin-top:0">Proveedores</h3>
@@ -1482,7 +1490,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.22-SKU-COLORES-25';
+const VERSION_SISTEMA_UI='2026.10.23-COSTOS-COMPRA-26';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -12342,7 +12350,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.22-SKU-COLORES-25';
+  const APP_VERSION='2026.10.23-COSTOS-COMPRA-26';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
@@ -12386,6 +12394,40 @@ function esc(v){
 let BM={filas:[],id:'',enviado:false,finalizado:false,sucursal:'',opciones:null};let BM_BUSY=false;
 const BM_COLS=['marca','modelo','color','talla','cantidad','costo','precio','tipo','escala','categoria','ubicacion','stockMinimo','lote'];
 function bmMsg(t,error=false){$('bmMensaje').textContent=t;$('bmMensaje').className='mensaje '+(error?'error':'ok');}
+let CC26={items:[],numero:'',firma:'',idSolicitud:'',pendiente:null},CC_BUSY=false;
+function ccInvalidar(){if(CC_BUSY)return;CC26.firma='';CC26.idSolicitud='';$('ccAplicar').hidden=true;}
+async function ccCargar(){
+ if(CC_BUSY)return;CC_BUSY=true;$('ccCargar').disabled=true;
+ try{
+  const r=await bmCall('costoscomprainfo',{numeroCompra:$('ccNumero').value.trim()});
+  if(r.estado!=='RECIBIDA')throw Error('La compra debe estar completamente recibida.');
+  CC26={items:r.items,numero:r.numeroCompra,firma:'',idSolicitud:'',pendiente:r.correccionPendiente||null};
+  const sugeridos={'PT0177|NEGRO':12.75,'PT0245|MORADOBR':14.25};
+  $('ccTabla').innerHTML='<p>'+esc(r.proveedor)+' | Total actual: '+Q(r.total)+'</p><table><thead><tr><th>Codigo / producto</th><th>Escala</th><th>Talla</th><th>Pares</th><th>Costo registrado</th><th>Costo correcto por par</th></tr></thead><tbody>'+r.items.map((x,i)=>{
+   let costo=x.costo;
+   if(r.numeroCompra==='COM-20261023-180826-CDA256B2'&&x.escala==='D'&&Number(x.talla)>=33&&Number(x.talla)<=36){const sugerido=sugeridos[L(x.modelo)+'|'+L(x.color)];if(sugerido)costo=sugerido;}
+   if(CC26.pendiente){const e=CC26.pendiente.costos.find(e=>e.codigo===x.codigo);if(e)costo=e.costo;}
+   return '<tr><td>'+esc(x.codigo)+'<br>'+esc(x.modelo)+' '+esc(x.color)+'</td><td>'+esc(x.escala)+'</td><td>'+esc(x.talla)+'</td><td>'+x.cantidad+'</td><td>'+Q(x.costo)+'</td><td><input class="ccCosto" data-i="'+i+'" type="number" min="0.01" step="0.01" value="'+costo+'" '+(CC26.pendiente?'disabled':'')+' oninput="ccInvalidar()"></td></tr>';
+  }).join('')+'</tbody></table>';
+  $('ccResumen').innerHTML='';$('ccAplicar').hidden=true;
+  msg('ccMensaje',CC26.pendiente?'Hay una correccion pendiente. Revise y reanude los mismos costos.':'Revise las tallas y costos sugeridos. Vista previa antes de aplicar.','ok');
+ }catch(e){CC26={items:[],numero:'',firma:'',idSolicitud:'',pendiente:null};$('ccTabla').innerHTML='';$('ccAplicar').hidden=true;msg('ccMensaje',e.message,'error');}finally{CC_BUSY=false;$('ccCargar').disabled=false;}
+}
+async function ccProcesar(guardar){
+ if(CC_BUSY)return;
+ try{
+  if(!CC26.numero||CC26.numero!==$('ccNumero').value.trim())throw Error('Cargue primero esta orden.');
+  const costos=CC26.pendiente?CC26.pendiente.costos:Array.from(document.querySelectorAll('#ccTabla .ccCosto')).map(e=>({codigo:CC26.items[Number(e.dataset.i)].codigo,costo:Number(e.value),antes:Number(CC26.items[Number(e.dataset.i)].costo)})).filter(x=>x.costo!==x.antes).map(({codigo,costo})=>({codigo,costo}));
+  if(!costos.length)throw Error('No hay costos modificados.');
+  if(guardar&&!CC26.firma)throw Error('Revise primero la vista previa.');
+  CC_BUSY=true;['ccCargar','ccRevisar','ccAplicar','ccNumero'].forEach(id=>$(id).disabled=true);
+  const r=await bmCall('corregircostoscompra',{numeroCompra:CC26.numero,costos:JSON.stringify(costos),guardar:guardar?'SI':'NO',firma:CC26.firma,idSolicitud:CC26.idSolicitud});
+  $('ccResumen').innerHTML='<p>Total anterior: <b>'+Q(r.anterior)+'</b> | Diferencia: <b>'+Q(r.diferencia)+'</b> | Total corregido: <b>'+Q(r.total)+'</b> | Saldo corregido: <b>'+Q(r.saldo)+'</b></p><table><thead><tr><th>Codigo</th><th>Pares</th><th>Antes</th><th>Correcto</th></tr></thead><tbody>'+r.detalles.map(x=>'<tr><td>'+esc(x.codigo)+'</td><td>'+x.cantidad+'</td><td>'+Q(x.antes)+'</td><td>'+Q(x.despues)+'</td></tr>').join('')+'</tbody></table>';
+  if(guardar){$('ccAplicar').hidden=true;CC26.firma='';CC26.items=[];carrito.forEach(x=>delete x.preciosVenta);cargarResumen();}
+  else{CC26.firma=r.firma;CC26.idSolicitud=r.idSolicitud||('CC-'+(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2)));$('ccAplicar').hidden=false;}
+  msg('ccMensaje',r.mensaje||(guardar?'Correccion completada.':'Revise antes de aplicar.'),'ok');
+ }catch(e){msg('ccMensaje',e.message+' Si se perdio la respuesta, vuelva a cargar la orden para consultar o reanudar la correccion.','error');}finally{CC_BUSY=false;['ccCargar','ccRevisar','ccAplicar','ccNumero'].forEach(id=>$(id).disabled=false);}
+}
 let PC_BUSY=false,PC_PREVIEW='';
 function pcInvalidar(){PC_PREVIEW='';$('pcAplicar').hidden=true;}
 function pcReglas(){return Array.from(document.querySelectorAll('#pcNiveles .pcFila')).filter(e=>e.querySelector('.pcUsar').checked).map(e=>({id:e.dataset.id,modo:'PORCENTAJE',valor:e.querySelector('.pcValor').value,costoReferencia:''}));}
