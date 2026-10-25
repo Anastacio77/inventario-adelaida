@@ -23,3 +23,5 @@ El archivo Apps Script se distribuye en el paquete privado; no publicar credenci
 - Correccion de costos de compras recibidas: ADMIN, vista previa vigente, cantidades intactas, flete separado, conservar abonos, auditoria con plan anterior/nuevo, reintento sin duplicacion y reanudacion de pendientes. Detener ante lotes consumidos/trasladados o inconsistencias. Ejecutar tests/corregir-costos-compra.cjs con el GS vigente.
 
 - POS: seleccionar Unitario por defecto al agregar una referencia sin nivel previo; actualizar importe, base y selector juntos. Conservar elecciones manuales y niveles de pedidos existentes. Ejecutar tests/pos-unitario.cjs.
+
+- Compras: limpiar automaticamente la carga masiva solo tras confirmar orden creada, conservar numero/ID en comprobante, no descartar pendientes/errores ni una nueva carga al recibir otra orden. Limpiar formulario de recepcion tras exito. Ejecutar tests/limpieza-compras.cjs.
