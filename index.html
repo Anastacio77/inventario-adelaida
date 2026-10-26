@@ -1492,7 +1492,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.26-CLIENTES-CF-32';
+const VERSION_SISTEMA_UI='2026.10.26-LIMPIEZA-CLIENTES-33';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -10394,13 +10394,22 @@ function cargarClientes(){
   });
 }
 
+let CLIENTE_GUARDANDO=false;
 function guardarClienteUI(){
+  if(CLIENTE_GUARDANDO) return;
+  if(!$('cliNombre').value.trim()) return msg('mensajeClientes','Ingrese el nombre del cliente.','error');
+  CLIENTE_GUARDANDO=true;
   api('guardarcliente',{
     nombre:$('cliNombre').value,nit:$('cliNit').value,telefono:$('cliTelefono').value,whatsapp:$('cliWhatsapp').value,
     direccion:$('cliDireccion').value,limiteCredito:$('cliLimite').value
   },r=>{
+    CLIENTE_GUARDANDO=false;
+    if(!r) return msg('mensajeClientes','No se pudo guardar el cliente.','error');
     msg('mensajeClientes',r.ok?r.mensaje:r.error,r.ok?'ok':'error');
     if(r.ok){
+      ['cliNombre','cliNit','cliTelefono','cliWhatsapp','cliDireccion'].forEach(id=>$(id).value='');
+      $('cliLimite').value='0';
+      $('cliNombre').focus();
       cargarClientes();
       cargarClientesPos(true,r.clienteId);
     }
@@ -12366,7 +12375,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.26-CLIENTES-CF-32';
+  const APP_VERSION='2026.10.26-LIMPIEZA-CLIENTES-33';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
