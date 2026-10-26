@@ -37,3 +37,5 @@ El archivo Apps Script se distribuye en el paquete privado; no publicar credenci
 - Clientes: limpiar formulario y restablecer limite a cero solo tras guardado exitoso; conservar datos en error y bloquear guardados simultaneos.
 
 - Clientes: acciones Editar y Eliminar por ID; conservar saldo y fecha de creacion, bloquear NIT de otro cliente. Eliminar solo sin saldo ni ventas, pedidos, creditos, abonos, devoluciones o reservas; validar en servidor y conservar identidades anteriores para comprobar movimientos tras cambiar nombre/NIT. Confirmar antes de eliminar. Ejecutar tests/clientes-edicion.cjs.
+
+- Documentos moviles: preparar PDF en visor comun antes del gesto de compartir; compartir archivo application/pdf y ofrecer Descargar PDF cuando no hay Web Share de archivos. Conservar Imprimir/Abrir/Cerrar, evitar doble generacion, permitir reintento y no descargar al cancelar compartir. Incluir html2pdf.bundle.min.js y sus licencias en despliegue. Ejecutar tests/pdf-movil.cjs.
