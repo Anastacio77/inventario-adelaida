@@ -1,4 +1,4 @@
-const CACHE_NAME = 'adelaida-pos-2026.10.26-PDF-MOVIL-35';
+const CACHE_NAME = 'adelaida-pos-2026.10.26-IMPRESION-PDF-36';
 const CORE = ['./', './index.html', './manifest.webmanifest', './html2pdf.bundle.min.js'];
 
 self.addEventListener('install', event => {
