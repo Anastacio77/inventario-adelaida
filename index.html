@@ -481,7 +481,7 @@ document.addEventListener('click',e=>{
       <button id="bmNuevo" onclick="bmNueva()">Nueva carga / limpiar</button>
       <button onclick="bmRecuperar()">Recuperar carga pendiente</button>
       <div id="bmMensaje" role="status" aria-live="polite"></div>
-      <details id="bmUltimaOperacion" hidden><summary>Ultima compra procesada: numero e ID</summary><p id="bmUltimaTexto"></p></details>
+      <details id="bmUltimaOperacion" hidden><summary>Ultima carga completada: comprobante e ID</summary><p id="bmUltimaTexto"></p></details>
     </div>
 
     <div class="card">
@@ -1491,7 +1491,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.25-LIMPIEZA-COMPRAS-28';
+const VERSION_SISTEMA_UI='2026.10.25-LIMPIEZA-CATALOGO-29';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -12354,7 +12354,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.25-LIMPIEZA-COMPRAS-28';
+  const APP_VERSION='2026.10.25-LIMPIEZA-CATALOGO-29';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
@@ -12483,8 +12483,8 @@ function bmLimpiarFormulario(){
 }
 function bmUltimaCompra(r){
  const registro={...r,id:r.id||BM.id,sucursal:BM.sucursal||SUCURSAL};
- try{localStorage.setItem(bmKey()+'-ultima-compra',JSON.stringify(registro));}catch(e){}
- $('bmUltimaTexto').textContent=(r.recibida?'Recepcion completada. ':'Orden de compra creada. ')+r.numeroCompra+' | ID: '+registro.id+' | '+r.referencias+' referencias, '+r.unidades+' unidades.';
+ try{localStorage.setItem(bmKey()+(r.numeroCompra?'-ultima-compra':'-ultima-carga'),JSON.stringify(registro));}catch(e){}
+ $('bmUltimaTexto').textContent=(r.numeroCompra?(r.recibida?'Recepcion completada. ':'Orden de compra creada. ')+r.numeroCompra:String(r.mensaje||'Carga completada.'))+' | ID: '+registro.id+' | '+r.referencias+' referencias, '+r.unidades+' unidades.';
  $('bmUltimaOperacion').hidden=false;$('bmUltimaOperacion').open=false;
 }
 function bmRecepcionCompletada(numero){
@@ -12695,8 +12695,8 @@ function bmEliminar(i){if(BM.enviado||BM_BUSY)return;BM.filas.splice(i,1);bmDraf
 function bmCall(a,p){return new Promise((resolve,reject)=>api(a,p,r=>r.ok?resolve(r):reject(Error(r.error||'No se pudo completar.'))));}
 function bmCompletar(r){
   BM.finalizado=true;BM.resultado=r;bmDraft();
-  if(r.numeroCompra){bmUltimaCompra(r);bmLimpiarFormulario();bmRender();bmMsg('Orden '+r.numeroCompra+' creada. Formulario listo para otra carga. Recibala en Compras para sumar inventario.');}
-  else bmMsg(r.mensaje+' '+r.referencias+' referencias, '+r.unidades+' unidades. ID: '+BM.id);
+  bmUltimaCompra(r);bmLimpiarFormulario();bmRender();
+  bmMsg(r.numeroCompra?'Orden '+r.numeroCompra+' creada. Formulario listo para otra carga. Recibala en Compras para sumar inventario.':r.mensaje+' Formulario listo para otra carga.');
   cargarResumen();
 }
 async function bmConsultar(){
