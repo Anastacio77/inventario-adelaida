@@ -1421,7 +1421,7 @@ document.addEventListener('click',e=>{
 
   <div id="vistaClientes" class="vistaApp oculto">
     <div class="card">
-      <h3 style="margin-top:0">Clientes</h3>
+      <h3 style="margin-top:0">Clientes</h3><input id="cliId" type="hidden"><div id="cliEdicion" class="sub"></div>
       <div class="grid2">
         <div><label>Nombre</label><input id="cliNombre"></div>
         <div><label>NIT</label><input id="cliNit"></div>
@@ -1430,7 +1430,8 @@ document.addEventListener('click',e=>{
         <div><label>Direcci&#243;n</label><input id="cliDireccion"></div>
         <div><label>L&#237;mite de cr&#233;dito Q</label><input id="cliLimite" type="number" min="0" step="0.01" value="0"></div>
       </div>
-      <button class="btnAzul w100" style="margin-top:12px" onclick="guardarClienteUI()">Guardar cliente</button>
+      <button class="btnAzul w100" style="margin-top:12px" id="cliGuardar" onclick="guardarClienteUI()">Guardar cliente</button>
+      <button class="btnGris" style="margin-top:8px" onclick="limpiarClienteUI()">Nuevo / Cancelar edici&#243;n</button>
       <div id="mensajeClientes"></div>
       <div id="listaClientes" style="margin-top:12px"></div>
     </div>
@@ -1492,7 +1493,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.26-LIMPIEZA-CLIENTES-33';
+const VERSION_SISTEMA_UI='2026.10.26-CLIENTES-34';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -10385,12 +10386,37 @@ function cerrarCajaUI(){
   });
 }
 
+let CLIENTES_LISTA=[];
 function cargarClientes(){
   if(!SESION||!['ADMIN','CAJERO','VENDEDOR'].includes(SESION.rol)) return;
   api('clientes',{q:''},r=>{
     if(!r.ok) return msg('mensajeClientes',r.error,'error');
-    const rows=(r.clientes||[]).slice(0,100).map(c=>'<tr><td>'+esc(c.nombre)+'</td><td>'+esc(c.nit)+'</td><td>'+esc(c.whatsapp||c.telefono)+'</td><td>'+Q(c.saldo)+'</td><td>'+Q(c.limiteCredito)+'</td></tr>').join('');
-    $('listaClientes').innerHTML='<table class="tabla"><thead><tr><th>Cliente</th><th>NIT</th><th>Contacto</th><th>Saldo</th><th>L\u00edmite</th></tr></thead><tbody>'+rows+'</tbody></table>';
+    CLIENTES_LISTA=r.clientes||[];
+    const rows=CLIENTES_LISTA.map((c,i)=>'<tr><td>'+esc(c.nombre)+'</td><td>'+esc(c.nit)+'</td><td>'+esc(c.whatsapp||c.telefono)+'</td><td>'+Q(c.saldo)+'</td><td>'+Q(c.limiteCredito)+'</td><td><button class="btnGris" onclick="editarClienteUI('+i+')">Editar</button> <button class="btnGris" onclick="eliminarClienteUI('+i+')">Eliminar</button></td></tr>').join('');
+    $('listaClientes').innerHTML='<table class="tabla"><thead><tr><th>Cliente</th><th>NIT</th><th>Contacto</th><th>Saldo</th><th>L\u00edmite</th><th>Acciones</th></tr></thead><tbody>'+rows+'</tbody></table>';
+  });
+}
+
+function limpiarClienteUI(){
+  if(CLIENTE_GUARDANDO) return;
+  ['cliId','cliNombre','cliNit','cliTelefono','cliWhatsapp','cliDireccion'].forEach(id=>$(id).value='');
+  $('cliLimite').value='0';$('cliEdicion').textContent='';$('cliGuardar').textContent='Guardar cliente';$('cliNombre').focus();
+}
+function editarClienteUI(i){
+  if(CLIENTE_GUARDANDO) return;
+  const c=CLIENTES_LISTA[i];if(!c) return;
+  const campos={cliId:'clienteId',cliNombre:'nombre',cliNit:'nit',cliTelefono:'telefono',cliWhatsapp:'whatsapp',cliDireccion:'direccion',cliLimite:'limiteCredito'};
+  Object.keys(campos).forEach(id=>$(id).value=c[campos[id]]==null?'':c[campos[id]]);
+  $('cliEdicion').textContent='Editando: '+c.nombre;$('cliGuardar').textContent='Guardar cambios';$('cliNombre').focus();
+}
+function eliminarClienteUI(i){
+  if(CLIENTE_GUARDANDO) return;
+  const c=CLIENTES_LISTA[i];if(!c||!confirm('Eliminar a '+c.nombre+'? Solo se permite si no tiene movimientos.')) return;
+  CLIENTE_GUARDANDO=true;
+  api('eliminarcliente',{clienteId:c.clienteId},r=>{
+    CLIENTE_GUARDANDO=false;
+    msg('mensajeClientes',r&&r.ok?r.mensaje:(r&&r.error)||'No se pudo eliminar.',r&&r.ok?'ok':'error');
+    if(r&&r.ok){if($('cliId').value===c.clienteId) limpiarClienteUI();cargarClientes();cargarClientesPos(true);}
   });
 }
 
@@ -10400,16 +10426,14 @@ function guardarClienteUI(){
   if(!$('cliNombre').value.trim()) return msg('mensajeClientes','Ingrese el nombre del cliente.','error');
   CLIENTE_GUARDANDO=true;
   api('guardarcliente',{
-    nombre:$('cliNombre').value,nit:$('cliNit').value,telefono:$('cliTelefono').value,whatsapp:$('cliWhatsapp').value,
+    clienteId:$('cliId').value,nombre:$('cliNombre').value,nit:$('cliNit').value,telefono:$('cliTelefono').value,whatsapp:$('cliWhatsapp').value,
     direccion:$('cliDireccion').value,limiteCredito:$('cliLimite').value
   },r=>{
     CLIENTE_GUARDANDO=false;
     if(!r) return msg('mensajeClientes','No se pudo guardar el cliente.','error');
     msg('mensajeClientes',r.ok?r.mensaje:r.error,r.ok?'ok':'error');
     if(r.ok){
-      ['cliNombre','cliNit','cliTelefono','cliWhatsapp','cliDireccion'].forEach(id=>$(id).value='');
-      $('cliLimite').value='0';
-      $('cliNombre').focus();
+      limpiarClienteUI();
       cargarClientes();
       cargarClientesPos(true,r.clienteId);
     }
@@ -12375,7 +12399,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.26-LIMPIEZA-CLIENTES-33';
+  const APP_VERSION='2026.10.26-CLIENTES-34';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
