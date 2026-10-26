@@ -1,4 +1,4 @@
-const CACHE_NAME = 'adelaida-pos-2026.10.26-CLIENTES-CF-32';
+const CACHE_NAME = 'adelaida-pos-2026.10.26-LIMPIEZA-CLIENTES-33';
 const CORE = ['./', './index.html', './manifest.webmanifest'];
 
 self.addEventListener('install', event => {
