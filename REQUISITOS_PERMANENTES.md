@@ -29,3 +29,5 @@ El archivo Apps Script se distribuye en el paquete privado; no publicar credenci
 - La limpieza automatica tambien debe aplicarse a +Producto / Catalogo maestro cuando el servidor confirma COMPLETADO: vaciar tabla/borrador, conservar precios y comprobante con ID. Nunca limpiar por respuestas pendientes o errores.
 
 - Traslados: incluir categoria, tipo y escala de cada codigo desde el maestro al listar/reimprimir. No depender del stock o catalogo disponible en origen ni tomar atributos de otra referencia. Conservar productos individuales reales. Ejecutar tests/escala-traslados.cjs.
+
+- Buscador de Traslados: tocar sugerencias agrega directamente al conjunto y mantiene filtro/lista abierta como POS. Permitir varias tallas y sumar repetidos con control de stock. Conservar botones manuales y bloqueos de envio/reintento. Ejecutar tests/selector-traslados.cjs.
