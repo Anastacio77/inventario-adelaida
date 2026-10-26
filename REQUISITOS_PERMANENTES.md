@@ -35,3 +35,5 @@ El archivo Apps Script se distribuye en el paquete privado; no publicar credenci
 - Clientes: C/F, CF y consumidor final no son identificadores unicos. Guardar clientes distintos sin reemplazarlos; edicion explicita por ID conserva saldo. Creditos no deben compartir cliente por C/F ni por nombre cuando hay NIT distintos. Ejecutar tests/clientes-cf.cjs con GS vigente.
 
 - Clientes: limpiar formulario y restablecer limite a cero solo tras guardado exitoso; conservar datos en error y bloquear guardados simultaneos.
+
+- Clientes: acciones Editar y Eliminar por ID; conservar saldo y fecha de creacion, bloquear NIT de otro cliente. Eliminar solo sin saldo ni ventas, pedidos, creditos, abonos, devoluciones o reservas; validar en servidor y conservar identidades anteriores para comprobar movimientos tras cambiar nombre/NIT. Confirmar antes de eliminar. Ejecutar tests/clientes-edicion.cjs.
