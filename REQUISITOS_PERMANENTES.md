@@ -25,3 +25,5 @@ El archivo Apps Script se distribuye en el paquete privado; no publicar credenci
 - POS: seleccionar Unitario por defecto al agregar una referencia sin nivel previo; actualizar importe, base y selector juntos. Conservar elecciones manuales y niveles de pedidos existentes. Ejecutar tests/pos-unitario.cjs.
 
 - Compras: limpiar automaticamente la carga masiva solo tras confirmar orden creada, conservar numero/ID en comprobante, no descartar pendientes/errores ni una nueva carga al recibir otra orden. Limpiar formulario de recepcion tras exito. Ejecutar tests/limpieza-compras.cjs.
+
+- La limpieza automatica tambien debe aplicarse a +Producto / Catalogo maestro cuando el servidor confirma COMPLETADO: vaciar tabla/borrador, conservar precios y comprobante con ID. Nunca limpiar por respuestas pendientes o errores.
