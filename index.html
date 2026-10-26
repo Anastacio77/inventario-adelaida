@@ -1493,7 +1493,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.26-CLIENTES-34';
+const VERSION_SISTEMA_UI='2026.10.26-PDF-MOVIL-35';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -4721,15 +4721,59 @@ function imprimirDocumentoHTML(html,formato='MEDIA'){
     overlay=document.createElement('div');overlay.setAttribute('role','dialog');overlay.setAttribute('aria-label','Vista de impresion');
     overlay.style.cssText='position:fixed;inset:0;z-index:100000;background:#fff;display:flex;flex-direction:column';
     const barra=document.createElement('div');barra.style.cssText='display:flex;flex-wrap:wrap;gap:8px;padding:12px;background:#eee';
-    const boton=(texto,accion)=>{const b=document.createElement('button');b.type='button';b.textContent=texto;b.style.cssText='padding:12px;font-size:16px';b.onclick=accion;barra.appendChild(b);};
+    const boton=(texto,accion)=>{const b=document.createElement('button');b.type='button';b.textContent=texto;b.style.cssText='padding:12px;font-size:16px';b.onclick=accion;barra.appendChild(b);return b;};
     boton('Imprimir',()=>{preparar();iframe.contentWindow.focus();try{iframe.contentWindow.print();}catch(e){alert('Abra el documento en otra pesta\u00f1a con el siguiente boton para imprimir.');}});
     boton('Abrir en otra pesta\u00f1a',()=>{preparar();
       const contenido=doc.documentElement.outerHTML.replace('</body>','<div class="controlImpresion" style="position:fixed;top:0;left:0;right:0;padding:12px;background:#eee"><button style="display:inline-block!important;padding:12px" onclick="window.print()">Imprimir</button></div><style>@media screen{body{padding-top:60px}}@media print{.controlImpresion{display:none!important}}</style></body>');
       if(urlDocumento)URL.revokeObjectURL(urlDocumento);urlDocumento=URL.createObjectURL(new Blob(['<!doctype html>'+contenido],{type:'text/html'}));
       const w=window.open(urlDocumento,'_blank');if(!w)alert('El navegador bloqueo la pesta\u00f1a. Permita abrir ventanas para imprimir.');
     });
+    let archivoPDF=null,generandoPDF=false;
+    const estadoPDF=document.createElement('span');estadoPDF.setAttribute('role','status');estadoPDF.style.cssText='width:100%;font-size:14px';
+    const descargarPDF=()=>{
+      if(!archivoPDF) return;
+      const url=URL.createObjectURL(archivoPDF),a=document.createElement('a');a.href=url;a.download=archivoPDF.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+    };
+    const compartir=boton('Preparando PDF...',()=>{
+      if(!archivoPDF){generarPDF();return;}
+      if(navigator.share&&navigator.canShare&&navigator.canShare({files:[archivoPDF]})){
+        navigator.share({files:[archivoPDF],title:archivoPDF.name}).catch(e=>{
+          if(e.name!=='AbortError') estadoPDF.textContent='No se pudo compartir. Use Descargar PDF e intente enviarlo desde Archivos.';
+        });
+      }else{descargarPDF();estadoPDF.textContent='PDF descargado. Puede enviarlo desde Archivos o Descargas.';}
+    });
+    const descargar=boton('Descargar PDF',descargarPDF);compartir.disabled=true;descargar.disabled=true;
+    barra.appendChild(estadoPDF);
+    const generarPDF=async()=>{
+      if(generandoPDF||eliminado) return;
+      generandoPDF=true;compartir.disabled=true;compartir.textContent='Preparando PDF...';estadoPDF.textContent='Espere a que el PDF este listo para compartir.';
+      try{
+        preparar();
+        if(!iframe.contentWindow.html2pdf) await new Promise((resolve,reject)=>{
+          const script=doc.createElement('script');let timer;
+          const terminar=err=>{clearTimeout(timer);script.onload=null;script.onerror=null;if(err){script.remove();reject(err);}else resolve();};
+          timer=setTimeout(()=>terminar(new Error('Tiempo agotado al cargar PDF.')),30000);
+          script.onload=()=>terminar();script.onerror=()=>terminar(new Error('No se pudo cargar PDF.'));
+          script.src=new URL('./html2pdf.bundle.min.js',location.href).href;doc.head.appendChild(script);
+        });
+        if(doc.fonts&&doc.fonts.ready) await doc.fonts.ready;
+        await Promise.all(Array.from(doc.images).map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=resolve;img.onerror=resolve;setTimeout(resolve,5000);} )));
+        if(eliminado) return;
+        const ticket=doc.querySelector('.ticket');
+        const texto=ticket.textContent||'';
+        const referencia=(texto.match(/(?:COM|TRAS|VEN|PED|RES|DEV|AB|CR)-[A-Za-z0-9-]+/)||[])[0];
+        const nombre=(referencia||'Comercial-Adelaida-'+new Date().toISOString().slice(0,10)) + '.pdf';
+        const media=formato==='MEDIA'&&ticket.scrollHeight<=480;
+        const blob=await iframe.contentWindow.html2pdf().set({margin:0.25,filename:nombre,image:{type:'jpeg',quality:0.96},html2canvas:{scale:1.5,useCORS:true,backgroundColor:'#ffffff',logging:false,windowWidth:816},jsPDF:{unit:'in',format:media?[8.5,5.5]:[8.5,11],orientation:media?'landscape':'portrait'},pagebreak:{mode:['css','legacy'],avoid:['tr','.firmas']}}).from(ticket).outputPdf('blob');
+        if(eliminado) return;
+        if(!blob||blob.size<100) throw new Error('No se pudo generar el PDF.');
+        archivoPDF=new File([blob],nombre,{type:'application/pdf'});
+        compartir.textContent='Compartir PDF';descargar.disabled=false;estadoPDF.textContent='PDF listo. Toque Compartir PDF para elegir una aplicacion.';
+      }catch(e){if(!eliminado){compartir.textContent='Reintentar PDF';estadoPDF.textContent='No se pudo preparar el PDF. Reintente o use Imprimir.';}}
+      finally{generandoPDF=false;if(!eliminado)compartir.disabled=false;}
+    };
     boton('Cerrar',limpiar);overlay.appendChild(barra);const copiaDocumento=doc.documentElement.outerHTML;iframe.style.cssText='width:100%;flex:1;min-height:0;border:0';overlay.appendChild(iframe);document.body.appendChild(overlay);doc=iframe.contentDocument||iframe.contentWindow.document;doc.open();doc.write('<!doctype html>'+copiaDocumento);doc.close();papel=doc.getElementById('papelDocumento');
-    setTimeout(preparar,500);return;
+    setTimeout(generarPDF,500);return;
   }
   iframe.contentWindow.addEventListener('afterprint',limpiar,{once:true});
   setTimeout(()=>{
@@ -12399,7 +12443,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.26-CLIENTES-34';
+  const APP_VERSION='2026.10.26-PDF-MOVIL-35';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
