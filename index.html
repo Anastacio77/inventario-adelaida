@@ -1493,7 +1493,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.26-PDF-MOVIL-35';
+const VERSION_SISTEMA_UI='2026.10.26-IMPRESION-PDF-36';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -4722,12 +4722,19 @@ function imprimirDocumentoHTML(html,formato='MEDIA'){
     overlay.style.cssText='position:fixed;inset:0;z-index:100000;background:#fff;display:flex;flex-direction:column';
     const barra=document.createElement('div');barra.style.cssText='display:flex;flex-wrap:wrap;gap:8px;padding:12px;background:#eee';
     const boton=(texto,accion)=>{const b=document.createElement('button');b.type='button';b.textContent=texto;b.style.cssText='padding:12px;font-size:16px';b.onclick=accion;barra.appendChild(b);return b;};
-    boton('Imprimir',()=>{preparar();iframe.contentWindow.focus();try{iframe.contentWindow.print();}catch(e){alert('Abra el documento en otra pesta\u00f1a con el siguiente boton para imprimir.');}});
-    boton('Abrir en otra pesta\u00f1a',()=>{preparar();
-      const contenido=doc.documentElement.outerHTML.replace('</body>','<div class="controlImpresion" style="position:fixed;top:0;left:0;right:0;padding:12px;background:#eee"><button style="display:inline-block!important;padding:12px" onclick="window.print()">Imprimir</button></div><style>@media screen{body{padding-top:60px}}@media print{.controlImpresion{display:none!important}}</style></body>');
-      if(urlDocumento)URL.revokeObjectURL(urlDocumento);urlDocumento=URL.createObjectURL(new Blob(['<!doctype html>'+contenido],{type:'text/html'}));
-      const w=window.open(urlDocumento,'_blank');if(!w)alert('El navegador bloqueo la pesta\u00f1a. Permita abrir ventanas para imprimir.');
-    });
+    const abrirImpresionMovil=(imprimir=true)=>{
+      preparar();
+      // Abrir dentro del gesto del usuario; imprimir un documento principal, no el iframe.
+      const w=window.open('about:blank','_blank');
+      if(!w){alert('Permita abrir ventanas para imprimir. Tambien puede descargar el PDF y abrirlo en el visor del telefono.');return;}
+      const copia=doc.documentElement.cloneNode(true);
+      copia.querySelectorAll('script').forEach(el=>el.remove());
+      const contenido=copia.outerHTML.replace('</head>','<meta name="viewport" content="width=816"><style>@media screen{body{padding-top:70px}}@media print{.controlImpresion{display:none!important}body{padding-top:0}}</style></head>').replace('</body>','<div class="controlImpresion" style="position:fixed;top:0;left:0;right:0;padding:12px;background:#eee;z-index:999"><button style="display:inline-block!important;padding:12px" onclick="window.print()">Imprimir</button><button style="display:inline-block!important;padding:12px" onclick="window.close()">Cerrar</button><span> Si no abre la impresion, descargue el PDF y abra la opcion Imprimir del visor del telefono.</span></div></body>');
+      w.document.open();w.document.write('<!doctype html>'+contenido);w.document.close();w.focus();
+      if(imprimir) try{w.print();}catch(e){alert('Pulse Imprimir en la nueva pesta\u00f1a o abra el PDF descargado.');}
+    };
+    boton('Imprimir',()=>abrirImpresionMovil(true));
+    boton('Abrir en otra pesta\u00f1a',()=>abrirImpresionMovil(false));
     let archivoPDF=null,generandoPDF=false;
     const estadoPDF=document.createElement('span');estadoPDF.setAttribute('role','status');estadoPDF.style.cssText='width:100%;font-size:14px';
     const descargarPDF=()=>{
@@ -4764,7 +4771,8 @@ function imprimirDocumentoHTML(html,formato='MEDIA'){
         const referencia=(texto.match(/(?:COM|TRAS|VEN|PED|RES|DEV|AB|CR)-[A-Za-z0-9-]+/)||[])[0];
         const nombre=(referencia||'Comercial-Adelaida-'+new Date().toISOString().slice(0,10)) + '.pdf';
         const media=formato==='MEDIA'&&ticket.scrollHeight<=480;
-        const blob=await iframe.contentWindow.html2pdf().set({margin:0.25,filename:nombre,image:{type:'jpeg',quality:0.96},html2canvas:{scale:1.5,useCORS:true,backgroundColor:'#ffffff',logging:false,windowWidth:816},jsPDF:{unit:'in',format:media?[8.5,5.5]:[8.5,11],orientation:media?'landscape':'portrait'},pagebreak:{mode:['css','legacy'],avoid:['tr','.firmas']}}).from(ticket).outputPdf('blob');
+        iframe.contentWindow.scrollTo(0,0);
+        const blob=await iframe.contentWindow.html2pdf().set({margin:0.25,filename:nombre,image:{type:'jpeg',quality:0.96},html2canvas:{scale:1.5,useCORS:true,backgroundColor:'#ffffff',logging:false,scrollX:0,scrollY:0,windowWidth:816,windowHeight:Math.max(1056,ticket.scrollHeight),onclone:clon=>{clon.documentElement.scrollLeft=0;clon.documentElement.scrollTop=0;clon.body.scrollLeft=0;clon.body.scrollTop=0;}},jsPDF:{unit:'in',format:media?[8.5,5.5]:[8.5,11],orientation:media?'landscape':'portrait'},pagebreak:{mode:['css','legacy'],avoid:['tr','.firmas']}}).from(ticket).outputPdf('blob');
         if(eliminado) return;
         if(!blob||blob.size<100) throw new Error('No se pudo generar el PDF.');
         archivoPDF=new File([blob],nombre,{type:'application/pdf'});
@@ -4772,7 +4780,7 @@ function imprimirDocumentoHTML(html,formato='MEDIA'){
       }catch(e){if(!eliminado){compartir.textContent='Reintentar PDF';estadoPDF.textContent='No se pudo preparar el PDF. Reintente o use Imprimir.';}}
       finally{generandoPDF=false;if(!eliminado)compartir.disabled=false;}
     };
-    boton('Cerrar',limpiar);overlay.appendChild(barra);const copiaDocumento=doc.documentElement.outerHTML;iframe.style.cssText='width:100%;flex:1;min-height:0;border:0';overlay.appendChild(iframe);document.body.appendChild(overlay);doc=iframe.contentDocument||iframe.contentWindow.document;doc.open();doc.write('<!doctype html>'+copiaDocumento);doc.close();papel=doc.getElementById('papelDocumento');
+    boton('Cerrar',limpiar);overlay.appendChild(barra);const copiaDocumento=doc.documentElement.outerHTML;const vistaPapel=document.createElement('div');vistaPapel.style.cssText='width:100%;flex:1;min-height:0;overflow:auto;background:#ddd';iframe.style.cssText='display:block;width:816px;min-width:816px;height:100%;min-height:600px;border:0;background:#fff';vistaPapel.appendChild(iframe);overlay.appendChild(vistaPapel);document.body.appendChild(overlay);doc=iframe.contentDocument||iframe.contentWindow.document;doc.open();doc.write('<!doctype html>'+copiaDocumento);doc.close();papel=doc.getElementById('papelDocumento');
     setTimeout(generarPDF,500);return;
   }
   iframe.contentWindow.addEventListener('afterprint',limpiar,{once:true});
@@ -12443,7 +12451,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.26-PDF-MOVIL-35';
+  const APP_VERSION='2026.10.26-IMPRESION-PDF-36';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
