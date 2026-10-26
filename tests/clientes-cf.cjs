@@ -4,7 +4,7 @@ const code=source.slice(source.indexOf('function nitIdentificadorCliente_('),sou
 const rows=[['ID','Nombre','NIT','Telefono','WhatsApp','Direccion','Limite','Saldo','Activo','Fecha']];
 let seq=0;
 const sheet={getLastRow:()=>rows.length,appendRow:r=>rows.push(r),getRange:(r,c,n=1,m=1)=>({getValues:()=>rows.slice(r-1,r-1+n).map(x=>x.slice(c-1,c-1+m)),getValue:()=>rows[r-1][c-1],setValues:values=>values.forEach((row,i)=>row.forEach((v,j)=>rows[r-1+i][c-1+j]=v))})};
-const ctx=vm.createContext({CONFIG:{CLIENTES:'Clientes'},auth_:()=>{},hoja_:()=>sheet,num_:v=>Number(v)||0,op_:()=>`CLI-${++seq}`});
+const ctx=vm.createContext({CONFIG:{CLIENTES:'Clientes'},auth_:()=>{},hoja_:()=>sheet,num_:v=>Number(v)||0,op_:()=>`CLI-${++seq}`,SpreadsheetApp:{getActiveSpreadsheet:()=>({})},hojaOCrea_:()=>({appendRow(){}}),cab_:()=>{}});
 vm.runInContext(code,ctx);
 const save=(nombre,nit,extra={})=>ctx.guardarCliente_('token',{nombre,nit,...extra});
 const a=save('Ana','c/f'),b=save('Rafael','c/f'),c=save('Maria','CF'),d=save('Pedro','');
