@@ -33,3 +33,5 @@ El archivo Apps Script se distribuye en el paquete privado; no publicar credenci
 - Buscador de Traslados: tocar sugerencias agrega directamente al conjunto y mantiene filtro/lista abierta como POS. Permitir varias tallas y sumar repetidos con control de stock. Conservar botones manuales y bloqueos de envio/reintento. Ejecutar tests/selector-traslados.cjs.
 
 - Clientes: C/F, CF y consumidor final no son identificadores unicos. Guardar clientes distintos sin reemplazarlos; edicion explicita por ID conserva saldo. Creditos no deben compartir cliente por C/F ni por nombre cuando hay NIT distintos. Ejecutar tests/clientes-cf.cjs con GS vigente.
+
+- Clientes: limpiar formulario y restablecer limite a cero solo tras guardado exitoso; conservar datos en error y bloquear guardados simultaneos.
