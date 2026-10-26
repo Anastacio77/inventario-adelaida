@@ -31,3 +31,5 @@ El archivo Apps Script se distribuye en el paquete privado; no publicar credenci
 - Traslados: incluir categoria, tipo y escala de cada codigo desde el maestro al listar/reimprimir. No depender del stock o catalogo disponible en origen ni tomar atributos de otra referencia. Conservar productos individuales reales. Ejecutar tests/escala-traslados.cjs.
 
 - Buscador de Traslados: tocar sugerencias agrega directamente al conjunto y mantiene filtro/lista abierta como POS. Permitir varias tallas y sumar repetidos con control de stock. Conservar botones manuales y bloqueos de envio/reintento. Ejecutar tests/selector-traslados.cjs.
+
+- Clientes: C/F, CF y consumidor final no son identificadores unicos. Guardar clientes distintos sin reemplazarlos; edicion explicita por ID conserva saldo. Creditos no deben compartir cliente por C/F ni por nombre cuando hay NIT distintos. Ejecutar tests/clientes-cf.cjs con GS vigente.
