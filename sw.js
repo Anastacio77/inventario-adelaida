@@ -1,5 +1,5 @@
-const CACHE_NAME = 'adelaida-pos-2026.10.26-CLIENTES-34';
-const CORE = ['./', './index.html', './manifest.webmanifest'];
+const CACHE_NAME = 'adelaida-pos-2026.10.26-PDF-MOVIL-35';
+const CORE = ['./', './index.html', './manifest.webmanifest', './html2pdf.bundle.min.js'];
 
 self.addEventListener('install', event => {
   event.waitUntil(
