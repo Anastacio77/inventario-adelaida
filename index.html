@@ -870,6 +870,7 @@ document.addEventListener('click',e=>{
         <input id="trasCodigo" autocomplete="off" placeholder="C&#243;digo, modelo, marca o color">
         <div id="sugerenciasTras" class="listaSugerencias oculto"></div>
       </div>
+      <div class="sub">Toque un codigo de la lista para agregarlo al traslado. La busqueda permanece abierta para elegir otras tallas; repetir un codigo suma cantidad.</div>
 
       <label>Sucursal destino</label>
       <select id="trasDestino"></select>
@@ -1491,7 +1492,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.25-ESCALA-TRASLADOS-30';
+const VERSION_SISTEMA_UI='2026.10.25-SELECTOR-TRASLADOS-31';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -3059,9 +3060,9 @@ function pintarSugerencias(resultados,modo,q){
         $('codigo').value=p.codigo;
         consultar(p.codigo);
 
-      }else{
-        lista.classList.add('oculto');
-        $('trasCodigo').value=p.codigo;
+      }else if(modo==='tras'){
+        agregarDesdeSugerenciaTraslado(p);
+        lista.classList.remove('oculto');
       }
     };
 
@@ -3069,7 +3070,7 @@ function pintarSugerencias(resultados,modo,q){
       e.preventDefault();
       e.stopPropagation();
 
-      if(modo==='pos'){
+      if(modo==='pos'||modo==='tras'){
         lista.classList.remove('oculto');
       }
     };
@@ -5859,7 +5860,17 @@ function renderProductosTraslado(){
  guardarListaTraslado();
  $('trasListaProductos').innerHTML=TRAS_PRODUCTOS.length?'<table><thead><tr><th>Producto</th><th>Cantidad</th><th></th></tr></thead><tbody>'+TRAS_PRODUCTOS.map((x,i)=>'<tr><td>'+esc([x.marca,x.modelo,x.color,x.talla,x.codigo].filter(Boolean).join(' / '))+'</td><td><input type="number" min="1" value="'+x.cantidad+'" '+(TRASLADO_ENVIANDO||TRASLADO_SOLICITUD_ID?'disabled':'')+' onchange="editarCantidadTraslado('+i+',this.value)"></td><td><button '+(TRASLADO_ENVIANDO||TRASLADO_SOLICITUD_ID?'disabled':'')+' onclick="quitarProductoTraslado('+i+')">Quitar</button></td></tr>').join('')+'</tbody></table>':'';
 }
-function agregarProductoTraslado(){
+function agregarDesdeSugerenciaTraslado(p){
+ if(TRASLADO_ENVIANDO||TRASLADO_SOLICITUD_ID)return msg('mensajeTraslado','Reintente el traslado pendiente antes de modificarlo.','error');
+ const input=$('trasCodigo'),busqueda=input.value;
+ if(!PRODUCTOS_TRASLADO_ORIGEN.some(x=>x.codigo===p.codigo))return msg('mensajeTraslado','Actualice Productos del origen antes de seleccionar esta referencia.','error');
+ input.value=p.codigo;
+ const agregado=agregarProductoTraslado(true);
+ input.value=busqueda;$('trasProductoSelect').value='';input.focus();
+ $('sugerenciasTras').classList.remove('oculto');
+ if(agregado===true)msg('mensajeTraslado','Agregado: '+p.codigo+'. Puede seleccionar otra talla de la misma lista.','ok');
+}
+function agregarProductoTraslado(conservarBusqueda=false){
  if(TRASLADO_ENVIANDO||TRASLADO_SOLICITUD_ID)return msg('mensajeTraslado','Reintente el traslado pendiente antes de modificarlo.','error');
  const codigo=$('trasCodigo').value.trim(),p=PRODUCTOS_TRASLADO_ORIGEN.find(x=>x.codigo===codigo),cantidad=Number($('trasCantidad').value);
  if(!p||!Number.isSafeInteger(cantidad)||cantidad<=0)return msg('mensajeTraslado','Seleccione producto y cantidad valida.','error');
@@ -5867,7 +5878,8 @@ function agregarProductoTraslado(){
  const old=TRAS_PRODUCTOS.find(x=>x.codigo===codigo),n=cantidad+(old?old.cantidad:0);
  if(n>Number(p.existencia))return msg('mensajeTraslado','Cantidad supera existencia disponible.','error');
  if(old)old.cantidad=n;else{if(TRAS_PRODUCTOS.length>=50)return msg('mensajeTraslado','Maximo 50 referencias por traslado.','error');TRAS_PRODUCTOS.push({...p,cantidad,origen:SUCURSAL});}
- $('trasCodigo').value='';$('trasProductoSelect').value='';$('trasCantidad').value=1;renderProductosTraslado();
+ if(!conservarBusqueda){$('trasCodigo').value='';$('trasProductoSelect').value='';}
+ $('trasCantidad').value=1;renderProductosTraslado();return true;
 }
 function quitarProductoTraslado(i){if(TRASLADO_ENVIANDO||TRASLADO_SOLICITUD_ID)return;TRAS_PRODUCTOS.splice(i,1);renderProductosTraslado();}
 function editarCantidadTraslado(i,v){if(TRASLADO_ENVIANDO||TRASLADO_SOLICITUD_ID)return;const n=Number(v);if(Number.isSafeInteger(n)&&n>0&&n<=Number(TRAS_PRODUCTOS[i].existencia))TRAS_PRODUCTOS[i].cantidad=n;renderProductosTraslado();}
@@ -12354,7 +12366,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.25-ESCALA-TRASLADOS-30';
+  const APP_VERSION='2026.10.25-SELECTOR-TRASLADOS-31';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
