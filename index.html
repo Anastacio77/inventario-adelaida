@@ -1493,7 +1493,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.27-BLOQUEO-TRASLADOS-40';
+const VERSION_SISTEMA_UI='2026.10.27-TRASLADAR-TODO-41';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -5918,7 +5918,7 @@ function recuperarListaTraslado(){if(TRASLADO_ENVIANDO||TRAS_PRODUCTOS.length)re
 
 function renderProductosTraslado(){
  guardarListaTraslado();
- $('trasListaProductos').innerHTML=TRAS_PRODUCTOS.length?'<div style="overflow-x:auto"><table><thead><tr><th>Producto</th><th>Existencia en origen</th><th>Cantidad</th><th></th></tr></thead><tbody>'+TRAS_PRODUCTOS.map((x,i)=>'<tr><td>'+esc([x.marca,x.modelo,x.color,x.talla,x.codigo].filter(Boolean).join(' / '))+'</td><td style="text-align:center;font-weight:700">'+esc(x.existencia==null?'-':x.existencia)+'</td><td><input style="min-width:70px;width:90px;max-width:100%" type="number" min="1" value="'+x.cantidad+'" '+(TRASLADO_ENVIANDO||TRASLADO_SOLICITUD_ID?'disabled':'')+' onchange="editarCantidadTraslado('+i+',this.value)"></td><td><button '+(TRASLADO_ENVIANDO||TRASLADO_SOLICITUD_ID?'disabled':'')+' onclick="quitarProductoTraslado('+i+')">Quitar</button></td></tr>').join('')+'</tbody></table></div>':'';
+ $('trasListaProductos').innerHTML=TRAS_PRODUCTOS.length?'<div style="overflow-x:auto"><table><thead><tr><th>Producto</th><th>Existencia en origen</th><th>Cantidad</th><th></th></tr></thead><tbody>'+TRAS_PRODUCTOS.map((x,i)=>'<tr><td>'+esc([x.marca,x.modelo,x.color,x.talla,x.codigo].filter(Boolean).join(' / '))+'</td><td style="text-align:center;font-weight:700">'+esc(x.existencia==null?'-':x.existencia)+'</td><td><input style="min-width:70px;width:90px;max-width:100%" type="number" min="1" value="'+x.cantidad+'" '+(TRASLADO_ENVIANDO||TRASLADO_SOLICITUD_ID?'disabled':'')+' onchange="editarCantidadTraslado('+i+',this.value)"></td><td><button type="button" '+(TRASLADO_ENVIANDO||TRASLADO_SOLICITUD_ID||!Number.isSafeInteger(Number(x.existencia))||Number(x.existencia)<=0?'disabled':'')+' onclick="trasladarTodoFila('+i+')">Trasladar todo</button> <button '+(TRASLADO_ENVIANDO||TRASLADO_SOLICITUD_ID?'disabled':'')+' onclick="quitarProductoTraslado('+i+')">Quitar</button></td></tr>').join('')+'</tbody></table></div>':'';
 }
 function agregarDesdeSugerenciaTraslado(p){
  if(TRASLADO_ENVIANDO||TRASLADO_SOLICITUD_ID)return msg('mensajeTraslado','Reintente el traslado pendiente antes de modificarlo.','error');
@@ -5943,6 +5943,14 @@ function agregarProductoTraslado(conservarBusqueda=false){
 }
 function quitarProductoTraslado(i){if(TRASLADO_ENVIANDO||TRASLADO_SOLICITUD_ID)return;TRAS_PRODUCTOS.splice(i,1);renderProductosTraslado();}
 function editarCantidadTraslado(i,v){if(TRASLADO_ENVIANDO||TRASLADO_SOLICITUD_ID)return;const n=Number(v);if(Number.isSafeInteger(n)&&n>0&&n<=Number(TRAS_PRODUCTOS[i].existencia))TRAS_PRODUCTOS[i].cantidad=n;renderProductosTraslado();}
+function trasladarTodoFila(i){
+ if(TRASLADO_ENVIANDO||TRASLADO_SOLICITUD_ID)return;
+ const producto=TRAS_PRODUCTOS[i];if(!producto)return;
+ if(producto.origen!==SUCURSAL)return msg('mensajeTraslado','Vuelva a la sucursal origen de esta lista.','error');
+ const cantidad=Number(producto.existencia);
+ if(!Number.isSafeInteger(cantidad)||cantidad<=0)return msg('mensajeTraslado','La referencia no tiene existencia disponible.','error');
+ editarCantidadTraslado(i,cantidad);
+}
 function hacerTraslado(){
  if(TRASLADO_ENVIANDO)return;
  if(!TRAS_PRODUCTOS.length)agregarProductoTraslado();if(!TRAS_PRODUCTOS.length)return;
@@ -12458,7 +12466,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.27-BLOQUEO-TRASLADOS-40';
+  const APP_VERSION='2026.10.27-TRASLADAR-TODO-41';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
