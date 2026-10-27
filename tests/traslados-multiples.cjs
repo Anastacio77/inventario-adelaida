@@ -11,3 +11,8 @@ calls=[];rows=[Array(21).fill('')];Object.assign(rows[0],{1:'TRAS-1',2:'A',7:p.o
 rows=[];c.trasladoFila_=()=>{throw Error('stock')};assert.throws(()=>c.traslado_('token',p));assert(restored);assert.equal(locked,0);
 rows=[Array(21).fill(''),Array(21).fill('')];rows.forEach((x,i)=>Object.assign(x,{1:'TRAS-1',2:i?'B':'A',8:p.destino}));calls=[];r=c.recibirTraslado_('token',{numeroTraslado:'TRAS-1',sucursal:p.destino});assert.equal(r.referencias,2);assert.deepEqual(calls,['A','B']);assert.equal(locked,0);
 console.log('OK multiple products, single number, duplicate retry, rollback and joint receipt');
+
+// Un bloqueo ocupado no inicia movimientos y conserva el ID para el reintento.
+let intentos=0;c.LockService={getDocumentLock:()=>({waitLock(){throw Error('Lock timeout: another process was holding the lock for too long.');},releaseLock(){throw Error('No se adquirio');}})};c.trasladoFila_=()=>{intentos++};rows=[];
+const ocupado=c.traslado_('token',p);assert.equal(ocupado.ok,false);assert(ocupado.reintentable);assert.equal(ocupado.idSolicitud,p.idSolicitud);assert.equal(intentos,0);
+console.log('OK bloqueo ocupado no mueve inventario y conserva ID de reintento');
