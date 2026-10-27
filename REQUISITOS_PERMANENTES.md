@@ -45,3 +45,5 @@ El archivo Apps Script se distribuye en el paquete privado; no publicar credenci
 - Traslados: mostrar columna Existencia en origen junto a cada producto seleccionado, separada de Cantidad a trasladar. Conservar cantidades, controles de stock, seleccion multiple y flujo de impresion/PDF confirmado por el usuario.
 
 - Traslados: ante lock timeout conservar ID/lista/destino y permitir reintento con el mismo ID; nunca generar nueva solicitud por bloqueo ocupado. Servidor devuelve error reintentable sin escribir si no obtiene lock. Asegurar cabecera de traslados una sola vez en operacion multiple, no por referencia. Mantener rollback y deduplicacion.
+
+- Traslados: cada fila incluye Trasladar todo para fijar cantidad a la existencia de esa referencia; no despacha automaticamente ni modifica otras filas. Bloquear durante envio o solicitud pendiente, validar origen y existencia positiva. Confirmacion conjunta con Despachar traslado.
