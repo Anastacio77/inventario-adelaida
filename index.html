@@ -1493,7 +1493,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.27-EXISTENCIA-TRASLADOS-39';
+const VERSION_SISTEMA_UI='2026.10.27-BLOQUEO-TRASLADOS-40';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -5953,7 +5953,7 @@ function hacerTraslado(){
  msg('mensajeTraslado','Despachando '+items.length+' referencias en un solo traslado...','info');
  api('traslado',{origen:SUCURSAL,destino,nota,items:JSON.stringify(items.map(x=>({codigo:x.codigo,cantidad:x.cantidad}))),idSolicitud:TRASLADO_SOLICITUD_ID},r=>{
  TRASLADO_ENVIANDO=false;$('btnDespacharTraslado').disabled=false;
- if(!r||!r.ok){if(r&&!/Tiempo agotado|No se pudo conectar/.test(r.error||'')){TRASLADO_SOLICITUD_ID='';['trasDestino','trasNota','trasCodigo','trasCantidad','trasProductoSelect'].forEach(id=>$(id).disabled=false);}renderProductosTraslado();return msg('mensajeTraslado',(r&&r.error)||'No se pudo conectar. Reintente esta misma lista sin duplicarla.','error');}
+ if(!r||!r.ok){if(r&&!r.reintentable&&!/Tiempo agotado|No se pudo conectar|lock timeout|another process was holding|TRASLADO_OCUPADO/i.test(r.error||'')){TRASLADO_SOLICITUD_ID='';['trasDestino','trasNota','trasCodigo','trasCantidad','trasProductoSelect'].forEach(id=>$(id).disabled=false);}renderProductosTraslado();const error=(r&&r.error)||'No se pudo conectar. Reintente esta misma lista sin duplicarla.';return msg('mensajeTraslado',/lock timeout|another process was holding/i.test(error)?'El sistema esta ocupado. Espere 30 segundos y pulse Despachar traslado para reintentar la misma lista sin duplicarla.':error,'error');}
  ULTIMO_TRASLADO_IMPRESION={...r,items,nota,fecha:new Date().toLocaleString(),usuario:SESION.nombre||SESION.usuario};TRAS_PRODUCTOS=[];TRASLADO_SOLICITUD_ID='';
  ['trasDestino','trasNota','trasCodigo','trasCantidad','trasProductoSelect'].forEach(id=>$(id).disabled=false);$('trasNota').value='';renderProductosTraslado();$('btnImprimirUltimoTraslado').classList.remove('oculto');PRODUCTOS_TRASLADO_TS=0;cargarResumen();cargarProductosTrasladoOrigen(true);cargarTraslados();msg('mensajeTraslado','Traslado '+r.numeroTraslado+': '+items.length+' referencias. Pendiente de recepcion en destino.','ok');
  });
@@ -12458,7 +12458,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.27-EXISTENCIA-TRASLADOS-39';
+  const APP_VERSION='2026.10.27-BLOQUEO-TRASLADOS-40';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
