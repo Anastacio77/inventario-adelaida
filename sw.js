@@ -1,4 +1,4 @@
-const CACHE_NAME = 'adelaida-pos-2026.10.26-IMPRESION-DIRECTA-37';
+const CACHE_NAME = 'adelaida-pos-2026.10.26-IMPRESION-APP-38';
 const CORE = ['./', './index.html', './manifest.webmanifest', './html2pdf.bundle.min.js'];
 
 self.addEventListener('install', event => {
