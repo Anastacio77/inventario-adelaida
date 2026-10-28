@@ -1,4 +1,4 @@
-const CACHE_NAME = 'adelaida-pos-2026.10.27-TRASLADAR-TODO-41';
+const CACHE_NAME = 'adelaida-pos-2026.10.27-RECUPERACION-42';
 const CORE = ['./', './index.html', './manifest.webmanifest', './html2pdf.bundle.min.js'];
 
 self.addEventListener('install', event => {
