@@ -1,0 +1,11 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const s=fs.readFileSync(process.argv[2]||'entrega/Code_Recuperacion_42.gs','utf8');
+const code=s.slice(s.indexOf('function trasladoRestaurar_('),s.indexOf('function trasladoControl_('));
+let escrito,limpiado=0,flushed=0;
+const hoja={getLastRow:()=>4,getRange:(r,c,n,m)=>({setValues(v){escrito=v},clearContent(){assert(escrito);assert(flushed);limpiado++}}),clearContents(){throw Error('Nunca vaciar la hoja');}};
+const ctx=vm.createContext({SpreadsheetApp:{flush(){flushed++}}});vm.runInContext(code,ctx);
+ctx.trasladoRestaurar_([{h:hoja,v:[['Codigo','QR'],['A',{cellImage:true}]],f:[['',''],['','=IMAGE("qr")']]}]);
+assert.equal(escrito[1][1],'=IMAGE("qr")');assert.equal(limpiado,1);
+limpiado=0;const mal={getLastRow:()=>4,getRange:()=>({setValues(){throw Error('Service error: Spreadsheets')},clearContent(){limpiado++}})};
+assert.throws(()=>ctx.trasladoRestaurar_([{h:mal,v:[[1]],f:[['']]}]),/REVISION NECESARIA/);assert.equal(limpiado,0);
+console.log('OK restauracion escribe formulas antes de limpiar solo filas nuevas; fallo de escritura nunca vacia hoja.');
