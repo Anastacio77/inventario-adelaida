@@ -1,0 +1,16 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const gs=fs.readFileSync(process.argv[2]||'entrega/Code_Recepcion_Verificada_46.gs','utf8'),html=fs.readFileSync(process.argv[3]||'entrega/index.html','utf8');
+const source=gs.slice(gs.indexOf('function recibirCompra_(token,p){'),gs.indexOf('function listarCuentasPorPagar_'));
+const cab=Array(19).fill('');Object.assign(cab,{1:'COM-A',4:'Origen',5:'RECIBIDA'});
+let reads=0,writes=0;const det=[['','COM-A','A','',40,47.75,1910,40],['','COM-A','B','',5,55.25,276.25,5]];
+const sheet=rows=>({getLastRow:()=>rows.length+1,getLastColumn:()=>19,getRange:()=>({getValues:()=>{reads++;return rows;},setValue(){writes++;}})});
+const c=vm.createContext({auth_:()=>({rol:'ADMIN',usuario:'admin'}),sucursalUso_:(s,v)=>v,LockService:{getDocumentLock:()=>({waitLock(){},releaseLock(){}})},SpreadsheetApp:{getActiveSpreadsheet:()=>({getSheetByName:()=>null})},preciosCompraLeer_:()=>[],asegurarCuentasPorPagar_:()=>{},CONFIG:{COMPRAS:'C',CUENTAS_PAGAR:'X',DETALLE_COMPRAS:'D'},hoja_:n=>sheet(n==='C'?[cab]:n==='D'?det:[]),num_:v=>Number(v)||0});vm.runInContext(source,c);
+let r=c.recibirCompra_('',{numeroCompra:'COM-A'});assert.equal(r.totalRecibido,45);assert.equal(r.recibidos,0);assert.equal(r.yaProcesada,true);assert.equal(writes,0);
+det[0][7]=0;assert.throws(()=>c.recibirCompra_('',{numeroCompra:'COM-A'}),/no concuerdan/);assert.equal(writes,0);
+// Lost response triggers only a read, never a second receive request.
+const ui=html.slice(html.indexOf('function confirmarRecepcionSelectiva(){'),html.indexOf('let COMPRA_DETALLE_ACTUAL='));
+function front(detail){let calls=[],messages=[],queue=[];const nodes={};const ctx=vm.createContext({RECEPCION_COMPRA_ACTUAL:{numeroCompra:'COM-A'},COMPRAS_RECIBIENDO:new Set(),document:{querySelectorAll:()=>[{dataset:{codigo:'A'},value:'40'}]},confirm:()=>true,$:id=>nodes[id]||(nodes[id]={innerHTML:'rows',classList:{add(){}}}),msg:(id,t)=>messages.push(t),api:(a,p,cb)=>{calls.push(a);queue.push(()=>cb(a==='recibircompra'?{ok:false,error:'Tiempo agotado.'}:detail));},bmRecepcionCompletada(){},cargarCompras(){},cargarCuentasPorPagar(){},cargarResumen(){},precargarCatalogoPos(){},CATALOGO_POS:[],CATALOGO_POS_TS:0});vm.runInContext(ui,ctx);ctx.confirmarRecepcionSelectiva();ctx.confirmarRecepcionSelectiva();assert.equal(calls.length,1);queue.shift()();queue.shift()();assert.deepEqual(calls,['recibircompra','detallecompra']);return{ctx,messages,nodes};}
+let f=front({ok:true,estado:'RECIBIDA',items:[{cantidad:40,cantidadRecibida:40},{cantidad:5,cantidadRecibida:5}]});assert.equal(f.ctx.RECEPCION_COMPRA_ACTUAL,null);assert(f.messages.at(-1).includes('Total recibido: 45'));assert(!f.messages.at(-1).includes('Recibidos: 0'));
+f=front({ok:true,estado:'PARCIAL',items:[{cantidad:40,cantidadRecibida:20}]});assert(f.ctx.RECEPCION_COMPRA_ACTUAL);assert(f.messages.at(-1).includes('No se pudo confirmar'));assert.equal(f.nodes.recepcionCompraTabla,undefined);
+assert(html.includes("['masivoconfirmar','recibircompra'].includes(a) ? 180000 : 60000"));
+console.log('OK recepcion: reintento informa total real sin escrituras, discrepancia bloqueada, timeout consulta sin reenviar, doble clic bloqueado, parcial conserva formulario.');
