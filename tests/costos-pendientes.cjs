@@ -16,3 +16,25 @@ t=setup();r=t.ctx.corregirCostosCompra_(t.p);t.sheets.Detalle.fail=3;assert.thro
 t=setup();const cxp=Array(14).fill('');Object.assign(cxp,{1:'CXP-p',2:t.p.numeroCompra,9:56659.75,10:55659.75,11:'PARCIAL'});t.sheets.CXP.rows.push(cxp);r=t.ctx.corregirCostosCompra_(t.p);t.ctx.corregirCostosCompra_({...t.p,guardar:'SI',firma:r.firma});assert.equal(cxp[10],55764.75);
 t=setup();t.setAdmin(false);assert.throws(()=>t.ctx.corregirCostosCompra_(t.p),/ADMIN/);
 console.log('OK pendiente: 5 referencias, +105/56764.75, sin inventario ni nueva CXP, flete conservado, parcial bloqueada, vista previa vigente, reanudacion, abonos y ADMIN.');
+
+// Sheets returns a new Date instance on each read; journal JSON stores ISO strings.
+const originalRange=Sheet.prototype.getRange;
+Sheet.prototype.getRange=function(...args){const r=originalRange.apply(this,args),get=r.getValue; r.getValue=()=>{const v=get();return v instanceof Date?new Date(v.getTime()):v;};return r;};
+t=setup();t.sheets.Compras.rows[1][15]=new Date('2026-11-29T17:24:00.000Z');
+r=t.ctx.corregirCostosCompra_(t.p);
+const datedApply={...t.p,guardar:'SI',firma:r.firma};
+t.ctx.corregirCostosCompra_(datedApply);
+assert.equal(t.sheets.Compras.rows[1][8],56764.75);
+// Persisted pending plan must resume, without changing its original signature.
+t=setup();t.sheets.Compras.rows[1][15]=new Date('2026-11-29T17:24:00.000Z');r=t.ctx.corregirCostosCompra_(t.p);
+t.sheets.Detalle.fail=3;assert.throws(()=>t.ctx.corregirCostosCompra_({...t.p,guardar:'SI',firma:r.firma}),/interrupted/);
+const savedPlan=JSON.parse(t.sheets.CorreccionesCostosCompras.rows[1][5]);
+assert.equal(savedPlan.guards.find(x=>x.sheet==='Compras'&&x.col===16).value,'2026-11-29T17:24:00.000Z');
+t.ctx.corregirCostosCompra_({...t.p,guardar:'SI',firma:r.firma});assert.equal(t.sheets.Compras.rows[1][8],56764.75);
+// A genuinely changed due date still blocks all pending writes.
+t=setup();t.sheets.Compras.rows[1][15]=new Date('2026-11-29T17:24:00.000Z');r=t.ctx.corregirCostosCompra_(t.p);
+t.sheets.Detalle.fail=1;assert.throws(()=>t.ctx.corregirCostosCompra_({...t.p,guardar:'SI',firma:r.firma}),/interrupted/);
+t.sheets.Compras.rows[1][15]=new Date('2026-11-30T17:24:00.000Z');
+assert.throws(()=>t.ctx.corregirCostosCompra_({...t.p,guardar:'SI',firma:r.firma}),/inventario cambiaron/);
+assert.equal(t.sheets.Compras.rows[1][8],56659.75);
+console.log('OK fechas Sheets: instancias nuevas, plan JSON reanudable y vencimiento realmente cambiado bloqueado.');
