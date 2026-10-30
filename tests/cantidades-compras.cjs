@@ -1,0 +1,13 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const gs=fs.readFileSync(process.argv[2]||'entrega/Code_Cantidades_Compras_45.gs','utf8');
+const fn=gs.slice(gs.indexOf('function listarCompras_(token,p){'),gs.indexOf('function detalleCompra_'));
+let reads=0;const cab=(id,suc,prov,state,total)=>{const r=Array(19).fill('');Object.assign(r,{1:id,2:prov,4:suc,5:state,8:total});return r;};
+const rows=[cab('A','Origen','P','PENDIENTE',56764.75),cab('B','Destino','P','RECIBIDA',99),cab('C','Origen','Q','PARCIAL',20)];
+const detail=[['','A','','',48],['','A','','',48],['','A','','',72],['','A','','',906],['','A','','',145],['','B','','',7],['','C','','',3]];
+const sheet=(data,det=false)=>({getLastRow:()=>data.length+1,getLastColumn:()=>19,getRange:()=>({getValues:()=>{if(det)reads++;return data;}})});
+const context=vm.createContext({auth_:()=>({rol:'ADMIN'}),sucursalUso_:(ses,suc)=>suc,CONFIG:{COMPRAS:'C',DETALLE_COMPRAS:'D'},hoja_:n=>n==='C'?sheet(rows):sheet(detail,true),num_:v=>Number(v)||0,fmtFecha_:String});vm.runInContext(fn,context);
+let r=context.listarCompras_('',{sucursal:'Origen'});assert.equal(r.compras.length,2);assert.equal(r.compras.find(c=>c.numeroCompra==='A').totalCantidad,1219);assert.equal(r.compras.find(c=>c.numeroCompra==='A').total,56764.75);assert.equal(reads,1);
+r=context.listarCompras_('',{sucursal:'Origen',proveedorId:'P',todasSucursales:'SI'});assert.equal(r.compras.length,2);assert.equal(r.compras.reduce((s,c)=>s+c.totalCantidad,0),1226);
+r=context.listarCompras_('',{sucursal:'Origen',estado:'PARCIAL'});assert.equal(r.compras[0].totalCantidad,3);
+r=context.listarCompras_('',{sucursal:'Origen',proveedorId:'SIN'});assert.equal(r.compras.length,0);assert.equal(reads,3);
+console.log('OK cantidades: 1219 unidades, filtros por sucursal/proveedor/estado, totales monetarios intactos y una lectura por lista.');
