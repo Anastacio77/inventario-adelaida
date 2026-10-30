@@ -1493,7 +1493,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.30-FECHAS-COSTOS-44';
+const VERSION_SISTEMA_UI='2026.10.30-CANTIDADES-COMPRAS-45';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -9472,6 +9472,7 @@ function cargarCompras(){
           '<div>'+
             '<span class="badge">'+esc(c.estado)+'</span>'+
             '<br><b>'+Q(c.total)+'</b>'+
+            '<div class="mini">Pares / unidades: <b>'+Number(c.totalCantidad||0)+'</b></div>'+
             '<div class="mini">Pago: '+esc(c.estadoPago||'PENDIENTE')+'</div>'+
           '</div>'+
         '</div>';
@@ -9582,6 +9583,7 @@ function cargarComprasProveedor(){
         resumen.innerHTML=
           '<b>'+esc(proveedor?proveedor.nombre:'Proveedor')+'</b>'+
           ' \u00b7 '+compras.length+' compra(s)'+
+          ' \u00b7 Pares / unidades: '+compras.reduce((s,c)=>s+Number(c.totalCantidad||0),0)+
           ' \u00b7 Total '+Q(total)+
           ' \u00b7 Recibidas '+recibidas+
           ' \u00b7 Pendientes/parciales '+pendientes+
@@ -9607,6 +9609,7 @@ function cargarComprasProveedor(){
           '<th>Sucursal</th>'+
           '<th>Estado</th>'+
           '<th>Pago</th>'+
+          '<th>Pares / unidades</th>'+
           '<th>Total</th>'+
           '<th>Acci\u00f3n</th>'+
         '</tr></thead><tbody>';
@@ -9619,6 +9622,7 @@ function cargarComprasProveedor(){
             '<td>'+esc(c.sucursal||'')+'</td>'+
             '<td>'+esc(c.estado||'')+'</td>'+
             '<td>'+esc(c.estadoPago||'')+'</td>'+
+            '<td>'+Number(c.totalCantidad||0)+'</td>'+
             '<td><b>'+Q(c.total)+'</b></td>'+
             '<td>'+
               '<button class="btnGris btnVerCompraProveedor" type="button" '+
@@ -9908,6 +9912,7 @@ function ticketCompraHTML(r,id){
 
   const ticket=$(id);
 
+  if(ticket)ticket.innerHTML+='<div class="lineaTotal"><span>Total pares / unidades</span><b>'+items.reduce((s,x)=>s+Number(x.cantidad||0),0)+'</b></div>';
   if(ticket && Number(r.flete)>0){ticket.innerHTML+='<div>Flete (solo costo): <b>'+Q(r.flete)+'</b></div><small>Distribuido por unidades; excluido del total del proveedor.</small>';}
   if(ticket && Number(r.otrosCostos)>0){
     const totales=ticket.querySelector('.totales');
@@ -12466,7 +12471,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.30-FECHAS-COSTOS-44';
+  const APP_VERSION='2026.10.30-CANTIDADES-COMPRAS-45';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
@@ -12520,7 +12525,7 @@ async function ccCargar(){
   if(r.estado==='PENDIENTE'&&r.items.some(x=>Number(x.cantidadRecibida||0)>0))throw Error('La orden ya tiene recepcion parcial; requiere revision.');
   CC26={items:r.items,numero:r.numeroCompra,firma:'',idSolicitud:'',pendiente:r.correccionPendiente||null};
   const sugeridos={'PT0177|NEGRO':12.75,'PT0245|MORADOBR':14.25};
-  $('ccTabla').innerHTML='<p>'+esc(r.proveedor)+' | Estado: '+esc(r.estado)+' | Total actual: '+Q(r.total)+'</p><table><thead><tr><th>Codigo / producto</th><th>Escala</th><th>Talla</th><th>Pares</th><th>Costo registrado</th><th>Costo correcto por par</th></tr></thead><tbody>'+r.items.map((x,i)=>{
+  $('ccTabla').innerHTML='<p>'+esc(r.proveedor)+' | Estado: '+esc(r.estado)+' | Total pares / unidades: '+r.items.reduce((s,x)=>s+Number(x.cantidad||0),0)+' | Total actual: '+Q(r.total)+'</p><table><thead><tr><th>Codigo / producto</th><th>Escala</th><th>Talla</th><th>Pares / unidades</th><th>Costo registrado</th><th>Costo correcto por par / unidad</th></tr></thead><tbody>'+r.items.map((x,i)=>{
    let costo=x.costo;
    if(r.numeroCompra==='COM-20261023-180826-CDA256B2'&&x.escala==='D'&&Number(x.talla)>=33&&Number(x.talla)<=36){const sugerido=sugeridos[L(x.modelo)+'|'+L(x.color)];if(sugerido)costo=sugerido;}
    if(r.numeroCompra==='COM-20261030-112402-879CB29C'&&r.estado==='PENDIENTE'&&String(x.escala).toUpperCase()==='E'&&[43,44,45].includes(Number(x.talla))){
@@ -12544,7 +12549,7 @@ async function ccProcesar(guardar){
   if(guardar&&!CC26.firma)throw Error('Revise primero la vista previa.');
   CC_BUSY=true;['ccCargar','ccRevisar','ccAplicar','ccNumero'].forEach(id=>$(id).disabled=true);
   const r=await bmCall('corregircostoscompra',{numeroCompra:CC26.numero,costos:JSON.stringify(costos),guardar:guardar?'SI':'NO',firma:CC26.firma,idSolicitud:CC26.idSolicitud});
-  $('ccResumen').innerHTML='<p>Total anterior: <b>'+Q(r.anterior)+'</b> | Diferencia: <b>'+Q(r.diferencia)+'</b> | Total corregido: <b>'+Q(r.total)+'</b> | '+(r.cuentaPorPagarActualizada?'Saldo corregido':'Total al recibir')+': <b>'+Q(r.saldo)+'</b></p><table><thead><tr><th>Codigo</th><th>Pares</th><th>Antes</th><th>Correcto</th></tr></thead><tbody>'+r.detalles.map(x=>'<tr><td>'+esc(x.codigo)+'</td><td>'+x.cantidad+'</td><td>'+Q(x.antes)+'</td><td>'+Q(x.despues)+'</td></tr>').join('')+'</tbody></table>';
+  $('ccResumen').innerHTML='<p>Total pares / unidades de la orden: <b>'+CC26.items.reduce((s,x)=>s+Number(x.cantidad||0),0)+'</b> | Pares / unidades con costo corregido: <b>'+r.detalles.reduce((s,x)=>s+Number(x.cantidad||0),0)+'</b></p><p>Total anterior: <b>'+Q(r.anterior)+'</b> | Diferencia: <b>'+Q(r.diferencia)+'</b> | Total corregido: <b>'+Q(r.total)+'</b> | '+(r.cuentaPorPagarActualizada?'Saldo corregido':'Total al recibir')+': <b>'+Q(r.saldo)+'</b></p><table><thead><tr><th>Codigo</th><th>Pares / unidades</th><th>Antes</th><th>Correcto</th></tr></thead><tbody>'+r.detalles.map(x=>'<tr><td>'+esc(x.codigo)+'</td><td>'+x.cantidad+'</td><td>'+Q(x.antes)+'</td><td>'+Q(x.despues)+'</td></tr>').join('')+'</tbody></table>';
   if(guardar){$('ccAplicar').hidden=true;CC26.firma='';CC26.items=[];carrito.forEach(x=>delete x.preciosVenta);cargarResumen();cargarCompras();if(COMPRA_DETALLE_ACTUAL&&COMPRA_DETALLE_ACTUAL.numeroCompra===r.numeroCompra)abrirDetalleCompra(r.numeroCompra);}
   else{CC26.firma=r.firma;CC26.idSolicitud=r.idSolicitud||('CC-'+(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2)));$('ccAplicar').hidden=false;}
   msg('ccMensaje',r.mensaje||(guardar?'Correccion completada.':'Revise antes de aplicar.'),'ok');
