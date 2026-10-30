@@ -1493,7 +1493,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.30-CANTIDADES-COMPRAS-45';
+const VERSION_SISTEMA_UI='2026.10.30-RECEPCION-VERIFICADA-46';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -8053,7 +8053,7 @@ function api(a,p,cb,sinToken=false){
           });
         }
       },
-      a==='masivoconfirmar' ? 180000 : 60000
+      ['masivoconfirmar','recibircompra'].includes(a) ? 180000 : 60000
     );
 
   window[n]=r=>{
@@ -9777,6 +9777,7 @@ function recibirCompraUI(numero,boton){
 
 function confirmarRecepcionSelectiva(){
   const r=RECEPCION_COMPRA_ACTUAL;
+  if(r&&COMPRAS_RECIBIENDO.has(r.numeroCompra))return;
 
   if(!r){
     return msg(
@@ -9820,13 +9821,8 @@ function confirmarRecepcionSelectiva(){
 
   COMPRAS_RECIBIENDO.add(r.numeroCompra);
 
-  api(
-    'recibircompra',
-    {
-      numeroCompra:r.numeroCompra,
-      recepciones:JSON.stringify(recepciones)
-    },
-    x=>{
+  msg('mensajeCompras','Procesando recepcion. Espere la confirmacion; no vuelva a enviarla.','info');
+  const finalizar=x=>{
       COMPRAS_RECIBIENDO.delete(r.numeroCompra);
 
       if(!x||!x.ok){
@@ -9846,7 +9842,7 @@ function confirmarRecepcionSelectiva(){
       msg(
         'mensajeCompras',
         x.mensaje+
-        ' \u00b7 Recibidos: '+x.recibidos+
+        (x.totalRecibido!=null?' \u00b7 Total recibido: '+x.totalRecibido+' pares/unidades':' \u00b7 Recibidos en esta recepcion: '+x.recibidos+' pares/unidades')+
         (
           x.pendientes
             ? ' \u00b7 Pendientes: '+x.pendientes
@@ -9862,10 +9858,25 @@ function confirmarRecepcionSelectiva(){
       CATALOGO_POS=[];
       CATALOGO_POS_TS=0;
       precargarCatalogoPos(true);
-    }
-  );
-}
 
+  };
+  api('recibircompra',{numeroCompra:r.numeroCompra,recepciones:JSON.stringify(recepciones)},x=>{
+    if(x&&x.ok)return finalizar(x);
+    if(!x||/Tiempo agotado|No se pudo conectar/i.test(x.error||'')){
+      msg('mensajeCompras','Se perdio la respuesta. Consultando la orden sin volver a recibir productos...','info');
+      return api('detallecompra',{numeroCompra:r.numeroCompra},d=>{
+        if(d&&d.ok&&d.estado==='RECIBIDA'&&d.items&&d.items.length&&d.items.every(i=>Number(i.cantidadRecibida)===Number(i.cantidad))){
+          const totalRecibido=d.items.reduce((s,i)=>s+Number(i.cantidadRecibida||0),0);
+          return finalizar({ok:true,completa:true,yaProcesada:true,totalRecibido,recibidos:0,pendientes:0,mensaje:'Recepcion confirmada. La respuesta anterior no llego; no se volvio a procesar.'});
+        }
+        COMPRAS_RECIBIENDO.delete(r.numeroCompra);
+        msg('mensajeCompras','No se pudo confirmar que la recepcion haya terminado. Espere y vuelva a abrir la orden para revisar lo recibido antes de enviar otra recepcion.','info');
+        cargarCompras();
+      });
+    }
+    finalizar(x);
+  });
+}
 
 let COMPRA_DETALLE_ACTUAL=null;
 
@@ -12471,7 +12482,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.30-CANTIDADES-COMPRAS-45';
+  const APP_VERSION='2026.10.30-RECEPCION-VERIFICADA-46';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
