@@ -1,4 +1,4 @@
-const CACHE_NAME = 'adelaida-pos-2026.10.31-COMPRAS-BORRADOR-51';
+const CACHE_NAME = 'adelaida-pos-2026.10.31-PAGOS-PROVEEDOR-52';
 const CORE = ['./', './index.html', './manifest.webmanifest', './html2pdf.bundle.min.js'];
 
 self.addEventListener('install', event => {
