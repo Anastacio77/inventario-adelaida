@@ -322,9 +322,9 @@ document.addEventListener('click',e=>{
       </div>
 
       <div class="grid2" style="margin-top:10px">
-        <div><label>Marca</label><select id="inventarioFiltroMarca" onchange="actualizarFiltrosInventario('marca');filtrarInventarioSucursalLocal()"><option value="">Todas</option></select></div>
-        <div><label>Modelo</label><select id="inventarioFiltroModelo" onchange="actualizarFiltrosInventario('modelo');filtrarInventarioSucursalLocal()"><option value="">Todos</option></select></div>
-        <div><label>Color</label><select id="inventarioFiltroColor" onchange="filtrarInventarioSucursalLocal()"><option value="">Todos</option></select></div>
+        <div><label>Marca</label><select id="inventarioFiltroMarca" multiple hidden onchange="filtrarInventarioSucursalLocal()"><option value="">Todas</option></select></div>
+        <div><label>Modelo</label><select id="inventarioFiltroModelo" multiple hidden onchange="filtrarInventarioSucursalLocal()"><option value="">Todos</option></select></div>
+        <div><label>Color</label><select id="inventarioFiltroColor" multiple hidden onchange="filtrarInventarioSucursalLocal()"><option value="">Todos</option></select></div><div><label>Talla</label><select id="inventarioFiltroTalla" multiple hidden onchange="filtrarInventarioSucursalLocal()"></select></div><div><label>Categor&#237;a</label><select id="inventarioFiltroCategoria" multiple hidden onchange="filtrarInventarioSucursalLocal()"></select></div>
         <div><label>Sucursal</label><select id="inventarioFiltroSucursal" onchange="cambiarSucursalReporteInventario()"></select></div>
       </div>
 
@@ -912,9 +912,9 @@ document.addEventListener('click',e=>{
       </div>
 
       <div class="grid2" style="margin-top:10px">
-        <div><label>Marca</label><select id="stockFiltroMarca" onchange="actualizarFiltrosStockGlobal('marca');filtrarStockGlobalLocal()"><option value="">Todas</option></select></div>
-        <div><label>Modelo</label><select id="stockFiltroModelo" onchange="actualizarFiltrosStockGlobal('modelo');filtrarStockGlobalLocal()"><option value="">Todos</option></select></div>
-        <div><label>Color</label><select id="stockFiltroColor" onchange="filtrarStockGlobalLocal()"><option value="">Todos</option></select></div>
+        <div><label>Marca</label><select id="stockFiltroMarca" multiple hidden onchange="filtrarStockGlobalLocal()"><option value="">Todas</option></select></div>
+        <div><label>Modelo</label><select id="stockFiltroModelo" multiple hidden onchange="filtrarStockGlobalLocal()"><option value="">Todos</option></select></div>
+        <div><label>Color</label><select id="stockFiltroColor" multiple hidden onchange="filtrarStockGlobalLocal()"><option value="">Todos</option></select></div><div><label>Talla</label><select id="stockFiltroTalla" multiple hidden onchange="filtrarStockGlobalLocal()"></select></div><div><label>Categor&#237;a</label><select id="stockFiltroCategoria" multiple hidden onchange="filtrarStockGlobalLocal()"></select></div>
         <div><label>Sucursal</label><select id="stockFiltroSucursal" onchange="filtrarStockGlobalLocal()"><option value="">Todas</option></select></div>
       </div>
 
@@ -1493,7 +1493,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.30-RECEPCION-VERIFICADA-46';
+const VERSION_SISTEMA_UI='2026.10.31-FILTROS-MULTIPLES-47';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -10653,59 +10653,51 @@ function llenarSelectInventario(id,valores,etiqueta){
   if(actual&&[...s.options].some(o=>o.value===actual)) s.value=actual;
 }
 
-function prepararFiltrosInventario(){
-  prepararFiltroSucursalInventario();
-
-  llenarSelectInventario(
-    'inventarioFiltroMarca',
-    valoresUnicosInventario('marca',INVENTARIO_LISTA_CACHE),
-    'Todas'
-  );
-
-  actualizarFiltrosInventario('marca');
+const FILTROS_PRODUCTO_CAMPOS=['Marca','Modelo','Color','Talla','Categoria'];
+function valoresFiltroMultiple(id){
+ const s=$(id);return s?Array.from(s.selectedOptions||[]).map(o=>o.value).filter(Boolean):[];
+}
+function coincideFiltrosProducto(p,prefijo){
+ return FILTROS_PRODUCTO_CAMPOS.every(c=>{const v=valoresFiltroMultiple(prefijo+c);return !v.length||v.includes(String(p[c.toLowerCase()]??'').trim());});
+}
+function resumenFiltrosProducto(prefijo){
+ return FILTROS_PRODUCTO_CAMPOS.map(c=>{const v=valoresFiltroMultiple(prefijo+c);return v.length?(c==='Categoria'?'Categor\u00eda':c)+': '+v.join(', '):'';}).filter(Boolean).join(' \u00b7 ');
+}
+function mostrarFiltroMultiple(id){
+ const s=$(id);if(!s)return;
+ let d=$(id+'Multi');const abierto=d&&d.open,busqueda=d&&d.querySelector('input[type=search]')?d.querySelector('input[type=search]').value:'';
+ if(!d){d=document.createElement('details');d.id=id+'Multi';d.className='filtroMultiple';s.insertAdjacentElement('afterend',d);}
+ const valores=valoresFiltroMultiple(id);
+ d.innerHTML='<summary style="cursor:pointer;padding:10px;border:1px solid #bbb;border-radius:10px">'+esc(valores.length?valores.join(', '):'Todos / Todas')+'</summary><div style="padding:8px;border:1px solid #ddd;border-radius:8px"><input type="search" aria-label="Buscar opciones" placeholder="Buscar opciones" oninput="buscarFiltroMultiple(this)"><button type="button" class="btnGris" onclick="vaciarFiltroMultiple(\''+id+'\')">Quitar seleccion</button><div style="max-height:220px;overflow:auto">'+Array.from(s.options).map((o,i)=>'<label data-filtro-texto="'+esc(o.text)+'" style="display:flex;align-items:center;gap:8px;padding:8px;margin:0"><input type="checkbox" style="width:auto" '+(o.selected?'checked ':'')+'onchange="cambiarFiltroMultiple(\''+id+'\','+i+',this.checked)"><span>'+esc(o.text)+'</span></label>').join('')+'</div></div>';
+ d.open=!!abierto;const q=d.querySelector('input[type=search]');q.value=busqueda;buscarFiltroMultiple(q);
+}
+function buscarFiltroMultiple(input){
+ const q=L(input.value);input.parentElement.querySelectorAll('[data-filtro-texto]').forEach(e=>{e.style.display=!q||L(e.dataset.filtroTexto).includes(q)?'flex':'none';});
+}
+function cambiarFiltroMultiple(id,i,seleccionado){
+ const s=$(id);s.options[i].selected=seleccionado;
+ const d=$(id+'Multi'),v=valoresFiltroMultiple(id);d.querySelector('summary').textContent=v.length?v.join(', '):'Todos / Todas';
+ s.dispatchEvent(new Event('change'));
+}
+function vaciarFiltroMultiple(id){
+ const s=$(id);Array.from(s.options).forEach(o=>o.selected=false);mostrarFiltroMultiple(id);s.dispatchEvent(new Event('change'));
+}
+function prepararFiltrosMultiplesProducto(prefijo,lista){
+ FILTROS_PRODUCTO_CAMPOS.forEach(c=>{
+  const s=$(prefijo+c);if(!s)return;const antes=valoresFiltroMultiple(s.id);
+  const valores=[...new Set((lista||[]).map(p=>String(p[c.toLowerCase()]??'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}));
+  s.innerHTML='';valores.forEach(v=>{const o=new Option(v,v);o.selected=antes.includes(v);s.add(o);});mostrarFiltroMultiple(s.id);
+ });
+}
+function limpiarFiltrosMultiplesProducto(prefijo){
+ FILTROS_PRODUCTO_CAMPOS.forEach(c=>{const s=$(prefijo+c);if(s)Array.from(s.options).forEach(o=>o.selected=false);});
 }
 
-function actualizarFiltrosInventario(origen){
-  const marca=$('inventarioFiltroMarca')?$('inventarioFiltroMarca').value:'';
-  const modeloActual=$('inventarioFiltroModelo')?$('inventarioFiltroModelo').value:'';
-  const colorActual=$('inventarioFiltroColor')?$('inventarioFiltroColor').value:'';
-
-  let base=(INVENTARIO_LISTA_CACHE||[])
-    .filter(p=>!marca||String(p.marca||'')===marca);
-
-  llenarSelectInventario(
-    'inventarioFiltroModelo',
-    valoresUnicosInventario('modelo',base),
-    'Todos'
-  );
-
-  if(
-    modeloActual &&
-    $('inventarioFiltroModelo') &&
-    [...$('inventarioFiltroModelo').options].some(o=>o.value===modeloActual)
-  ){
-    $('inventarioFiltroModelo').value=modeloActual;
-  }
-
-  const modelo=$('inventarioFiltroModelo')?$('inventarioFiltroModelo').value:'';
-  base=base.filter(p=>!modelo||String(p.modelo||'')===modelo);
-
-  llenarSelectInventario(
-    'inventarioFiltroColor',
-    valoresUnicosInventario('color',base),
-    'Todos'
-  );
-
-  if(
-    colorActual &&
-    $('inventarioFiltroColor') &&
-    [...$('inventarioFiltroColor').options].some(o=>o.value===colorActual)
-  ){
-    $('inventarioFiltroColor').value=colorActual;
-  }
-}
+function prepararFiltrosInventario(){prepararFiltroSucursalInventario();actualizarFiltrosInventario();}
+function actualizarFiltrosInventario(){prepararFiltrosMultiplesProducto('inventarioFiltro',INVENTARIO_LISTA_CACHE);}
 
 function limpiarFiltrosInventario(){
+  limpiarFiltrosMultiplesProducto('inventarioFiltro');
   if($('inventarioListaQ')) $('inventarioListaQ').value='';
   if($('inventarioFiltroMarca')) $('inventarioFiltroMarca').value='';
   if($('inventarioFiltroModelo')) $('inventarioFiltroModelo').value='';
@@ -10720,9 +10712,6 @@ function obtenerInventarioSucursalFiltrado(){
   const q=L($('inventarioListaQ')?$('inventarioListaQ').value:'');
   const solo=$('inventarioSoloExistencia')?$('inventarioSoloExistencia').checked:false;
   const soloStockBajo=$('inventarioSoloStockBajo')?$('inventarioSoloStockBajo').checked:false;
-  const marca=$('inventarioFiltroMarca')?$('inventarioFiltroMarca').value:'';
-  const modelo=$('inventarioFiltroModelo')?$('inventarioFiltroModelo').value:'';
-  const color=$('inventarioFiltroColor')?$('inventarioFiltroColor').value:'';
 
   return (INVENTARIO_LISTA_CACHE||[]).filter(p=>{
     if(solo && Number(p.total||0)<=0) return false;
@@ -10741,9 +10730,7 @@ function obtenerInventarioSucursalFiltrado(){
         .some(v=>L(v).includes(q))
     ) return false;
 
-    if(marca&&String(p.marca||'')!==marca) return false;
-    if(modelo&&String(p.modelo||'')!==modelo) return false;
-    if(color&&String(p.color||'')!==color) return false;
+    if(!coincideFiltrosProducto(p,'inventarioFiltro'))return false;
 
     return true;
   });
@@ -10835,14 +10822,7 @@ function construirTablaInventarioHTML(datos,paraImpresion=false){
   let h='<table class="tabla tablaBordes'+(paraImpresion?' inventarioPrintTabla':'')+'"><thead>';
 
   if(paraImpresion){
-    const filtros=[
-      $('inventarioFiltroMarca')&&$('inventarioFiltroMarca').value
-        ? 'Marca: '+$('inventarioFiltroMarca').value : '',
-      $('inventarioFiltroModelo')&&$('inventarioFiltroModelo').value
-        ? 'Modelo: '+$('inventarioFiltroModelo').value : '',
-      $('inventarioFiltroColor')&&$('inventarioFiltroColor').value
-        ? 'Color: '+$('inventarioFiltroColor').value : ''
-    ].filter(Boolean).join(' \u00b7 ');
+    const filtros=resumenFiltrosProducto('inventarioFiltro');
 
     const columnas=2+maxSlots+1;
 
@@ -11037,7 +11017,6 @@ function llenarSelectStock(id,valores,etiqueta){
 }
 
 function prepararFiltrosStockGlobal(){
-  llenarSelectStock('stockFiltroMarca',valoresUnicosStock('marca',STOCK_GLOBAL_CACHE),'Todas');
   actualizarFiltrosStockGlobal('marca');
 
   const ss=$('stockFiltroSucursal');
@@ -11049,27 +11028,10 @@ function prepararFiltrosStockGlobal(){
   }
 }
 
-function actualizarFiltrosStockGlobal(origen){
-  const marca=$('stockFiltroMarca')?$('stockFiltroMarca').value:'';
-  const modeloActual=$('stockFiltroModelo')?$('stockFiltroModelo').value:'';
-  const colorActual=$('stockFiltroColor')?$('stockFiltroColor').value:'';
-
-  let base=(STOCK_GLOBAL_CACHE||[]).filter(p=>!marca||String(p.marca||'')===marca);
-
-  llenarSelectStock('stockFiltroModelo',valoresUnicosStock('modelo',base),'Todos');
-  if(modeloActual&&$('stockFiltroModelo')&&[...$('stockFiltroModelo').options].some(o=>o.value===modeloActual)){
-    $('stockFiltroModelo').value=modeloActual;
-  }
-
-  const modelo=$('stockFiltroModelo')?$('stockFiltroModelo').value:'';
-  base=base.filter(p=>!modelo||String(p.modelo||'')===modelo);
-  llenarSelectStock('stockFiltroColor',valoresUnicosStock('color',base),'Todos');
-  if(colorActual&&$('stockFiltroColor')&&[...$('stockFiltroColor').options].some(o=>o.value===colorActual)){
-    $('stockFiltroColor').value=colorActual;
-  }
-}
+function actualizarFiltrosStockGlobal(){prepararFiltrosMultiplesProducto('stockFiltro',STOCK_GLOBAL_CACHE);}
 
 function limpiarFiltrosStockGlobal(){
+  limpiarFiltrosMultiplesProducto('stockFiltro');
   if($('stockGlobalQ')) $('stockGlobalQ').value='';
   if($('stockFiltroMarca')) $('stockFiltroMarca').value='';
   if($('stockFiltroModelo')) $('stockFiltroModelo').value='';
@@ -11082,9 +11044,6 @@ function limpiarFiltrosStockGlobal(){
 
 function obtenerStockGlobalFiltrado(){
   const q=L($('stockGlobalQ')?$('stockGlobalQ').value:'');
-  const marca=$('stockFiltroMarca')?$('stockFiltroMarca').value:'';
-  const modelo=$('stockFiltroModelo')?$('stockFiltroModelo').value:'';
-  const color=$('stockFiltroColor')?$('stockFiltroColor').value:'';
   const sucursal=$('stockFiltroSucursal')?$('stockFiltroSucursal').value:'';
   const soloExistencia=$('stockSoloExistencia')?$('stockSoloExistencia').checked:false;
 
@@ -11093,9 +11052,7 @@ function obtenerStockGlobalFiltrado(){
       p.codigo,p.marca,p.modelo,p.categoria,p.color,p.talla
     ].some(v=>L(v).includes(q))) return false;
 
-    if(marca&&String(p.marca||'')!==marca) return false;
-    if(modelo&&String(p.modelo||'')!==modelo) return false;
-    if(color&&String(p.color||'')!==color) return false;
+    if(!coincideFiltrosProducto(p,'stockFiltro'))return false;
 
     if(sucursal){
       const n=Number((p.porSucursal||{})[sucursal])||0;
@@ -11343,9 +11300,9 @@ function imprimirStockGlobal(){
   const thead=tabla.querySelector('thead');
 
   if(thead){
-    const marca=$('stockFiltroMarca')?$('stockFiltroMarca').value:'';
-    const modelo=$('stockFiltroModelo')?$('stockFiltroModelo').value:'';
-    const color=$('stockFiltroColor')?$('stockFiltroColor').value:'';
+    const marca=$('stockFiltroMarca')?valoresFiltroMultiple('stockFiltroMarca').join(', '):'';
+    const modelo=$('stockFiltroModelo')?valoresFiltroMultiple('stockFiltroModelo').join(', '):'';
+    const color=$('stockFiltroColor')?valoresFiltroMultiple('stockFiltroColor').join(', '):'';
     const sucursal=$('stockFiltroSucursal')?$('stockFiltroSucursal').value:'';
     const q=$('stockGlobalQ')?$('stockGlobalQ').value.trim():'';
     const solo=$('stockSoloExistencia')&&$('stockSoloExistencia').checked;
@@ -11354,6 +11311,8 @@ function imprimirStockGlobal(){
       marca ? 'Marca: '+marca : '',
       modelo ? 'Modelo: '+modelo : '',
       color ? 'Color: '+color : '',
+      valoresFiltroMultiple('stockFiltroTalla').length?'Talla: '+valoresFiltroMultiple('stockFiltroTalla').join(', '):'',
+      valoresFiltroMultiple('stockFiltroCategoria').length?'Categor\u00eda: '+valoresFiltroMultiple('stockFiltroCategoria').join(', '):'',
       sucursal ? 'Sucursal: '+sucursal : 'Sucursales: Todas',
       q ? 'B\u00fasqueda: '+q : '',
       solo ? 'Solo con existencia' : ''
@@ -12482,7 +12441,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.30-RECEPCION-VERIFICADA-46';
+  const APP_VERSION='2026.10.31-FILTROS-MULTIPLES-47';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
