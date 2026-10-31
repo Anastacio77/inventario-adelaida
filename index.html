@@ -907,7 +907,7 @@ document.addEventListener('click',e=>{
       <div class="fila" style="margin-top:10px">
         <input id="stockGlobalQ" placeholder="Buscar c&#243;digo, marca, modelo, color o talla" oninput="filtrarStockGlobalLocal()">
         <button class="btnNegro" onclick="cargarStockGlobal(true)">&#8635; Actualizar</button>
-        <button class="btnVerde" onclick="exportarStockGlobalCSV()">&#11015; Exportar CSV / Excel</button>
+        <button class="btnVerde" onclick="exportarStockGlobalCSV()">&#11015; Exportar Excel (.xlsx)</button>
         <button class="btnAzul" type="button" onclick="imprimirStockGlobal()">&#128424; Imprimir</button>
       </div>
 
@@ -1346,7 +1346,7 @@ document.addEventListener('click',e=>{
 
       <div class="fila noPrint" style="margin-top:8px">
         <button class="btnAzul" style="flex:1" onclick="exportarCompraCSV()">
-          &#11015; Exportar CSV / Excel
+          &#11015; Exportar Excel (.xlsx)
         </button>
         <button class="btnGris" style="flex:1" onclick="mostrarListaCompras()">
           Volver a compras
@@ -1493,7 +1493,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.31-FILTROS-MULTIPLES-47';
+const VERSION_SISTEMA_UI='2026.10.31-EXCEL-ORDENADO-48';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -10917,6 +10917,17 @@ function filtrarInventarioSucursalLocal(){
     unidades+' unidades';
 }
 
+function descargarTablaExcel(encabezados,filas,nombre,hoja){
+ const ns='http://schemas.openxmlformats.org/spreadsheetml/2006/main',or='http://schemas.openxmlformats.org/officeDocument/2006/relationships',rel='http://schemas.openxmlformats.org/package/2006/relationships';
+ const fin=exCol(encabezados.length-1)+(filas.length+1);
+ const celda=(v,c,r)=>{const estilo=r===1?1:c===0?2:0;return '<c r="'+exCol(c)+r+'" s="'+estilo+'"'+(typeof v==='number'&&Number.isFinite(v)?'><v>'+v+'</v>':' t="inlineStr"><is><t xml:space="preserve">'+exXML(v)+'</t></is>')+'</c>';};
+ const anchos=encabezados.map((h,c)=>Math.min(42,Math.max(12,Math.min(32,Math.max(String(h).length,...filas.slice(0,1000).map(f=>String(f[c]??'').length)))+3)));
+ const xml='<worksheet xmlns="'+ns+'"><dimension ref="A1:'+fin+'"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>'+anchos.map((w,i)=>'<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+w+'" customWidth="1"/>').join('')+'</cols><sheetData>'+[encabezados,...filas].map((f,i)=>'<row r="'+(i+1)+'" ht="'+(i?22:28)+'" customHeight="1">'+f.map((v,c)=>celda(v,c,i+1)).join('')+'</row>').join('')+'</sheetData><autoFilter ref="A1:'+fin+'"/></worksheet>';
+ const styles='<styleSheet xmlns="'+ns+'"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9D9D9"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left style="thin"><color rgb="FFCCCCCC"/></left><right style="thin"><color rgb="FFCCCCCC"/></right><top style="thin"><color rgb="FFCCCCCC"/></top><bottom style="thin"><color rgb="FFCCCCCC"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFill="1" applyFont="1"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFill="1" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+ const files=[['[Content_Types].xml','<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>'],['_rels/.rels','<Relationships xmlns="'+rel+'"><Relationship Id="rId1" Type="'+or+'/officeDocument" Target="xl/workbook.xml"/></Relationships>'],['xl/workbook.xml','<workbook xmlns="'+ns+'" xmlns:r="'+or+'"><sheets><sheet name="'+exXML(hoja)+'" sheetId="1" r:id="rId1"/></sheets></workbook>'],['xl/_rels/workbook.xml.rels','<Relationships xmlns="'+rel+'"><Relationship Id="rId1" Type="'+or+'/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="'+or+'/styles" Target="styles.xml"/></Relationships>'],['xl/styles.xml',styles],['xl/worksheets/sheet1.xml',xml]];
+ const url=URL.createObjectURL(exZip(files)),a=document.createElement('a');a.href=url;a.download=nombre+'.xlsx';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
+
 function exportarInventarioSucursalCSV(){
   const lista=obtenerInventarioSucursalFiltrado();
   const suc=sucursalReporteInventario();
@@ -10942,21 +10953,7 @@ function exportarInventarioSucursalCSV(){
     suc
   ]));
 
-  const csv='\uFEFF'+filas.map(f=>
-    f.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')
-  ).join('\r\n');
-
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-
-  a.href=url;
-  a.download='inventario_'+suc.replace(/\s+/g,'_')+'.csv';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-
-  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  descargarTablaExcel(filas[0],filas.slice(1),'inventario_'+suc.replace(/\s+/g,'_'),'Inventario');
 }
 
 function imprimirInventarioSucursal(){
@@ -11369,27 +11366,7 @@ function exportarStockGlobalCSV(){
     ]);
   });
 
-  const csv='\uFEFF'+filas.map(f=>
-    f.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')
-  ).join('\r\n');
-
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  const ahora=new Date();
-  const sello=
-    ahora.getFullYear()+
-    String(ahora.getMonth()+1).padStart(2,'0')+
-    String(ahora.getDate()).padStart(2,'0')+'_'+
-    String(ahora.getHours()).padStart(2,'0')+
-    String(ahora.getMinutes()).padStart(2,'0');
-
-  a.href=url;
-  a.download='stock_global_'+sello+'.csv';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  descargarTablaExcel(encabezados,filas.slice(1),'stock_global_'+new Date().toISOString().slice(0,10),'Stock global');
 }
 
 function cargarCurvas(){
@@ -12441,7 +12418,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.31-FILTROS-MULTIPLES-47';
+  const APP_VERSION='2026.10.31-EXCEL-ORDENADO-48';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
