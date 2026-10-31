@@ -1487,13 +1487,13 @@ document.addEventListener('click',e=>{
       <div id="listaPromociones" style="margin-top:10px"></div>
     </div>
 
-    <div id="divisasAdmin" class="card"><h3 style="margin-top:0">Divisas</h3><div class="grid2"><div><label>C&#243;digo</label><input id="dCodigo" placeholder="USD"></div><div><label>Nombre</label><input id="dNombre" placeholder="D&#243;lar"></div><div><label>S&#237;mbolo</label><input id="dSimbolo" placeholder="$"></div><div><label>Tipo de cambio a GTQ</label><input id="dCambio" type="number" min="0.0001" step="0.0001" value="1"></div></div><button class="btnAzul w100" style="margin-top:12px" onclick="guardarDivisa()">Guardar divisa</button><div id="listaDivisas" style="margin-top:12px"></div></div>
+    <div id="divisasAdmin" class="card"><h3 style="margin-top:0">Divisas</h3><div class="grid2"><div><label>C&#243;digo</label><input id="dCodigo" placeholder="USD"></div><div><label>Nombre</label><input id="dNombre" placeholder="D&#243;lar"></div><div><label>S&#237;mbolo</label><input id="dSimbolo" placeholder="$"></div><div><label>Tipo de cambio a GTQ</label><input id="dCambio" type="number" min="0.0001" step="0.0001" value="1"></div></div><button class="btnAzul w100" style="margin-top:12px" id="dGuardar" onclick="guardarDivisa()">Guardar divisa</button><button id="dNueva" type="button" class="btnGris w100" style="margin-top:8px" onclick="nuevaDivisa()">Nueva moneda / Cancelar edicion</button><div id="dMensaje" class="sub" style="margin-top:8px">Seleccione Editar para actualizar la tasa de una moneda existente.</div><div id="listaDivisas" style="margin-top:12px"></div></div>
   </div>
 
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.31-EXCEL-ORDENADO-48';
+const VERSION_SISTEMA_UI='2026.10.31-DIVISAS-EDITAR-49';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -7190,18 +7190,39 @@ function llenarCambioMoneda(id,codigo){
   s.value=[...s.options].some(o=>o.value===prev)?prev:'GTQ';
 }
 
+let DIVISA_EDITANDO='',DIVISA_GUARDANDO=false;
 function renderDivisas(){
-  const box=$('listaDivisas'); if(!box) return;
-  box.innerHTML='<table class="tabla"><thead><tr><th>C\u00f3digo</th><th>Nombre</th><th>Cambio</th></tr></thead><tbody>'+DIVISAS.map(d=>'<tr><td>'+esc(d.codigo)+'</td><td>'+esc(d.nombre)+'</td><td>1 '+esc(d.codigo)+' = Q'+Number(d.tipoCambio).toFixed(4)+'</td></tr>').join('')+'</tbody></table>';
+ const box=$('listaDivisas');if(!box)return;
+ box.innerHTML='<table class="tabla"><thead><tr><th>C\u00f3digo</th><th>Nombre</th><th>Cambio</th><th>Acciones</th></tr></thead><tbody>'+DIVISAS.map((d,i)=>'<tr><td>'+esc(d.codigo)+'</td><td>'+esc(d.nombre)+'</td><td>1 '+esc(d.codigo)+' = Q'+Number(d.tipoCambio).toFixed(4)+'</td><td><button type="button" class="btnAzul" onclick="editarDivisa('+i+')">Editar / actualizar</button> '+(d.codigo!=='GTQ'?'<button type="button" class="btnRojo" onclick="eliminarDivisaUI('+i+')">Eliminar</button>':'')+'</td></tr>').join('')+'</tbody></table>';
 }
-
+function bloquearDivisa(estado){
+ DIVISA_GUARDANDO=estado;['dCodigo','dNombre','dSimbolo','dCambio','dGuardar','dNueva'].forEach(id=>{if($(id))$(id).disabled=estado;});
+}
+function nuevaDivisa(){
+ if(DIVISA_GUARDANDO)return;DIVISA_EDITANDO='';['dCodigo','dNombre','dSimbolo'].forEach(id=>$(id).value='');$('dCambio').value='1';$('dCodigo').readOnly=false;$('dGuardar').textContent='Guardar divisa';$('dMensaje').textContent='Nueva moneda. Para cambiar una tasa existente, seleccione Editar.';
+}
+function editarDivisa(i){
+ if(DIVISA_GUARDANDO)return;const d=DIVISAS[i];if(!d)return;
+ DIVISA_EDITANDO=d.codigo;$('dCodigo').value=d.codigo;$('dCodigo').readOnly=true;$('dNombre').value=d.nombre;$('dSimbolo').value=d.simbolo;$('dCambio').value=d.tipoCambio;$('dGuardar').textContent='Actualizar divisa';$('dMensaje').textContent='Editando '+d.codigo+'. Cambie la tasa y pulse Actualizar divisa.';$('dCambio').focus();$('dCodigo').scrollIntoView({behavior:'smooth',block:'center'});
+}
 function guardarDivisa(){
-  api('guardardivisa',{codigo:$('dCodigo').value,nombre:$('dNombre').value,simbolo:$('dSimbolo').value,tipoCambio:$('dCambio').value,activa:'SI'},r=>{
-    if(!r.ok) return msg('mensajeConfig',r.error,'error');
-    msg('mensajeConfig',r.mensaje,'ok'); cargarDivisas();
-  });
+ if(DIVISA_GUARDANDO)return;
+ const p={codigo:$('dCodigo').value,nombre:$('dNombre').value,simbolo:$('dSimbolo').value,tipoCambio:$('dCambio').value,activa:'SI',codigoOriginal:DIVISA_EDITANDO};
+ bloquearDivisa(true);$('dMensaje').textContent='Guardando divisa...';
+ api('guardardivisa',p,r=>{
+  bloquearDivisa(false);if(!r||!r.ok){$('dMensaje').textContent=(r&&r.error)||'No se pudo guardar. Consulte la lista antes de reintentar.';return;}
+  nuevaDivisa();$('dMensaje').textContent=r.mensaje;cargarDivisas();
+ });
 }
-
+function eliminarDivisaUI(i){
+ if(DIVISA_GUARDANDO)return;const d=DIVISAS[i];if(!d||d.codigo==='GTQ')return;
+ if(!confirm('Eliminar '+d.codigo+' - '+d.nombre+' de las monedas disponibles para cobrar? Los movimientos anteriores se conservan.'))return;
+ bloquearDivisa(true);$('dMensaje').textContent='Eliminando moneda...';
+ api('eliminardivisa',{codigo:d.codigo},r=>{
+  bloquearDivisa(false);if(!r||!r.ok){$('dMensaje').textContent=(r&&r.error)||'No se pudo eliminar. Consulte la lista antes de reintentar.';return;}
+  nuevaDivisa();$('dMensaje').textContent=r.mensaje;cargarDivisas();
+ });
+}
 
 function clavePedidosEsperaPos(){
   const usuario=
@@ -12418,7 +12439,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.31-EXCEL-ORDENADO-48';
+  const APP_VERSION='2026.10.31-DIVISAS-EDITAR-49';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
