@@ -1,4 +1,4 @@
-const CACHE_NAME = 'adelaida-pos-2026.10.30-RECEPCION-VERIFICADA-46';
+const CACHE_NAME = 'adelaida-pos-2026.10.31-FILTROS-MULTIPLES-47';
 const CORE = ['./', './index.html', './manifest.webmanifest', './html2pdf.bundle.min.js'];
 
 self.addEventListener('install', event => {
