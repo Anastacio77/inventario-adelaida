@@ -317,7 +317,7 @@ document.addEventListener('click',e=>{
       <div class="fila" style="margin-top:10px">
         <input id="inventarioListaQ" placeholder="Buscar c&#243;digo, marca, modelo, color o talla" oninput="filtrarInventarioSucursalLocal()">
         <button class="btnNegro" type="button" onclick="cargarInventarioSucursal(true)">&#8635; Actualizar</button>
-        <button class="btnVerde" type="button" onclick="exportarInventarioSucursalCSV()">&#11015; CSV / Excel</button>
+        <button class="btnVerde" type="button" onclick="exportarInventarioSucursalCSV()">&#11015; Excel (.xlsx)</button>
         <button class="btnAzul" type="button" onclick="imprimirInventarioSucursal()">&#128424; Imprimir</button>
       </div>
 
@@ -458,7 +458,7 @@ document.addEventListener('click',e=>{
       <p id="bmExplica">Se sumar&#225;n las cantidades como EXISTENCIA ANTERIOR, conservando los lotes. Los productos nuevos se crean desde Bodega Principal.</p>
       <details open><summary><b>1. Importar archivo o pegar desde Excel</b></summary>
         <p>Una fila por talla. Columnas: marca, modelo, color, talla, cantidad, costo, precio, tipo, escala, categoria, ubicacion, stockMinimo, lote. Tipo: INDIVIDUAL o CORRIDA.</p>
-        <button onclick="bmPlantilla()">Descargar plantilla CSV para Excel</button>
+        <button onclick="bmPlantilla()">Descargar plantilla Excel (.xlsx)</button>
         <input id="bmArchivo" type="file" accept=".xml,.csv,.tsv,.xlsx" onchange="bmImportar(this)">
         <p>XML FEL: seleccione orden de compra. Los c&#243;digos del XML se incluyen si coinciden con el cat&#225;logo. Los faltantes o no encontrados quedan en blanco para ingresarlos manualmente.</p><textarea id="bmPegado" rows="3" placeholder="Pegue aqu&#237; la tabla de Excel con encabezados"></textarea>
         <button onclick="bmPegar()">Agregar tabla pegada a la vista previa</button>
@@ -1493,7 +1493,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.31-DIVISAS-EDITAR-49';
+const VERSION_SISTEMA_UI='2026.10.31-EXCEL-DOCUMENTOS-50';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -9511,7 +9511,7 @@ function cargarCompras(){
       const exportar=document.createElement('button');
       exportar.className='btnAzul';
       exportar.style.flex='1';
-      exportar.textContent='\u2b07 Exportar';
+      exportar.textContent='\u2b07 Exportar Excel';
       exportar.onclick=()=>abrirDetalleCompra(c.numeroCompra,false,true);
 
       acciones.appendChild(ver);
@@ -10082,34 +10082,11 @@ function exportarCompraCSV(){
   filas.push(['TOTAL',Number(r.total)||0]);
   filas.push(['Nota',r.nota||'']);
 
-  const csv=filas.map(f=>
-    f.map(v=>{
-      const s=String(v??'').replace(/"/g,'""');
-      return '"'+s+'"';
-    }).join(',')
-  ).join('\r\n');
-
-  const blob=new Blob(
-    ['\uFEFF'+csv],
-    {type:'text/csv;charset=utf-8;'}
-  );
-
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-
-  a.href=url;
-  a.download=(r.numeroCompra||'compra')+'.csv';
-
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-
-  setTimeout(
-    ()=>URL.revokeObjectURL(url),
-    1000
-  );
+  const encabezado=filas[12],detalle=filas.slice(13,13+(r.items||[]).length);
+  const pie=filas.slice(13+(r.items||[]).length);
+  pie.push(['Total pares / unidades',(r.items||[]).reduce((s,x)=>s+Number(x.cantidad||0),0)]);
+  descargarTablaExcel(encabezado,detalle,r.numeroCompra||'compra','Orden de compra',{inicio:filas.slice(0,12),pie});
 }
-
 
 function actualizarBotonesDuplicado(cuentas){
   if(!SESION||SESION.rol!=='ADMIN'){
@@ -10938,12 +10915,13 @@ function filtrarInventarioSucursalLocal(){
     unidades+' unidades';
 }
 
-function descargarTablaExcel(encabezados,filas,nombre,hoja){
+function descargarTablaExcel(encabezados,filas,nombre,hoja,opciones={}){
+ const inicio=opciones.inicio||[],pie=opciones.pie||[],filaEncabezado=inicio.length+1,datos=[...inicio,encabezados,...filas,...pie];
  const ns='http://schemas.openxmlformats.org/spreadsheetml/2006/main',or='http://schemas.openxmlformats.org/officeDocument/2006/relationships',rel='http://schemas.openxmlformats.org/package/2006/relationships';
- const fin=exCol(encabezados.length-1)+(filas.length+1);
- const celda=(v,c,r)=>{const estilo=r===1?1:c===0?2:0;return '<c r="'+exCol(c)+r+'" s="'+estilo+'"'+(typeof v==='number'&&Number.isFinite(v)?'><v>'+v+'</v>':' t="inlineStr"><is><t xml:space="preserve">'+exXML(v)+'</t></is>')+'</c>';};
+ const fin=exCol(encabezados.length-1)+(filas.length+filaEncabezado),dimension=exCol(encabezados.length-1)+datos.length;
+ const celda=(v,c,r)=>{const estilo=r===filaEncabezado?1:c===0?2:0;return '<c r="'+exCol(c)+r+'" s="'+estilo+'"'+(typeof v==='number'&&Number.isFinite(v)?'><v>'+v+'</v>':' t="inlineStr"><is><t xml:space="preserve">'+exXML(v)+'</t></is>')+'</c>';};
  const anchos=encabezados.map((h,c)=>Math.min(42,Math.max(12,Math.min(32,Math.max(String(h).length,...filas.slice(0,1000).map(f=>String(f[c]??'').length)))+3)));
- const xml='<worksheet xmlns="'+ns+'"><dimension ref="A1:'+fin+'"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>'+anchos.map((w,i)=>'<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+w+'" customWidth="1"/>').join('')+'</cols><sheetData>'+[encabezados,...filas].map((f,i)=>'<row r="'+(i+1)+'" ht="'+(i?22:28)+'" customHeight="1">'+f.map((v,c)=>celda(v,c,i+1)).join('')+'</row>').join('')+'</sheetData><autoFilter ref="A1:'+fin+'"/></worksheet>';
+ const xml='<worksheet xmlns="'+ns+'"><dimension ref="A1:'+dimension+'"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="'+filaEncabezado+'" topLeftCell="A'+(filaEncabezado+1)+'" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>'+anchos.map((w,i)=>'<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+w+'" customWidth="1"/>').join('')+'</cols><sheetData>'+datos.map((f,i)=>'<row r="'+(i+1)+'" ht="'+(i+1===filaEncabezado?28:22)+'" customHeight="1">'+f.map((v,c)=>celda(v,c,i+1)).join('')+'</row>').join('')+'</sheetData><autoFilter ref="A'+filaEncabezado+':'+fin+'"/></worksheet>';
  const styles='<styleSheet xmlns="'+ns+'"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9D9D9"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left style="thin"><color rgb="FFCCCCCC"/></left><right style="thin"><color rgb="FFCCCCCC"/></right><top style="thin"><color rgb="FFCCCCCC"/></top><bottom style="thin"><color rgb="FFCCCCCC"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFill="1" applyFont="1"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFill="1" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
  const files=[['[Content_Types].xml','<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>'],['_rels/.rels','<Relationships xmlns="'+rel+'"><Relationship Id="rId1" Type="'+or+'/officeDocument" Target="xl/workbook.xml"/></Relationships>'],['xl/workbook.xml','<workbook xmlns="'+ns+'" xmlns:r="'+or+'"><sheets><sheet name="'+exXML(hoja)+'" sheetId="1" r:id="rId1"/></sheets></workbook>'],['xl/_rels/workbook.xml.rels','<Relationships xmlns="'+rel+'"><Relationship Id="rId1" Type="'+or+'/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="'+or+'/styles" Target="styles.xml"/></Relationships>'],['xl/styles.xml',styles],['xl/worksheets/sheet1.xml',xml]];
  const url=URL.createObjectURL(exZip(files)),a=document.createElement('a');a.href=url;a.download=nombre+'.xlsx';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
@@ -12439,7 +12417,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.31-DIVISAS-EDITAR-49';
+  const APP_VERSION='2026.10.31-EXCEL-DOCUMENTOS-50';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
@@ -12848,7 +12826,10 @@ async function bmGuardar(){
     }
   }catch(e){bmMsg(e.message,true);}finally{BM_BUSY=false;bmRender();}
 }
-function bmPlantilla(){const csv='\uFEFF'+BM_COLS.join(';')+'\r\nH\u00e9rcules;2323;Negro;37;2;50;75;CORRIDA;D;Botas;A1;2;\r\nH\u00e9rcules;2323;Negro;38;3;50;75;CORRIDA;D;Botas;A1;2;\r\nRoy;2925;Negro;40;1;120;200;INDIVIDUAL;;Zapatos;A2;2;\r\n';const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='Plantilla_Ingreso_Masivo.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+function bmPlantilla(){
+ const filas=[['H\u00e9rcules','2323','Negro','37',2,50,75,'CORRIDA','D','Botas','A1',2,''],['H\u00e9rcules','2323','Negro','38',3,50,75,'CORRIDA','D','Botas','A1',2,''],['Roy','2925','Negro','40',1,120,200,'INDIVIDUAL','','Zapatos','A2',2,'']];
+ descargarTablaExcel(BM_COLS,filas,'Plantilla_Ingreso_Masivo','Ingreso masivo');
+}
 
 function precioPredeterminadoPOS(precios){
  const disponibles=(precios||[]).filter(p=>p.precio!==null&&p.precio!==undefined);
