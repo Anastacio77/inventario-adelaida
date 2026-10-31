@@ -1493,7 +1493,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.31-COMPRAS-BORRADOR-51';
+const VERSION_SISTEMA_UI='2026.10.31-PAGOS-PROVEEDOR-52';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -10237,16 +10237,18 @@ function cargarCuentasPorPagar(){
         const btn=document.createElement('button');
         btn.className='btnVerde';
         btn.textContent='Registrar pago';
+        const estadoPago=document.createElement('div');estadoPago.className='mensaje';estadoPago.style.gridColumn='1 / -1';
         btn.onclick=()=>pagarCuentaProveedor(
           c.cuentaPagarId,
           tipoPago.value,
           inp.value,
-          c.saldo
+          c.saldo,btn,estadoPago
         );
 
         fila.appendChild(tipoPago);
         fila.appendChild(inp);
         fila.appendChild(btn);
+        fila.appendChild(estadoPago);
         d.appendChild(fila);
 
         const desc=document.createElement('div');
@@ -10352,7 +10354,10 @@ function aplicarDescuentoProveedor(id,tipo,valor,motivo){
   );
 }
 
-function pagarCuentaProveedor(id,tipoPago,monto,saldoActual){
+const PAGOS_PROVEEDOR_ENVIANDO=new Set();
+function pagarCuentaProveedor(id,tipoPago,monto,saldoActual,boton,aviso){
+  if(PAGOS_PROVEEDOR_ENVIANDO.has(id))return;
+  const mostrar=(t,tipo='info')=>{if(aviso){aviso.textContent=t;aviso.className='mensaje '+tipo;}msg('mensajeCompras',t,tipo);};
   const tipo=String(tipoPago||'ABONO').toUpperCase();
   const saldo=Number(saldoActual)||0;
 
@@ -10392,51 +10397,29 @@ function pagarCuentaProveedor(id,tipoPago,monto,saldoActual){
     return;
   }
 
-  api(
-    'abonarcuentaporpagar',
-    {
-      cuentaPagarId:id,
-      monto:n,
-      metodo:'EFECTIVO',
-      nota:
-        tipo==='TOTAL'
-          ? 'PAGO TOTAL'
-          : 'ABONO'
-    },
-    r=>{
-      if(!r.ok){
-        return msg(
-          'mensajeCompras',
-          r.error,
-          'error'
-        );
-      }
-
-      msg(
-        'mensajeCompras',
-        (
-          tipo==='TOTAL'
-            ? 'Pago total registrado.'
-            : 'Abono registrado.'
-        )+
-        ' \u00b7 Pagado '+Q(n)+
-        ' \u00b7 Saldo '+Q(r.saldo),
-        'ok'
-      );
-
-      cargarCuentasPorPagar();
-      cargarCompras();
-
-      if(
-        SESION&&
-        ['ADMIN','CAJERO'].includes(SESION.rol)
-      ){
-        cargarCaja();
-      }
+  const key='adelaida-pago-proveedor-'+(SESION&&SESION.usuario||'')+'-'+id;
+  let datos;
+  try{datos=JSON.parse(localStorage.getItem(key)||'null');}catch(e){}
+  if(datos&&(datos.monto!==n||datos.tipoPago!==tipo))return mostrar('Hay una solicitud pendiente con otro monto. Reintente el mismo monto para consultar o reanudarla.','error');
+  if(!datos){datos={cuentaPagarId:id,monto:n,metodo:'EFECTIVO',nota:tipo==='TOTAL'?'PAGO TOTAL':'ABONO',tipoPago:tipo,saldoEsperado:saldo,idSolicitud:'PAGPROV-'+(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2))};}
+  try{localStorage.setItem(key,JSON.stringify(datos));}catch(e){return mostrar('No se pudo conservar el identificador del pago. Habilite almacenamiento antes de continuar.','error');}
+  PAGOS_PROVEEDOR_ENVIANDO.add(id);if(boton){boton.disabled=true;boton.textContent='Registrando pago...';}mostrar('Procesando pago. Espere la confirmacion.');
+  api('abonarcuentaporpagar',datos,r=>{
+    PAGOS_PROVEEDOR_ENVIANDO.delete(id);
+    if(!r||!r.ok){
+      const error=(r&&r.error)||'No se pudo conectar.';
+      // Unknown outcomes retain the same request, including across page reloads.
+      const conocido=/caja|Cuenta y monto|Metodo de pago|supera el saldo|saldo cambio|ya esta pagada|no encontrada|duplicada|permis|sesi|Inicie/i.test(error);
+      if(conocido){try{localStorage.removeItem(key);}catch(e){}}
+      if(boton){boton.disabled=false;boton.textContent=conocido?'Registrar pago':'Reintentar / consultar pago';}
+      return mostrar(error+(conocido?'':' Reintente con el mismo monto; se conserva la misma solicitud.'),'error');
     }
-  );
+    try{localStorage.removeItem(key);}catch(e){}
+    if(boton){boton.textContent='Pago registrado';boton.disabled=true;}
+    mostrar((r.yaProcesado?'Pago ya registrado; no se cobro de nuevo. ':tipo==='TOTAL'?'Pago total registrado. ':'Abono registrado. ')+'Estado: '+r.estado+' | Pagado '+Q(n)+' | Saldo '+Q(r.saldo),'ok');
+    cargarCuentasPorPagar();cargarCompras();if(SESION&&['ADMIN','CAJERO'].includes(SESION.rol))cargarCaja();
+  });
 }
-
 
 function cargarCaja(){
   if(!SESION||!['ADMIN','CAJERO'].includes(SESION.rol)) return;
@@ -12450,7 +12433,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.31-COMPRAS-BORRADOR-51';
+  const APP_VERSION='2026.10.31-PAGOS-PROVEEDOR-52';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
