@@ -1,4 +1,4 @@
-const CACHE_NAME = 'adelaida-pos-2026.10.31-DIVISAS-EDITAR-49';
+const CACHE_NAME = 'adelaida-pos-2026.10.31-EXCEL-DOCUMENTOS-50';
 const CORE = ['./', './index.html', './manifest.webmanifest', './html2pdf.bundle.min.js'];
 
 self.addEventListener('install', event => {
