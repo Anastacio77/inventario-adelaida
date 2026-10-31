@@ -1282,7 +1282,7 @@ document.addEventListener('click',e=>{
 
       <div id="compItems" style="margin-top:14px"></div>
       <label>Nota</label><input id="compNota">
-      <button class="btnVerde w100" style="margin-top:12px" onclick="crearCompraUI()">Crear orden de compra</button>
+      <div id="compEdicionInfo" class="sub"></div><button id="compGuardarOrden" class="btnVerde w100" style="margin-top:12px" onclick="crearCompraUI()">Guardar borrador</button><button id="compCancelarEdicion" class="btnGris w100" hidden onclick="cancelarEdicionCompra()">Cancelar edicion</button>
     </div>
     <div id="compListaCard" class="card">
       <h3 style="margin-top:0">Compras</h3>
@@ -1493,7 +1493,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.10.31-EXCEL-DOCUMENTOS-50';
+const VERSION_SISTEMA_UI='2026.10.31-COMPRAS-BORRADOR-51';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -9374,7 +9374,37 @@ function renderCompraItems(){
     '</div>';
 }
 
+let COMPRA_EDICION=null,COMPRA_GUARDANDO=false;
+function cancelarEdicionCompra(){
+ if(COMPRA_GUARDANDO)return;COMPRA_EDICION=null;COMPRA_ITEMS=[];renderCompraItems();$('compGuardarOrden').textContent='Guardar borrador';$('compCancelarEdicion').hidden=true;$('compEdicionInfo').textContent='';
+}
+function editarCompraBorrador(numero){
+ if(COMPRA_GUARDANDO)return;
+ if(COMPRA_ITEMS.length&&!confirm('Reemplazar los productos del formulario por este borrador?'))return;
+ api('gestionarcompraborrador',{numeroCompra:numero,operacion:'CONSULTAR'},r=>{
+  if(!r||!r.ok)return msg('mensajeCompras',(r&&r.error)||'No se pudo cargar el borrador.','error');
+  if(r.estado!=='BORRADOR')return msg('mensajeCompras','Solo se editan ordenes en BORRADOR.','error');
+  COMPRA_EDICION={numero,revision:r.revision};
+  const sel=$('compProveedor');if(!Array.from(sel.options).some(o=>o.value===r.proveedorId))sel.add(new Option(r.proveedor,r.proveedorId));sel.value=r.proveedorId;
+  $('compCondicionPago').value=r.condicionPago;ajustarCondicionCompra();$('compDiasCredito').value=r.diasCredito||30;$('compOtros').value=r.otrosCostos||0;$('compFlete').value=r.flete||0;$('compNota').value=r.nota||'';
+  COMPRA_ITEMS=(r.items||[]).map(x=>({...x,cantidad:Number(x.cantidad),costo:Number(x.costo)}));renderCompraItems();
+  $('compGuardarOrden').textContent='Guardar cambios del borrador';$('compCancelarEdicion').hidden=false;$('compEdicionInfo').textContent='Editando '+numero+'. La orden conserva su numero. Solo se permite antes de marcar enviada.';
+  cargarProductosCompra();$('compGuardarOrden').scrollIntoView({behavior:'smooth',block:'center'});
+ });
+}
+function accionCompraBorrador(numero,operacion){
+ if(COMPRA_GUARDANDO)return;
+ const texto=operacion==='ENVIAR'?'Marcar esta orden como ENVIADA al proveedor? Despues no se podra editar ni anular desde Borrador.':operacion==='ANULAR'?'Anular este borrador? Se conserva el registro y no ingresa inventario.':'Reanudar la edicion pendiente con los cambios ya guardados?';
+ if(!confirm(texto))return;COMPRA_GUARDANDO=true;msg('mensajeCompras','Procesando orden...','info');
+ api('gestionarcompraborrador',{numeroCompra:numero,operacion},r=>{
+  COMPRA_GUARDANDO=false;if(!r||!r.ok)return msg('mensajeCompras',(r&&r.error)||'No se pudo confirmar. Actualice la lista.','error');
+  if(COMPRA_EDICION&&COMPRA_EDICION.numero===numero)cancelarEdicionCompra();
+  msg('mensajeCompras',r.mensaje,'ok');cargarCompras();
+ });
+}
+
 function crearCompraUI(){
+  if(COMPRA_GUARDANDO)return;
 
   if(!COMPRA_ITEMS.length){
     return msg(
@@ -9400,16 +9430,19 @@ function crearCompraUI(){
     claveSolicitud
   };
 
+  if(COMPRA_EDICION){datos.numeroCompra=COMPRA_EDICION.numero;datos.revision=COMPRA_EDICION.revision;datos.operacion='GUARDAR';}
+  COMPRA_GUARDANDO=true;$('compGuardarOrden').disabled=true;
   msg(
     'mensajeCompras',
-    'Registrando compra\u2026',
+    'Guardando borrador\u2026',
     'info'
   );
 
   api(
-    'crearcompra',
+    COMPRA_EDICION?'gestionarcompraborrador':'crearcompra',
     datos,
     r=>{
+      COMPRA_GUARDANDO=false;$('compGuardarOrden').disabled=false;
 
       if(!r){
         return msg(
@@ -9427,13 +9460,8 @@ function crearCompraUI(){
         );
       }
 
-      msg(
-        'mensajeCompras',
-        'Compra '+r.numeroCompra+
-        ' creada por '+Q(r.total)+' \u00b7 '+r.condicionPago+(r.condicionPago==='CREDITO'?' \u00b7 '+r.diasCredito+' d\u00edas':'')+'.',
-        'ok'
-      );
-
+      msg('mensajeCompras',r.mensaje||('Borrador '+r.numeroCompra+' guardado.'),'ok');
+      cancelarEdicionCompra();
       COMPRA_ITEMS=[];
       renderCompraItems();
       cargarCompras();
@@ -9518,7 +9546,12 @@ function cargarCompras(){
       acciones.appendChild(exportar);
       d.appendChild(acciones);
 
-      if(['PENDIENTE','PARCIAL'].includes(c.estado)){
+      if(c.estado==='BORRADOR'){
+        [['Editar / modificar','EDITAR'],['Marcar enviada','ENVIAR'],['Anular','ANULAR'],['Reanudar edicion','REANUDAR']].forEach(([texto,op])=>{
+          const btn=document.createElement('button');btn.className=op==='ANULAR'?'btnRojo':'btnGris';btn.textContent=texto;btn.onclick=()=>op==='EDITAR'?editarCompraBorrador(c.numeroCompra):accionCompraBorrador(c.numeroCompra,op);acciones.appendChild(btn);
+        });
+      }
+      if(['ENVIADA','PENDIENTE','PARCIAL'].includes(c.estado)){
         const b=document.createElement('button');
         b.className='btnVerde w100';
         b.style.marginTop='8px';
@@ -9595,7 +9628,7 @@ function cargarComprasProveedor(){
       ).length;
 
       const pendientes=compras.filter(
-        x=>['PENDIENTE','PARCIAL'].includes(
+        x=>['BORRADOR','ENVIADA','PENDIENTE','PARCIAL'].includes(
           String(x.estado||'').toUpperCase()
         )
       ).length;
@@ -12417,7 +12450,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.10.31-EXCEL-DOCUMENTOS-50';
+  const APP_VERSION='2026.10.31-COMPRAS-BORRADOR-51';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
@@ -12553,7 +12586,7 @@ function bmLimpiarFormulario(){
 function bmUltimaCompra(r){
  const registro={...r,id:r.id||BM.id,sucursal:BM.sucursal||SUCURSAL};
  try{localStorage.setItem(bmKey()+(r.numeroCompra?'-ultima-compra':'-ultima-carga'),JSON.stringify(registro));}catch(e){}
- $('bmUltimaTexto').textContent=(r.numeroCompra?(r.recibida?'Recepcion completada. ':'Orden de compra creada. ')+r.numeroCompra:String(r.mensaje||'Carga completada.'))+' | ID: '+registro.id+' | '+r.referencias+' referencias, '+r.unidades+' unidades.';
+ $('bmUltimaTexto').textContent=(r.numeroCompra?(r.recibida?'Recepcion completada. ':'Borrador de compra creado. ')+r.numeroCompra:String(r.mensaje||'Carga completada.'))+' | ID: '+registro.id+' | '+r.referencias+' referencias, '+r.unidades+' unidades.';
  $('bmUltimaOperacion').hidden=false;$('bmUltimaOperacion').open=false;
 }
 function bmRecepcionCompletada(numero){
@@ -12561,7 +12594,7 @@ function bmRecepcionCompletada(numero){
  try{const r=JSON.parse(localStorage.getItem(bmKey()+'-ultima-compra')||'null');if(r&&r.numeroCompra===numero)bmUltimaCompra({...r,recibida:true});}catch(e){}
 }
 function bmNueva(){if(BM_BUSY)return;if(BM.enviado&&!BM.finalizado&&BM.confirmado)return bmMsg('Primero reanude y confirme la carga pendiente; no la duplique.',true);bmLimpiarFormulario();bmRender();bmMsg('Nueva carga lista.');}
-function bmModoUI(){const modo=$('bmModo').value,c=modo==='COMPRA';$('bmCompra').classList.toggle('oculto',!c);$('bmLote').disabled=modo==='CATALOGO';$('bmExplica').textContent=modo==='CATALOGO'?'Crea referencias en el cat\u00e1logo maestro desde Bodega Principal. No agrega existencias ni crea compras. La cantidad se ignora; los productos existentes se conservan sin modificar.':c?'Se crear\u00e1 una orden pendiente en la sucursal seleccionada. Rec\u00edbala desde Compras para sumar mercanc\u00eda.':'Se sumar\u00e1n las cantidades como EXISTENCIA ANTERIOR. Los productos nuevos se crean desde Bodega Principal.';$('bmPreciosPanel').classList.toggle('oculto',!['CATALOGO','COMPRA'].includes(modo));if(c)bmProveedores();}
+function bmModoUI(){const modo=$('bmModo').value,c=modo==='COMPRA';$('bmCompra').classList.toggle('oculto',!c);$('bmLote').disabled=modo==='CATALOGO';$('bmExplica').textContent=modo==='CATALOGO'?'Crea referencias en el cat\u00e1logo maestro desde Bodega Principal. No agrega existencias ni crea compras. La cantidad se ignora; los productos existentes se conservan sin modificar.':c?'Se creara un borrador en la sucursal seleccionada. Revise y marque Enviada desde Compras antes de recibir mercancia.':'Se sumar\u00e1n las cantidades como EXISTENCIA ANTERIOR. Los productos nuevos se crean desde Bodega Principal.';$('bmPreciosPanel').classList.toggle('oculto',!['CATALOGO','COMPRA'].includes(modo));if(c)bmProveedores();}
 
 let BM_NIVELES=[];
 async function bmCargarPrecios(){
