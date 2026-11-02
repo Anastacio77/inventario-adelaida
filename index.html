@@ -117,7 +117,8 @@ document.addEventListener('click',e=>{
     <div id="mensajeLogin"></div>
   </div>
 
-  <div id="tabs" class="tabs oculto">
+  <div id="ubicacionMenuModulos"></div>
+  <div id="tabs" class="tabs oculto" aria-label="Modulos del sistema">
     <button id="tabInicio" class="activo" onclick="vista('inicio');cargarDashboard()">&#127968; Inicio</button>
     <button id="tabPos" onclick="vista('pos');refrescarCatalogoVenta()">&#128722; Punto de venta</button>
     <button id="tabPedidos" onclick="vista('pedidos');mostrarListaPedidos();cargarPedidos()">&#128203; Pedidos</button>
@@ -186,7 +187,8 @@ document.addEventListener('click',e=>{
     </div>
   </div>
 
-  <div id="vistaPos" class="vistaApp oculto">
+  <div id="vistaPos" class="vistaApp oculto" style="scroll-margin-top:12px">
+    <div class="card noPrint posNavegacion" style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><b>Punto de venta</b><div id="posSucursalVisible" class="sub"></div></div><button class="btnGris" type="button" onclick="verOtrosModulosPOS()">Otros m&#243;dulos &#8595;</button></div>
     <div class="card">
       <div class="fila" style="margin-bottom:10px;align-items:center">
         <div style="flex:1">
@@ -1493,7 +1495,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.11.02-PRECIO-MANUAL-53';
+const VERSION_SISTEMA_UI='2026.11.02-INTERFAZ-POS-54';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -1784,12 +1786,25 @@ function volverLogin(){
     );
 }
 
+function posicionarMenuModulos(v){
+ const menu=$('tabs'),ancla=$('ubicacionMenuModulos'),pos=$('vistaPos');if(!menu||!ancla||!pos)return;
+ if(v==='pos'){
+  pos.insertAdjacentElement('afterend',menu);
+  if($('posSucursalVisible'))$('posSucursalVisible').textContent='Sucursal: '+(typeof SUCURSAL!=='undefined'?SUCURSAL:'');
+ }else ancla.insertAdjacentElement('afterend',menu);
+ const modulo=$('vista'+v.charAt(0).toUpperCase()+v.slice(1));
+ if(modulo)modulo.scrollIntoView({behavior:'auto',block:'start'});
+}
+function verOtrosModulosPOS(){
+ const menu=$('tabs');if(menu)menu.scrollIntoView({behavior:'smooth',block:'start'});
+}
 function vista(v){
   if(v==='traslados')recuperarListaTraslado();
   if(v==='nuevo'&&$('masivoPanel'))$('vistaNuevo').prepend($('masivoPanel'));
   ocultarVistas();
   const el=$('vista'+v.charAt(0).toUpperCase()+v.slice(1));
   if(el) el.classList.remove('oculto');
+  posicionarMenuModulos(v);
   ['inicio','pos','pedidos','ventas','inventario','nuevo','traslados','stockglobal','usuarios','trazabilidad','comisiones','devoluciones','compras','caja','reportes','clientes','config'].forEach(n=>{
     const b=$('tab'+n.charAt(0).toUpperCase()+n.slice(1));
     if(b) b.classList.toggle('activo',n===v);
@@ -3622,6 +3637,7 @@ function renderPromocionesAdmin(promos){
 }
 
 function renderCarrito(){
+  if($('posSucursalVisible'))$('posSucursalVisible').textContent='Sucursal: '+SUCURSAL;
   const l=$('carritoLista');
 
   l.innerHTML='';
@@ -12433,7 +12449,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.11.02-PRECIO-MANUAL-53';
+  const APP_VERSION='2026.11.02-INTERFAZ-POS-54';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
