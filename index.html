@@ -453,7 +453,7 @@ document.addEventListener('click',e=>{
         <div><label>Lote com&#250;n (existencia inicial)</label><input id="bmLote" placeholder="Autom&#225;tico si queda vac&#237;o"></div>
         <div><label>Observaci&#243;n</label><input id="bmNota" maxlength="200"></div>
       </div>
-      <div id="bmCompra" class="oculto grid2"><div><label>Flete Q (solo costo)</label><input id="bmFlete" type="number" min="0" step="0.01" value="0"></div>
+      <div id="bmCompra" class="oculto grid2"><div><label>Flete Q (solo costo)</label><input id="bmFlete" oninput="bmRender()" type="number" min="0" step="0.01" value="0"></div>
         <div><label>Proveedor</label><select id="bmProveedor" onchange="bmCargarModelosProveedor()"></select><button onclick="bmProveedores()">Cargar proveedores</button></div>
         <div><label>Condici&#243;n de pago</label><select id="bmPago"><option value="CONTADO">Contado</option><option value="CREDITO">Cr&#233;dito</option></select><label>D&#237;as de cr&#233;dito</label><input id="bmDias" type="number" min="1" value="30"></div>
       </div>
@@ -1495,7 +1495,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.11.02-PDF-ESCRITORIO-55';
+const VERSION_SISTEMA_UI='2026.11.02-COSTO-FLETE-56';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -12547,7 +12547,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.11.02-PDF-ESCRITORIO-55';
+  const APP_VERSION='2026.11.02-COSTO-FLETE-56';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
@@ -12691,7 +12691,7 @@ function bmRecepcionCompletada(numero){
  try{const r=JSON.parse(localStorage.getItem(bmKey()+'-ultima-compra')||'null');if(r&&r.numeroCompra===numero)bmUltimaCompra({...r,recibida:true});}catch(e){}
 }
 function bmNueva(){if(BM_BUSY)return;if(BM.enviado&&!BM.finalizado&&BM.confirmado)return bmMsg('Primero reanude y confirme la carga pendiente; no la duplique.',true);bmLimpiarFormulario();bmRender();bmMsg('Nueva carga lista.');}
-function bmModoUI(){const modo=$('bmModo').value,c=modo==='COMPRA';$('bmCompra').classList.toggle('oculto',!c);$('bmLote').disabled=modo==='CATALOGO';$('bmExplica').textContent=modo==='CATALOGO'?'Crea referencias en el cat\u00e1logo maestro desde Bodega Principal. No agrega existencias ni crea compras. La cantidad se ignora; los productos existentes se conservan sin modificar.':c?'Se creara un borrador en la sucursal seleccionada. Revise y marque Enviada desde Compras antes de recibir mercancia.':'Se sumar\u00e1n las cantidades como EXISTENCIA ANTERIOR. Los productos nuevos se crean desde Bodega Principal.';$('bmPreciosPanel').classList.toggle('oculto',!['CATALOGO','COMPRA'].includes(modo));if(c)bmProveedores();}
+function bmModoUI(){const modo=$('bmModo').value,c=modo==='COMPRA';$('bmCompra').classList.toggle('oculto',!c);$('bmLote').disabled=modo==='CATALOGO';$('bmExplica').textContent=modo==='CATALOGO'?'Crea referencias en el cat\u00e1logo maestro desde Bodega Principal. No agrega existencias ni crea compras. La cantidad se ignora; los productos existentes se conservan sin modificar.':c?'Se creara un borrador en la sucursal seleccionada. Revise y marque Enviada desde Compras antes de recibir mercancia.':'Se sumar\u00e1n las cantidades como EXISTENCIA ANTERIOR. Los productos nuevos se crean desde Bodega Principal.';$('bmPreciosPanel').classList.toggle('oculto',!['CATALOGO','COMPRA'].includes(modo));if(c)bmProveedores();bmRender();}
 
 let BM_NIVELES=[];
 async function bmCargarPrecios(){
@@ -12877,6 +12877,12 @@ function bmAgregarModelo(){try{const tallas=$('bmTallas').value.split(',').map(s
 function colorSKU(v){const clean=x=>String(x||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]/g,'');const partes=String(v||'').trim().split(/[\/\s]+/).map(clean).filter(Boolean);return partes.length>1?partes.map(x=>x.charAt(0)).join(''):clean(v).slice(0,2);}
 function bmCodigo(x){if(x.xml)return String(x.codigo||'').trim().toUpperCase();if(x.codigoMaestro)return x.codigoMaestro;const c=v=>String(v||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]/g,'');return c(x.modelo)+'-'+colorSKU(x.color)+'-'+c(x.talla);}
 function bmValidar(){const seen=new Set();return BM.filas.map((r,i)=>{const x={};BM_COLS.forEach(k=>x[k]=String(r[k]??'').trim());if(r.codigoMaestro)x.codigoMaestro=r.codigoMaestro;if(r.xml){x.xml=true;x.codigo=String(r.codigo||'').trim().toUpperCase();x.descripcion=r.descripcion;if(!x.codigo)throw Error('Fila '+(i+1)+': falta c\u00f3digo.');}x.tipo=(x.tipo||'INDIVIDUAL').toUpperCase();x.escala=x.tipo==='CORRIDA'?x.escala.toUpperCase():'';['cantidad','costo','precio','stockMinimo'].forEach(k=>{x[k]=bmNumero(x[k]);if(!Number.isFinite(x[k])||x[k]<0)throw Error('Fila '+(i+1)+': '+k+' inv\u00e1lido.');});if($('bmModo').value==='CATALOGO')x.cantidad=0;if(!Number.isSafeInteger(x.cantidad)||($('bmModo').value!=='CATALOGO'&&x.cantidad<=0))throw Error('Fila '+(i+1)+': cantidad entera positiva requerida.');['marca','modelo','color','talla'].forEach(k=>{if(!x[k])throw Error('Fila '+(i+1)+': falta '+k+'.');});if(!['INDIVIDUAL','CORRIDA'].includes(x.tipo)||(x.tipo==='CORRIDA'&&!x.escala))throw Error('Fila '+(i+1)+': tipo o escala inv\u00e1lido.');const cod=bmCodigo(x);if(seen.has(cod))throw Error('C\u00f3digo repetido '+cod+'. Combine las cantidades en una sola fila.');seen.add(cod);return x;});}
+function bmCostoConFlete(x){
+  const costo=bmNumero(x.costo),unidades=BM.filas.reduce((s,r)=>s+(Number.isFinite(bmNumero(r.cantidad))&&bmNumero(r.cantidad)>0?bmNumero(r.cantidad):0),0);
+  const flete=bmNumero($('bmFlete').value);
+  if(!Number.isFinite(costo)||costo<0||!Number.isFinite(flete)||flete<0||unidades<=0)return null;
+  return costo+flete/unidades;
+}
 function bmRender(){
   bmRenderPrecios();
   $('bmDestino').value=SUCURSAL;
@@ -12886,8 +12892,8 @@ function bmRender(){
   $('bmGuardar').disabled=BM_BUSY||BM.finalizado||!BM.filas.length;
   $('bmGuardar').textContent=BM.enviado?'Reanudar / consultar la misma carga':'Validar y guardar carga';
   $('bmResumen').textContent=BM.filas.length+' referencias \u00b7 '+BM.filas.reduce((s,x)=>s+(Number.isFinite(bmNumero(x.cantidad))?bmNumero(x.cantidad):0),0)+' unidades'+(BM.id?' \u00b7 ID '+BM.id:'');
-  const locked=BM.enviado||BM_BUSY;
-  $('bmTabla').innerHTML=BM.filas.length?'<table><thead><tr><th>#</th><th>C\u00f3digo / descripci\u00f3n XML</th>'+BM_COLS.map(k=>'<th>'+esc(k)+'</th>').join('')+'<th></th></tr></thead><tbody>'+BM.filas.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+(x.xml?'<input '+(locked?'disabled':'')+' aria-label="Codigo XML fila '+(i+1)+'" value="'+esc(x.codigo||'')+'" onchange="bmEditar('+i+',\'codigo\',this.value)"><small>'+esc(x.descripcion||'')+(x.codigoOrigen&&!x.codigo?' | C\u00f3digo XML no vinculado: '+esc(x.codigoOrigen):'')+'</small>':esc(bmCodigo(x)))+'</td>'+BM_COLS.map(k=>'<td>'+(bmCampoProveedor(x,i,k,locked)||'<input style="min-width:90px" '+(locked?'disabled':'')+' aria-label="'+k+' fila '+(i+1)+'" value="'+esc(x[k]??'')+'" onchange="bmEditar('+i+',\''+k+'\',this.value)">')+'</td>').join('')+'<td><button '+(locked?'disabled':'')+' onclick="bmEliminar('+i+')">Quitar</button></td></tr>').join('')+'</tbody></table>':'';
+  const locked=BM.enviado||BM_BUSY,verCostoFlete=$('bmModo').value==='COMPRA';
+  $('bmTabla').innerHTML=BM.filas.length?'<table><thead><tr><th>#</th><th>C\u00f3digo / descripci\u00f3n XML</th>'+BM_COLS.map(k=>'<th>'+esc(k)+'</th>'+(verCostoFlete&&k==='costo'?'<th>Costo + flete / unidad</th>':'')).join('')+'<th></th></tr></thead><tbody>'+BM.filas.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+(x.xml?'<input '+(locked?'disabled':'')+' aria-label="Codigo XML fila '+(i+1)+'" value="'+esc(x.codigo||'')+'" onchange="bmEditar('+i+',\'codigo\',this.value)"><small>'+esc(x.descripcion||'')+(x.codigoOrigen&&!x.codigo?' | C\u00f3digo XML no vinculado: '+esc(x.codigoOrigen):'')+'</small>':esc(bmCodigo(x)))+'</td>'+BM_COLS.map(k=>'<td>'+(bmCampoProveedor(x,i,k,locked)||'<input style="min-width:90px" '+(locked?'disabled':'')+' aria-label="'+k+' fila '+(i+1)+'" value="'+esc(x[k]??'')+'" onchange="bmEditar('+i+',\''+k+'\',this.value)">')+'</td>'+(verCostoFlete&&k==='costo'?'<td style="min-width:150px"><strong>'+((bmCostoConFlete(x)===null)?'Revisar datos':'Q'+bmCostoConFlete(x).toFixed(4))+'</strong></td>':'')).join('')+'<td><button '+(locked?'disabled':'')+' onclick="bmEliminar('+i+')">Quitar</button></td></tr>').join('')+'</tbody></table>':'';
 }
 function bmEditar(i,k,v){if(BM.enviado||BM_BUSY)return;BM.filas[i][k]=v;delete BM.filas[i].codigoMaestro;bmDraft();bmRender();}
 function bmEliminar(i){if(BM.enviado||BM_BUSY)return;BM.filas.splice(i,1);bmDraft();bmRender();}
