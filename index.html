@@ -1495,7 +1495,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.11.02-COSTO-FLETE-56';
+const VERSION_SISTEMA_UI='2026.11.02-VISTA-DIVISA-57';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -4035,7 +4035,49 @@ function descripcionTicket(x){
   .trim();
 }
 
+const VISTA_MONEDA_DOCUMENTOS=new Map();
+function tasaVistaDocumento(codigo,v){
+  if(codigo==='GTQ')return {codigo:'GTQ',simbolo:'Q',tipoCambio:1};
+  const d=DIVISAS.find(x=>x.codigo===codigo);
+  // Ventas cobradas conservan la tasa registrada de su divisa de pago.
+  const historica=v.monedaPago===codigo&&Number(v.tipoCambio)>0;
+  const tasa=historica?Number(v.tipoCambio):Number(d&&d.tipoCambio);
+  if(!Number.isFinite(tasa)||tasa<=0)return tasaVistaDocumento('GTQ',v);
+  return {codigo,simbolo:historica?(v.simboloMoneda||codigo):(d.simbolo||codigo),tipoCambio:tasa};
+}
+function cambiarMonedaDocumento(id,codigo){
+  const e=VISTA_MONEDA_DOCUMENTOS.get(id);if(!e)return;
+  e.codigo=codigo;
+  if(e.tipo==='PEDIDO')pedidoHTML(e.datos,id);else ticketHTML(e.datos,id);
+}
+function prepararMonedaDocumento(v,id,tipo){
+  const el=$(id);
+  if(!el||!['ticket','ticketPedido','pedidoDetalle'].includes(id))return {formato:Q,nota:''};
+  let e=VISTA_MONEDA_DOCUMENTOS.get(id);
+  if(!e||e.datos!==v){e={datos:v,tipo,codigo:'GTQ'};VISTA_MONEDA_DOCUMENTOS.set(id,e);}
+  const d=tasaVistaDocumento(e.codigo,v);e.codigo=d.codigo;
+  let box=$('monedaVista_'+id);
+  if(!box){
+    box=document.createElement('div');box.id='monedaVista_'+id;box.className='noPrint';
+    const label=document.createElement('label');label.textContent='Ver precios en';
+    const sel=document.createElement('select');sel.id='monedaSelect_'+id;
+    sel.onchange=()=>cambiarMonedaDocumento(id,sel.value);
+    box.appendChild(label);box.appendChild(sel);el.parentNode.insertBefore(box,el);
+  }
+  const sel=$('monedaSelect_'+id);sel.innerHTML='';
+  const codigos=['GTQ',...DIVISAS.map(x=>x.codigo),...(v.monedaPago?[v.monedaPago]:[])];
+  [...new Set(codigos)].forEach(c=>{
+    const t=tasaVistaDocumento(c,v);if(t.codigo!==c)return;
+    sel.add(new Option(c==='GTQ'?'Q - Quetzal':c,c));
+  });sel.value=d.codigo;
+  return {
+    formato:n=>d.codigo==='GTQ'?Q(n):d.simbolo+(Number(n||0)/d.tipoCambio).toFixed(2)+' '+d.codigo,
+    nota:'<div class="sub">Precios en '+esc(d.codigo)+(d.codigo==='GTQ'?'':' &middot; 1 '+esc(d.codigo)+' = Q'+d.tipoCambio.toFixed(4))+'</div>'
+  };
+}
+
 function ticketHTML(v,id){
+  const monedaVista=prepararMonedaDocumento(v,id,'VENTA');
   const tituloComprobante=v.tituloComprobante||'Comprobante de venta';
   const etiquetaNumero=v.etiquetaNumero||'Venta';
   const etiquetaSubtotal=v.etiquetaSubtotal||'Subtotal';
@@ -4306,11 +4348,11 @@ function ticketHTML(v,id){
         nums+
 
         '<td class="derecha">'+
-        Q(g.precio)+
+        monedaVista.formato(g.precio)+
         '</td>'+
 
         '<td class="derecha"><b>'+
-        Q(g.total)+
+        monedaVista.formato(g.total)+
         '</b></td>'+
 
       '</tr>';
@@ -4318,7 +4360,7 @@ function ticketHTML(v,id){
 
   $(id).innerHTML=
 
-    '<h2>COMERCIAL ADELAIDA</h2>'+
+    monedaVista.nota+'<h2>COMERCIAL ADELAIDA</h2>'+
 
     '<div class="centro">Zapater\u00eda</div>'+
 
@@ -4410,28 +4452,28 @@ function ticketHTML(v,id){
     '<div class="lineaTotal">'+
       '<span>'+esc(etiquetaSubtotal)+'</span>'+
       '<b>'+
-      Q(v.subtotal)+
+      monedaVista.formato(v.subtotal)+
       '</b>'+
     '</div>'+
 
     '<div class="lineaTotal">'+
       '<span>'+esc(etiquetaDescuento)+'</span>'+
       '<b>'+
-      Q(v.descuento)+
+      monedaVista.formato(v.descuento)+
       '</b>'+
     '</div>'+
 
     '<div class="lineaTotal" style="font-size:16px">'+
       '<span><b>'+esc(etiquetaTotal)+'</b></span>'+
       '<b>'+
-      Q(v.total)+
+      monedaVista.formato(v.total)+
       '</b>'+
     '</div>'+
 
     (
       Number(v.anticipoAplicado||0)>0
-        ? '<div class="lineaTotal"><span>Anticipo aplicado</span><b>- '+Q(v.anticipoAplicado)+'</b></div>'+
-          '<div class="lineaTotal"><span>Saldo cobrado</span><b>'+Q(v.saldoCobrado||0)+'</b></div>'
+        ? '<div class="lineaTotal"><span>Anticipo aplicado</span><b>- '+monedaVista.formato(v.anticipoAplicado)+'</b></div>'+
+          '<div class="lineaTotal"><span>Saldo cobrado</span><b>'+monedaVista.formato(v.saldoCobrado||0)+'</b></div>'
         : ''
     )+
 
@@ -4440,7 +4482,7 @@ function ticketHTML(v,id){
     '</div>'+
 
     (v.monedaPago && v.monedaPago!=='GTQ' ? '<div><b>Divisa:</b> '+esc(v.monedaPago)+' \u00b7 1 '+esc(v.monedaPago)+' = Q'+Number(v.tipoCambio||1).toFixed(4)+'</div><div><b>Total divisa:</b> '+esc(v.simboloMoneda||v.monedaPago)+Number(v.totalDivisa||0).toFixed(2)+'</div>' : '')+
-    (v.metodoPago==='EFECTIVO' ? '<div><b>Recibido:</b> '+(v.monedaPago&&v.monedaPago!=='GTQ' ? esc(v.simboloMoneda||v.monedaPago)+Number(v.efectivoDivisa||0).toFixed(2)+' '+esc(v.monedaPago) : Q(v.efectivoRecibido))+'</div><div><b>Cambio:</b> '+(v.cambioMoneda&&v.cambioMoneda!=='GTQ' ? esc(v.simboloMoneda||v.cambioMoneda)+Number(v.cambioDivisa||0).toFixed(2)+' '+esc(v.cambioMoneda) : Q(v.cambio))+'</div>' : '')+
+    (v.metodoPago==='EFECTIVO' ? '<div><b>Recibido:</b> '+(v.monedaPago&&v.monedaPago!=='GTQ' ? esc(v.simboloMoneda||v.monedaPago)+Number(v.efectivoDivisa||0).toFixed(2)+' '+esc(v.monedaPago) : monedaVista.formato(v.efectivoRecibido))+'</div><div><b>Cambio:</b> '+(v.cambioMoneda&&v.cambioMoneda!=='GTQ' ? esc(v.simboloMoneda||v.cambioMoneda)+Number(v.cambioDivisa||0).toFixed(2)+' '+esc(v.cambioMoneda) : monedaVista.formato(v.cambio))+'</div>' : '')+
 
     '<hr>'+
 
@@ -4450,6 +4492,7 @@ function ticketHTML(v,id){
 }
 
 function pedidoHTML(v,id){
+  const monedaVista=prepararMonedaDocumento(v,id,'PEDIDO');
   const grupos={};
 
   (v.items||[]).forEach(x=>{
@@ -4653,13 +4696,13 @@ function pedidoHTML(v,id){
         '<td><b>'+g.cantidad+'</b></td>'+ 
         '<td class="descripcion">'+esc(g.descripcion)+'</td>'+ 
         nums+
-        '<td class="derecha">'+Q(g.precio)+'</td>'+ 
-        '<td class="derecha"><b>'+Q(g.total)+'</b></td>'+ 
+        '<td class="derecha">'+monedaVista.formato(g.precio)+'</td>'+ 
+        '<td class="derecha"><b>'+monedaVista.formato(g.total)+'</b></td>'+ 
       '</tr>';
   });
 
   $(id).innerHTML=
-    '<h2>COMERCIAL ADELAIDA</h2>'+ 
+    monedaVista.nota+'<h2>COMERCIAL ADELAIDA</h2>'+ 
     '<div class="centro">Zapater\u00eda</div>'+ 
     '<div class="centro">'+esc(v.sucursal||SUCURSAL)+'</div>'+ 
     '<div class="centro"><b>PEDIDO</b></div>'+ 
@@ -4687,15 +4730,15 @@ function pedidoHTML(v,id){
     '<hr>'+ 
     '<div class="lineaTotal">'+ 
       '<span>Subtotal</span>'+ 
-      '<b>'+Q(v.subtotal)+'</b>'+ 
+      '<b>'+monedaVista.formato(v.subtotal)+'</b>'+ 
     '</div>'+ 
     '<div class="lineaTotal">'+ 
       '<span>Descuento</span>'+ 
-      '<b>'+Q(v.descuento)+'</b>'+ 
+      '<b>'+monedaVista.formato(v.descuento)+'</b>'+ 
     '</div>'+ 
     '<div class="lineaTotal" style="font-size:16px">'+ 
       '<span><b>TOTAL</b></span>'+ 
-      '<b>'+Q(v.total)+'</b>'+ 
+      '<b>'+monedaVista.formato(v.total)+'</b>'+ 
     '</div>'+ 
     (v.nota?'<div style="margin-top:6px"><b>Nota:</b> '+esc(v.nota)+'</div>':'');
 }
@@ -7278,6 +7321,7 @@ function cargarDivisas(){
     if(!r.ok) return;
     DIVISAS=r.divisas||[];
     llenarSelectsDivisas();
+    VISTA_MONEDA_DOCUMENTOS.forEach((e,id)=>cambiarMonedaDocumento(id,e.codigo));
     if(SESION&&SESION.rol==='ADMIN') renderDivisas();
     actualizarPago();
   });
@@ -12547,7 +12591,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.11.02-COSTO-FLETE-56';
+  const APP_VERSION='2026.11.02-VISTA-DIVISA-57';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
