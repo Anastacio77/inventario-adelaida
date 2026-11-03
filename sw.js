@@ -1,4 +1,4 @@
-const CACHE_NAME = 'adelaida-pos-2026.11.02-VISTA-DIVISA-57';
+const CACHE_NAME = 'adelaida-pos-2026.11.02-SIMBOLO-DIVISA-58';
 const CORE = ['./', './index.html', './manifest.webmanifest', './html2pdf.bundle.min.js'];
 
 self.addEventListener('install', event => {
