@@ -82,3 +82,5 @@ El archivo Apps Script se distribuye en el paquete privado; no publicar credenci
 - Pedido y comprobante de venta: selector Ver precios en convierte visualmente precio unitario, subtotales, descuento y total; mismo HTML se imprime/exporta PDF. No alterar datos GTQ ni divisa/importe de cobro. GTQ por defecto, tasas positivas, conservar tasa historica si coincide divisa de pago de venta, otras segun configuracion actual. Otros documentos mantienen Q. Ejecutar tests/vista-divisa.cjs.
 
 - Vista de precios en divisa: importes de pedido/comprobante muestran solo simbolo y numero, sin repetir codigo MXN/USD en cada celda o total. Moneda y tasa se indican una vez en encabezado. Mantener conversion y cobro intactos.
+
+- Historial de ventas: ticketHistorial incluye Ver precios en para reimpresion/PDF en Q o divisa. Reimprimir abre comprobante y selector antes de imprimir; usuario elige formato. No mutar venta/cobro ni perder formato de simbolo sin codigo repetido. Probar historial en tests/vista-divisa.cjs.
