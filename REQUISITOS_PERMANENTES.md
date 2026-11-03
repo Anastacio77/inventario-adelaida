@@ -80,3 +80,5 @@ El archivo Apps Script se distribuye en el paquete privado; no publicar credenci
 - Ingreso masivo COMPRA: columna informativa Costo + flete / unidad junto a costo; repartir flete por unidades totales, recalcular al editar flete/costo/cantidades/filas. No modificar BM_COLS, payload, costo base, precios de venta ni total del proveedor. Conservar importaciones y ocultar en otros modos. Ejecutar tests/costo-flete.cjs.
 
 - Pedido y comprobante de venta: selector Ver precios en convierte visualmente precio unitario, subtotales, descuento y total; mismo HTML se imprime/exporta PDF. No alterar datos GTQ ni divisa/importe de cobro. GTQ por defecto, tasas positivas, conservar tasa historica si coincide divisa de pago de venta, otras segun configuracion actual. Otros documentos mantienen Q. Ejecutar tests/vista-divisa.cjs.
+
+- Vista de precios en divisa: importes de pedido/comprobante muestran solo simbolo y numero, sin repetir codigo MXN/USD en cada celda o total. Moneda y tasa se indican una vez en encabezado. Mantener conversion y cobro intactos.
