@@ -7,13 +7,13 @@ const c={DIVISAS:[{codigo:'MXN',simbolo:'M$',tipoCambio:0.43},{codigo:'USD',simb
 vm.createContext(c);vm.runInContext(s.slice(s.indexOf('const VISTA_MONEDA_DOCUMENTOS='),s.indexOf('// Formato com')),c);
 const p={numeroPedido:'PED-TEST',subtotal:780,descuento:0,total:780,items:[{modelo:'PT0031',talla:'40',precio:52,cantidad:15,subtotal:780}]},before=JSON.stringify(p);
 c.pedidoHTML(p,'pedidoDetalle');a(nodes.pedidoDetalle.innerHTML.includes('Q52.00'));a(nodes.pedidoDetalle.innerHTML.includes('Q780.00'));
-c.cambiarMonedaDocumento('pedidoDetalle','MXN');a(nodes.pedidoDetalle.innerHTML.includes('M$120.93 MXN'));a(nodes.pedidoDetalle.innerHTML.includes('M$1813.95 MXN'));a(nodes.pedidoDetalle.innerHTML.includes('Q0.4300'));a.equal(JSON.stringify(p),before);
+c.cambiarMonedaDocumento('pedidoDetalle','MXN');a(nodes.pedidoDetalle.innerHTML.includes('M$120.93'));a(nodes.pedidoDetalle.innerHTML.includes('M$1813.95'));a(nodes.pedidoDetalle.innerHTML.includes('Q0.4300'));a.equal(JSON.stringify(p),before);a(!nodes.pedidoDetalle.innerHTML.includes('M$120.93 MXN'));a(!nodes.pedidoDetalle.innerHTML.includes('M$1813.95 MXN'));
 c.cambiarMonedaDocumento('pedidoDetalle','GTQ');a(nodes.pedidoDetalle.innerHTML.includes('Q780.00'));
 const v={...p,monedaPago:'MXN',tipoCambio:0.48,simboloMoneda:'M$'};
-c.ticketHTML(v,'ticket');c.cambiarMonedaDocumento('ticket','MXN');a(nodes.ticket.innerHTML.includes('M$1625.00 MXN'));a(nodes.ticket.innerHTML.includes('Q0.4800'));
+c.ticketHTML(v,'ticket');c.cambiarMonedaDocumento('ticket','MXN');a(nodes.ticket.innerHTML.includes('M$1625.00'));a(nodes.ticket.innerHTML.includes('Q0.4800'));
 c.cambiarMonedaDocumento('ticket','BAD');a(nodes.ticket.innerHTML.includes('Q780.00'));
 c.ticketHTML(p,'compra');a(nodes.compra.innerHTML.includes('Q780.00'));a(!nodes.monedaVista_compra);
 c.ticketHTML({...p},'ticket');a(nodes.ticket.innerHTML.includes('Q780.00'));
 for(const m of s.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi))new vm.Script(m[1]);
-new vm.Script(fs.readFileSync('entrega/sw.js','utf8'));new vm.Script(fs.readFileSync('entrega/Code_Vista_Divisa_57.gs','utf8'));
+new vm.Script(fs.readFileSync('entrega/sw.js','utf8'));new vm.Script(fs.readFileSync('entrega/Code_Simbolo_Divisa_58.gs','utf8'));
 console.log('OK vista Q/MXN, tasa historica, retorno GTQ, pedido intacto, aislamiento documentos y sintaxis');
