@@ -1495,7 +1495,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.11.02-SIMBOLO-DIVISA-58';
+const VERSION_SISTEMA_UI='2026.11.02-REIMPRESION-DIVISA-59';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -4052,7 +4052,7 @@ function cambiarMonedaDocumento(id,codigo){
 }
 function prepararMonedaDocumento(v,id,tipo){
   const el=$(id);
-  if(!el||!['ticket','ticketPedido','pedidoDetalle'].includes(id))return {formato:Q,nota:''};
+  if(!el||!['ticket','ticketPedido','pedidoDetalle','ticketHistorial'].includes(id))return {formato:Q,nota:''};
   let e=VISTA_MONEDA_DOCUMENTOS.get(id);
   if(!e||e.datos!==v){e={datos:v,tipo,codigo:'GTQ'};VISTA_MONEDA_DOCUMENTOS.set(id,e);}
   const d=tasaVistaDocumento(e.codigo,v);e.codigo=d.codigo;
@@ -6595,13 +6595,8 @@ function abrirVenta(numeroVenta,imprimir){
       },50);
 
       if(imprimir){
-        setTimeout(
-          ()=>imprimirTicket(
-            'ticketHistorial',
-            'MEDIA'
-          ),
-          250
-        );
+        const selector=$('monedaSelect_ticketHistorial');
+        if(selector)selector.focus();
       }
     }
   );
@@ -12591,7 +12586,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.11.02-SIMBOLO-DIVISA-58';
+  const APP_VERSION='2026.11.02-REIMPRESION-DIVISA-59';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
