@@ -1495,7 +1495,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.11.02-REIMPRESION-DIVISA-59';
+const VERSION_SISTEMA_UI='2026.11.04-TASA-PEDIDO-60';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -4038,6 +4038,7 @@ function descripcionTicket(x){
 const VISTA_MONEDA_DOCUMENTOS=new Map();
 function tasaVistaDocumento(codigo,v){
   if(codigo==='GTQ')return {codigo:'GTQ',simbolo:'Q',tipoCambio:1};
+  if(v.tasaNegociada&&v.tasaNegociada.codigo===codigo&&Number(v.tasaNegociada.tipoCambio)>0)return v.tasaNegociada;
   const d=DIVISAS.find(x=>x.codigo===codigo);
   // Ventas cobradas conservan la tasa registrada de su divisa de pago.
   const historica=v.monedaPago===codigo&&Number(v.tipoCambio)>0;
@@ -4054,7 +4055,7 @@ function prepararMonedaDocumento(v,id,tipo){
   const el=$(id);
   if(!el||!['ticket','ticketPedido','pedidoDetalle','ticketHistorial'].includes(id))return {formato:Q,nota:''};
   let e=VISTA_MONEDA_DOCUMENTOS.get(id);
-  if(!e||e.datos!==v){e={datos:v,tipo,codigo:'GTQ'};VISTA_MONEDA_DOCUMENTOS.set(id,e);}
+  if(!e||e.datos!==v){e={datos:v,tipo,codigo:v.tasaNegociada?v.tasaNegociada.codigo:'GTQ'};VISTA_MONEDA_DOCUMENTOS.set(id,e);}
   const d=tasaVistaDocumento(e.codigo,v);e.codigo=d.codigo;
   let box=$('monedaVista_'+id);
   if(!box){
@@ -4065,7 +4066,7 @@ function prepararMonedaDocumento(v,id,tipo){
     box.appendChild(label);box.appendChild(sel);el.parentNode.insertBefore(box,el);
   }
   const sel=$('monedaSelect_'+id);sel.innerHTML='';
-  const codigos=['GTQ',...DIVISAS.map(x=>x.codigo),...(v.monedaPago?[v.monedaPago]:[])];
+  const codigos=['GTQ',...DIVISAS.map(x=>x.codigo),...(v.monedaPago?[v.monedaPago]:[]),...(v.tasaNegociada?[v.tasaNegociada.codigo]:[])];
   [...new Set(codigos)].forEach(c=>{
     const t=tasaVistaDocumento(c,v);if(t.codigo!==c)return;
     sel.add(new Option(c==='GTQ'?'Q - Quetzal':c,c));
@@ -7974,6 +7975,42 @@ function cargarPedidos(){
   });
 }
 
+function divisaCobroPedido(){
+  const codigo=$('pedMoneda').value,t=PEDIDO_ACTUAL&&PEDIDO_ACTUAL.tasaNegociada;
+  return t&&t.codigo===codigo?t:divisaActual(codigo);
+}
+function renderTasaPedido(){
+  let box=$('tasaPedidoBox');
+  if(!box){box=document.createElement('div');box.id='tasaPedidoBox';box.className='noPrint';const el=$('pedidoDetalle');el.parentNode.insertBefore(box,el);}
+  const t=PEDIDO_ACTUAL.tasaNegociada,editable=['PENDIENTE','RESERVADO'].includes(PEDIDO_ACTUAL.estado)&&SESION&&['ADMIN','CAJERO','VENDEDOR'].includes(SESION.rol);
+  box.innerHTML='<label>Tipo de cambio de este pedido</label><select id="tasaPedidoMoneda"></select><label>1 unidad de esta moneda equivale a Q</label><input id="tasaPedidoValor" type="number" min="0.000001" step="any"><button id="tasaPedidoGuardar" type="button" class="btnAzul" onclick="guardarTasaPedidoUI()">Guardar tasa del pedido</button><div id="tasaPedidoAviso" class="sub"></div>';
+  const sel=$('tasaPedidoMoneda');
+  const monedas=[...DIVISAS];if(t&&!monedas.some(d=>d.codigo===t.codigo))monedas.push(t);
+  if(!monedas.some(d=>d.codigo==='GTQ'))monedas.unshift({codigo:'GTQ',tipoCambio:1});
+  monedas.forEach(d=>sel.add(new Option(d.codigo,d.codigo)));
+  sel.value=t?t.codigo:($('pedMoneda').value||'GTQ');
+  const valor=$('tasaPedidoValor');
+  sel.onchange=()=>{valor.value=divisaActual(sel.value).tipoCambio;valor.disabled=!editable||sel.value==='GTQ';};
+  valor.value=t?t.tipoCambio:divisaActual(sel.value).tipoCambio;
+  sel.disabled=!editable;valor.disabled=!editable||sel.value==='GTQ';$('tasaPedidoGuardar').disabled=!editable;
+  $('tasaPedidoAviso').textContent=t?'Tasa guardada para este pedido. Se conserva al consultar, cobrar y reimprimir.':'Sin tasa propia: usa Configuracion. Guarde la tasa para fijarla en este pedido.';
+  if(t){const cobro=$('pedMoneda');if(![...cobro.options].some(o=>o.value===t.codigo))cobro.add(new Option(t.codigo,t.codigo));cobro.value=t.codigo;}
+}
+let TASA_PEDIDO_GUARDANDO=false;
+function guardarTasaPedidoUI(){
+  if(TASA_PEDIDO_GUARDANDO||!PEDIDO_ACTUAL)return;
+  const numero=PEDIDO_ACTUAL.numeroPedido,tc=Number($('tasaPedidoValor').value);
+  if(!Number.isFinite(tc)||tc<=0)return $('tasaPedidoAviso').textContent='Ingrese una tasa positiva.';
+  TASA_PEDIDO_GUARDANDO=true;$('tasaPedidoGuardar').disabled=true;
+  $('tasaPedidoAviso').textContent='Guardando tasa...';
+  api('guardartasapedido',{numeroPedido:numero,moneda:$('tasaPedidoMoneda').value,tipoCambio:tc,revisionTasa:JSON.stringify(PEDIDO_ACTUAL.tasaNegociada||null)},r=>{
+    TASA_PEDIDO_GUARDANDO=false;
+    if(!PEDIDO_ACTUAL||PEDIDO_ACTUAL.numeroPedido!==numero)return;
+    if(!r||!r.ok){$('tasaPedidoGuardar').disabled=false;$('tasaPedidoAviso').textContent=r&&r.error||'No se pudo confirmar. Vuelva a abrir el pedido para consultar la tasa.';return;}
+    verPedido(numero);
+  });
+}
+
 function verPedido(numero){
 
   const lista=$('pedidoListaCard');
@@ -8004,6 +8041,7 @@ function verPedido(numero){
       }
 
       PEDIDO_ACTUAL=r;
+      renderTasaPedido();
 
       // Mostrar el pedido con el mismo formato de numeraci\u00f3n/escala del ticket,
       // pero con encabezado PEDIDO y sin convertirlo en comprobante de venta.
@@ -8085,7 +8123,7 @@ function reactivarReservaUI(){
 
 function actualizarCobroPedido(){
   if(!PEDIDO_ACTUAL) return;
-  const d=divisaActual($('pedMoneda').value);
+  const d=divisaCobroPedido();
   llenarCambioMoneda('pedCambioMoneda',$('pedMoneda').value);
   const ef=Number($('pedEfectivo').value)||0;
   const total=String(PEDIDO_ACTUAL.tipoPedido||'').toUpperCase()==='RESERVA'
@@ -8102,8 +8140,9 @@ function actualizarCobroPedido(){
 }
 
 function completarPedidoUI(){
+  if(TASA_PEDIDO_GUARDANDO)return msg('mensajePedidos','Espere a que se confirme la tasa guardada.','info');
   if(!PEDIDO_ACTUAL) return;
-  const d=divisaActual($('pedMoneda').value);
+  const d=divisaCobroPedido();
   const ef=Number($('pedEfectivo').value)||0;
   const saldo=String(PEDIDO_ACTUAL.tipoPedido||'').toUpperCase()==='RESERVA'
     ? Number(PEDIDO_ACTUAL.saldoPendiente)||0
@@ -8113,7 +8152,7 @@ function completarPedidoUI(){
   }
   if(!confirm('\u00bfCompletar '+PEDIDO_ACTUAL.numeroPedido+'? Saldo a cobrar: '+Q(saldo))) return;
   api('completarpedido',{
-    numeroPedido:PEDIDO_ACTUAL.numeroPedido,metodo:$('pedMetodo').value,
+    numeroPedido:PEDIDO_ACTUAL.numeroPedido,revisionTasa:JSON.stringify(PEDIDO_ACTUAL.tasaNegociada||null),metodo:$('pedMetodo').value,
     moneda:$('pedMoneda').value,efectivoDivisa:ef,cambioMoneda:$('pedCambioMoneda').value
   },r=>{
     if(!r||!r.ok) return msg('mensajePedidos',(r&&r.error)||'No se pudo completar el pedido.','error');
@@ -12586,7 +12625,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.11.02-REIMPRESION-DIVISA-59';
+  const APP_VERSION='2026.11.04-TASA-PEDIDO-60';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
