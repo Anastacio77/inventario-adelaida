@@ -1,0 +1,16 @@
+const fs=require('fs'),vm=require('vm'),a=require('assert');
+const s=fs.readFileSync(process.argv[2]||'entrega/Code_Tasa_Pedido_60.gs','utf8');
+let rows=[['Pedido','Moneda','Tasa','Simbolo','Fecha','Usuario']],estado='PENDIENTE',usuario='ADMIN',sucursal='La Paz',general=0.43,locked=false;
+const sheet={getLastRow:()=>rows.length,getRange:(r,c,n=1,m=1)=>({getValues:()=>rows.slice(r-1,r-1+n).map(x=>x.slice(c-1,c-1+m)),setValues:v=>{a(locked);v.forEach((x,i)=>rows[r-1+i]=x);}}),appendRow:r=>rows.push(r)};
+const c={SpreadsheetApp:{getActiveSpreadsheet:()=>({getSheetByName:()=>sheet}),flush(){}},LockService:{getDocumentLock:()=>({waitLock(){locked=true},releaseLock(){locked=false}})},auth_:()=>({rol:usuario,usuario:'u'}),sucursalUso_:()=>sucursal,localizarPedido_:()=>({valores:['','PED','','','La Paz','',''+estado]}),puedeVerPedido_:()=>usuario==='ADMIN',obtenerDivisa_:codigo=>({codigo,tipoCambio:general,simbolo:'M$'}),norm_:x=>String(x).toUpperCase()};vm.createContext(c);
+vm.runInContext(s.slice(s.indexOf('function tasaPedidoGuardada_('),s.indexOf('function guardarPedido_(')),c);
+const save=(moneda,tipoCambio,revision=c.tasaPedidoGuardada_('PED'))=>c.guardarTasaPedido_('token',{numeroPedido:'PED',moneda,tipoCambio,revisionTasa:JSON.stringify(revision)});
+a.equal(c.tasaPedidoGuardada_('PED'),null);save('MXN',0.45);general=0.7;a.equal(c.tasaPedidoGuardada_('PED').tipoCambio,0.45);a.equal(c.divisaVentaPedido_({}, {numeroPedido:'PED'},'MXN').tipoCambio,0.45);
+a.equal(c.divisaVentaPedido_({}, {},'MXN').tipoCambio,0.7);
+a.throws(()=>save('MXN',0.5,null),/cambio/);a.equal(rows.length,2);
+for(const t of [0,-1,Infinity,NaN])a.throws(()=>save('MXN',t),/positiva/);
+a.throws(()=>save('GTQ',2),/GTQ/);save('MXN',0.48);a.equal(rows.length,2);
+estado='PROCESANDO';a.throws(()=>save('MXN',0.5),/pendiente/);estado='COMPLETADO';a.throws(()=>save('MXN',0.5),/pendiente/);
+estado='RESERVADO';save('MXN',0.46);usuario='VENDEDOR';a.throws(()=>save('MXN',0.5),/usuario/);usuario='ADMIN';sucursal='Otra';a.throws(()=>save('MXN',0.5),/usuario/);
+new vm.Script(s);a(s.includes('const divisa=divisaVentaPedido_(ses,p,moneda)'));a(s.includes('venta.tasaNegociada=tasaPedidoGuardada_(numero)'));a(s.includes('tasaNegociada:f[14]?tasaPedidoGuardada_'));
+console.log('OK tasa persistida por pedido, configuracion independiente, cobro servidor, revision, permisos, estados y validacion');
