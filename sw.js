@@ -1,4 +1,4 @@
-const CACHE_NAME = 'adelaida-pos-2026.11.02-REIMPRESION-DIVISA-59';
+const CACHE_NAME = 'adelaida-pos-2026.11.04-TASA-PEDIDO-60';
 const CORE = ['./', './index.html', './manifest.webmanifest', './html2pdf.bundle.min.js'];
 
 self.addEventListener('install', event => {
