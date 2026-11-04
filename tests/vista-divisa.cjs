@@ -15,6 +15,7 @@ c.ticketHTML(v,'ticket');c.cambiarMonedaDocumento('ticket','MXN');a(nodes.ticket
 c.cambiarMonedaDocumento('ticket','BAD');a(nodes.ticket.innerHTML.includes('Q780.00'));
 c.ticketHTML(p,'compra');a(nodes.compra.innerHTML.includes('Q780.00'));a(!nodes.monedaVista_compra);
 c.ticketHTML({...p},'ticket');a(nodes.ticket.innerHTML.includes('Q780.00'));
+const negociado={...p,tasaNegociada:{codigo:'MXN',tipoCambio:0.5,simbolo:'M$'}};c.pedidoHTML(negociado,'pedidoDetalle');a(nodes.pedidoDetalle.innerHTML.includes('M$1560.00'));c.DIVISAS[0].tipoCambio=0.7;c.pedidoHTML(negociado,'pedidoDetalle');a(nodes.pedidoDetalle.innerHTML.includes('M$1560.00'));
 for(const m of s.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi))new vm.Script(m[1]);
-new vm.Script(fs.readFileSync('entrega/sw.js','utf8'));new vm.Script(fs.readFileSync('entrega/Code_Reimpresion_Divisa_59.gs','utf8'));
+new vm.Script(fs.readFileSync('entrega/sw.js','utf8'));new vm.Script(fs.readFileSync('entrega/Code_Tasa_Pedido_60.gs','utf8'));
 console.log('OK vista Q/MXN, tasa historica, retorno GTQ, pedido intacto, aislamiento documentos y sintaxis');
