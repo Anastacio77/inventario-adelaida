@@ -84,3 +84,5 @@ El archivo Apps Script se distribuye en el paquete privado; no publicar credenci
 - Vista de precios en divisa: importes de pedido/comprobante muestran solo simbolo y numero, sin repetir codigo MXN/USD en cada celda o total. Moneda y tasa se indican una vez en encabezado. Mantener conversion y cobro intactos.
 
 - Historial de ventas: ticketHistorial incluye Ver precios en para reimpresion/PDF en Q o divisa. Reimprimir abre comprobante y selector antes de imprimir; usuario elige formato. No mutar venta/cobro ni perder formato de simbolo sin codigo repetido. Probar historial en tests/vista-divisa.cjs.
+
+- Tasa negociada por pedido: guardar en servidor por numero, moneda/tasa/simbolo propios sin cambiar Divisas. Pendiente/reservado con permisos y sucursal, lock y revision contra cambios concurrentes; GTQ=1 y tasas finitas positivas. Conservar consulta, reimpresion, saldo/cambio y venta en misma divisa; tasa servidor, nunca tasa enviada por cliente. Bloquear cambios completados/procesando, conservar vinculo numeroPedido para historial de venta. Pruebas tests/tasa-pedido.cjs y tests/vista-divisa.cjs.
