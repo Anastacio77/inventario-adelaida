@@ -224,7 +224,7 @@ document.addEventListener('click',e=>{
         <div><label>Tel&#233;fono</label><input id="posTelefono" placeholder="Opcional"></div>
         <div><label>WhatsApp</label><input id="posWhatsapp" placeholder="Opcional"></div>
         <div><label>Direcci&#243;n</label><input id="posDireccion" placeholder="Opcional"></div>
-        <div><label>Vendedor</label><select id="posVendedor"></select></div><div><label>Forma de pago</label><select id="posMetodo" onchange="actualizarPago()"><option>EFECTIVO</option><option>TRANSFERENCIA</option><option>TARJETA</option><option>CREDITO</option></select></div><div><label>Tipo de documento</label><select id="posTipoDocumento"><option value="TICKET">TICKET</option><option value="FACTURA_INTERNA">FACTURA INTERNA</option><option value="FEL">FEL (requiere integraci&#243;n)</option></select></div><div><label>Divisa de pago</label><select id="posMoneda" onchange="actualizarPago()"></select></div><div><label id="posDescuentoEtiqueta">Descuento Q</label><input id="posDescuento" type="number" min="0" step="0.01" value="0" oninput="renderCarrito()"></div><div id="efectivoBox"><label id="efectivoEtiqueta">Efectivo recibido</label><input id="posEfectivo" type="number" min="0" step="0.01" value="0" oninput="actualizarCambio()"></div><div id="cambioMonedaBox"><label>Dar cambio en</label><select id="posCambioMoneda" onchange="actualizarCambio()"><option value="GTQ">GTQ - Quetzal</option></select></div><div><label>Nota</label><input id="posNota"></div></div>
+        <div><label>Vendedor</label><select id="posVendedor"></select></div><div><label>Forma de pago</label><select id="posMetodo" onchange="actualizarPago()"><option>EFECTIVO</option><option>TRANSFERENCIA</option><option>TARJETA</option><option>CREDITO</option></select></div><div><label>Tipo de documento</label><select id="posTipoDocumento"><option value="TICKET">TICKET</option><option value="FACTURA_INTERNA">FACTURA INTERNA</option><option value="FEL">FEL (requiere integraci&#243;n)</option></select></div><div><label>Divisa de pago</label><select id="posMoneda" onchange="cambiarMonedaPagoPos()"></select></div><div><label>Tipo de cambio negociado</label><input id="posTasaNegociada" type="number" min="0.000001" step="any" placeholder="Usar tasa general" oninput="actualizarPago()"><small>Q por 1 unidad de la divisa. Vac&#237;o usa la tasa general; solo aplica a esta operaci&#243;n.</small></div><div><label id="posDescuentoEtiqueta">Descuento Q</label><input id="posDescuento" type="number" min="0" step="0.01" value="0" oninput="renderCarrito()"></div><div id="efectivoBox"><label id="efectivoEtiqueta">Efectivo recibido</label><input id="posEfectivo" type="number" min="0" step="0.01" value="0" oninput="actualizarCambio()"></div><div id="cambioMonedaBox"><label>Dar cambio en</label><select id="posCambioMoneda" onchange="actualizarCambio()"><option value="GTQ">GTQ - Quetzal</option></select></div><div><label>Nota</label><input id="posNota"></div></div>
       <div class="fila" style="margin-top:8px">
         <button class="btnGris" type="button" onclick="toggleNuevoClientePos()">+ Crear nuevo cliente</button>
         <button class="btnGris" type="button" onclick="cargarClientesPos(true)">&#8635; Actualizar clientes</button>
@@ -1495,7 +1495,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.11.04-TASA-PEDIDO-60';
+const VERSION_SISTEMA_UI='2026.11.08-TASA-POS-61';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -3952,13 +3952,31 @@ function divisaActual(codigo){
   return DIVISAS.find(d=>d.codigo===String(codigo||'GTQ').toUpperCase())||{codigo:'GTQ',nombre:'Quetzal',simbolo:'Q',tipoCambio:1};
 }
 
+function cambiarMonedaPagoPos(){
+  if($('posTasaNegociada'))$('posTasaNegociada').value='';
+  actualizarPago();
+}
+function tasaNegociadaPos(){return $('posTasaNegociada')?String($('posTasaNegociada').value).trim():'';}
+function validarTasaPos(){
+  const v=tasaNegociadaPos(),n=Number(v),codigo=$('posMoneda').value;
+  if(v!==''&&(!Number.isFinite(n)||n<=0||(codigo==='GTQ'&&n!==1))){
+    msg('mensajePos','Ingrese una tasa positiva. Para GTQ la tasa es 1.','error');return false;
+  }
+  return true;
+}
+function divisaCobroPos(){
+  const d=divisaActual($('posMoneda').value),v=tasaNegociadaPos();
+  return v!==''?{...d,tipoCambio:Number(v)}:d;
+}
+
 function actualizarPago(){
   const e=$('posMetodo').value==='EFECTIVO';
   $('efectivoBox').classList.toggle('oculto',!e);
   $('cambioMonedaBox').classList.toggle('oculto',!e);
   $('cambioBox').classList.toggle('oculto',!e);
-  const d=divisaActual($('posMoneda').value);
+  const d=divisaCobroPos();
   $('efectivoEtiqueta').textContent='Efectivo recibido '+d.codigo+' ('+d.simbolo+')';
+  if($('posTasaNegociada')){const campo=$('posTasaNegociada');campo.disabled=d.codigo==='GTQ';campo.placeholder='General: '+Number(divisaActual(d.codigo).tipoCambio).toFixed(4);}
   const t=total();
   $('divisaInfo').textContent='1 '+d.codigo+' = Q'+Number(d.tipoCambio).toFixed(4)+' \u00b7 Total: '+d.simbolo+(t.total/d.tipoCambio).toFixed(2);
   llenarCambioMoneda('posCambioMoneda',$('posMoneda').value);
@@ -3967,7 +3985,7 @@ function actualizarPago(){
 
 function actualizarCambio(){
   const t=total();
-  const d=divisaActual($('posMoneda').value);
+  const d=divisaCobroPos();
   const recibido=Number($('posEfectivo').value)||0;
   const cambioGTQ=Math.max(0,recibido*d.tipoCambio-t.total);
   const cm=$('posCambioMoneda').value||'GTQ';
@@ -3977,6 +3995,7 @@ function actualizarCambio(){
 }
 
 function cobrar(){
+  if(!validarTasaPos())return;
   if(!SESION||!['ADMIN','CAJERO'].includes(SESION.rol)){
     return msg(
       'mensajePos',
@@ -3997,7 +4016,7 @@ function cobrar(){
 
   if(!carrito.length) return msg('mensajePos','Carrito vac\u00edo.','error');
   const t=total();
-  const d=divisaActual($('posMoneda').value);
+  const d=divisaCobroPos();
   const ef=Number($('posEfectivo').value)||0;
   if($('posMetodo').value==='EFECTIVO' && ef*d.tipoCambio<t.total) return msg('mensajePos','Efectivo insuficiente.','error');
   if(!confirm('\u00bfCobrar '+Q(t.total)+'?')) return;
@@ -4005,7 +4024,7 @@ function cobrar(){
   api('venta',{
     items:JSON.stringify(carrito.map(x=>({codigo:x.codigo,cantidad:x.cantidad,precioVenta:Number(x.precioVenta??x.precio)||0,precioNivelId:x.precioNivelId||''}))),
     cliente:$('posCliente').value,nit:$('posNit').value,metodo:$('posMetodo').value,
-    moneda:$('posMoneda').value,efectivoDivisa:ef,cambioMoneda:$('posCambioMoneda').value,
+    moneda:$('posMoneda').value,tasaNegociada:tasaNegociadaPos(),efectivoDivisa:ef,cambioMoneda:$('posCambioMoneda').value,
     descuento:t.desc,nota:$('posNota').value,vendedor:$('posVendedor').value,tipoDocumento:$('posTipoDocumento').value
   },r=>{
     if(!r.ok) return msg('mensajePos',r.error,'error');
@@ -7429,6 +7448,7 @@ function datosActualesPedidoPos(){
     metodo:$('posMetodo') ? $('posMetodo').value : 'EFECTIVO',
     tipoDocumento:$('posTipoDocumento') ? $('posTipoDocumento').value : 'TICKET',
     moneda:$('posMoneda') ? $('posMoneda').value : 'GTQ',
+    tasaNegociada:tasaNegociadaPos(),
     descuento:$('posDescuento') ? $('posDescuento').value : '0',
     efectivo:$('posEfectivo') ? $('posEfectivo').value : '0',
     cambioMoneda:$('posCambioMoneda') ? $('posCambioMoneda').value : 'GTQ',
@@ -7489,6 +7509,7 @@ function autoGuardarBorradorPos(){
 }
 
 function limpiarFormularioPedidoPos(){
+  if($('posTasaNegociada'))$('posTasaNegociada').value='';
   carrito=[];
   renderCarrito();
 
@@ -7593,6 +7614,7 @@ function restaurarPedidoEsperaPos(id){
     }
   });
 
+  if($('posTasaNegociada'))$('posTasaNegociada').value=b.tasaNegociada??'';
   renderCarrito();
   actualizarPago();
   actualizarInfoPedidoActualPos();
@@ -7751,7 +7773,7 @@ function activarAutoguardadoPedidoPos(){
   const ids=[
     'posCliente','posNit','posTelefono','posWhatsapp','posDireccion',
     'posVendedor','posMetodo','posTipoDocumento','posMoneda',
-    'posDescuento','posEfectivo','posCambioMoneda','posNota'
+    'posDescuento','posEfectivo','posCambioMoneda','posNota','posTasaNegociada'
   ];
 
   ids.forEach(id=>{
@@ -7772,6 +7794,7 @@ function activarAutoguardadoPedidoPos(){
 
 
 function limpiarPosDespues(){
+  if($('posTasaNegociada'))$('posTasaNegociada').value='';
   carrito=[]; renderCarrito();
   BORRADOR_POS_ACTUAL_ID='';
   CLIENTE_POS_ID='';
@@ -7881,6 +7904,7 @@ function comprobanteAnticipoHTML(p,id){
 }
 
 function guardarReservaPos(){
+  if(!validarTasaPos())return;
   if(!carrito.length) return msg('mensajePos','Carrito vac\u00edo.','error');
   const cliente=$('posCliente').value.trim();
   if(!cliente) return msg('mensajePos','Debe indicar el cliente.','error');
@@ -7897,6 +7921,7 @@ function guardarReservaPos(){
   }
 
   api('reservarpedido',{
+    moneda:$('posMoneda').value,tasaNegociada:tasaNegociadaPos(),
     items:JSON.stringify(carrito.map(x=>({codigo:x.codigo,cantidad:x.cantidad,precioVenta:Number(x.precioVenta??x.precio)||0,precioNivelId:x.precioNivelId||''}))),
     cliente,nit:$('posNit').value,descuento:t.desc,nota:$('posNota').value,
     vendedor:$('posVendedor').value,duracion,unidadDuracion:$('resUnidad').value,
@@ -7916,9 +7941,11 @@ function guardarReservaPos(){
 }
 
 function guardarPedido(){
+  if(!validarTasaPos())return;
   if(!carrito.length) return msg('mensajePos','Carrito vac\u00edo.','error');
   const t=total();
   api('guardarpedido',{
+    moneda:$('posMoneda').value,tasaNegociada:tasaNegociadaPos(),
     items:JSON.stringify(carrito.map(x=>({codigo:x.codigo,cantidad:x.cantidad,precioVenta:Number(x.precioVenta??x.precio)||0,precioNivelId:x.precioNivelId||''}))),
     cliente:$('posCliente').value,nit:$('posNit').value,descuento:t.desc,nota:$('posNota').value,vendedor:$('posVendedor').value
   },r=>{
@@ -12625,7 +12652,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.11.04-TASA-PEDIDO-60';
+  const APP_VERSION='2026.11.08-TASA-POS-61';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
