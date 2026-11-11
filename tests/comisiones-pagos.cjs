@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm'),a=require('assert'),crypto=require('crypto');
-const gs=fs.readFileSync(process.argv[2]||'entrega/Code_Comisiones_Pagos_62.gs','utf8'),html=fs.readFileSync(process.argv[3]||'entrega/index.html','utf8');
+const gs=fs.readFileSync(process.argv[2]||'entrega/Code_Salidas_Seguras_63.gs','utf8'),html=fs.readFileSync(process.argv[3]||'entrega/index.html','utf8');
 let role='ADMIN',usuario='admin',cashOpen=true,failAfter=0,writes=0;
 function sh(rows=[]){return {rows,getLastRow(){return this.rows.length},getLastColumn(){return Math.max(11,...this.rows.map(r=>r.length))},getMaxRows:()=>1000,getDataRange(){return this.getRange(1,1,this.rows.length,this.getLastColumn())},appendRow(r){this.rows.push(r.slice())},getRange(r,c,n=1,m=1){return {getValues:()=>Array.from({length:n},(_,i)=>Array.from({length:m},(_,j)=>this.rows[r+i-1]?.[c+j-1]??'')),getValue:()=>this.rows[r-1]?.[c-1]??'',setValues:v=>{v.forEach((f,i)=>{this.rows[r+i-1]??=[];f.forEach((x,j)=>this.rows[r+i-1][c+j-1]=x)})},setValue:v=>{if(failAfter&&++writes===failAfter)throw Error('Interrupcion');this.rows[r-1]??=[];this.rows[r-1][c-1]=v;}}}}}
 const row=(venta,vendedor='ana',suc='La Paz',monto=10)=>[new Date('2026-11-11T12:00:00Z'),venta,'',vendedor,suc,100,'PORCENTAJE',10,monto,'PENDIENTE','cajero'];
