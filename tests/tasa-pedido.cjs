@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm'),a=require('assert');
-const s=fs.readFileSync(process.argv[2]||'entrega/Code_Comisiones_Pagos_62.gs','utf8');
+const s=fs.readFileSync(process.argv[2]||'entrega/Code_Salidas_Seguras_63.gs','utf8');
 let rows=[['Pedido','Moneda','Tasa','Simbolo','Fecha','Usuario']],estado='PENDIENTE',usuario='ADMIN',sucursal='La Paz',general=0.43,locked=false;
 const sheet={getLastRow:()=>rows.length,getRange:(r,c,n=1,m=1)=>({getValues:()=>rows.slice(r-1,r-1+n).map(x=>x.slice(c-1,c-1+m)),setValues:v=>{a(locked);v.forEach((x,i)=>rows[r-1+i]=x);}}),appendRow:r=>rows.push(r)};
 const c={SpreadsheetApp:{getActiveSpreadsheet:()=>({getSheetByName:()=>sheet}),flush(){}},LockService:{getDocumentLock:()=>({waitLock(){locked=true},releaseLock(){locked=false}})},auth_:()=>({rol:usuario,usuario:'u'}),sucursalUso_:()=>sucursal,localizarPedido_:()=>({valores:['','PED','','','La Paz','',''+estado]}),puedeVerPedido_:()=>usuario==='ADMIN',obtenerDivisa_:codigo=>({codigo,tipoCambio:general,simbolo:'M$'}),norm_:x=>String(x).toUpperCase()};vm.createContext(c);
