@@ -1139,7 +1139,14 @@ document.addEventListener('click',e=>{
   </div>
 
   <div id="vistaComisiones" class="vistaApp oculto">
-    <div class="card"><h3 style="margin-top:0">Comisiones de vendedores</h3><div class="grid2"><div class="dato"><span>Total vendido</span><b id="comTotalVentas">Q0.00</b></div><div class="dato"><span>Comisi&#243;n acumulada</span><b id="comTotal">Q0.00</b></div></div><div id="listaComisiones" style="overflow:auto;margin-top:12px"></div></div>
+    <div class="card"><h3 style="margin-top:0">Comisiones de vendedores</h3>
+<div class="grid2"><div><label>Vendedor</label><select id="comVendedor" onchange="cargarComisiones()"><option value="">Todos los vendedores</option></select></div><div><label>Estado</label><select id="comEstado" onchange="cargarComisiones()"><option value="">Todos</option><option value="PENDIENTE">Pendientes</option><option value="PAGADA">Pagadas</option></select></div></div>
+<button type="button" class="btnGris" onclick="cargarComisiones()">Actualizar</button>
+<div class="grid2"><div class="dato"><span>Total vendido</span><b id="comTotalVentas">Q0.00</b></div><div class="dato"><span>Comisi&#243;n acumulada</span><b id="comTotal">Q0.00</b></div><div class="dato"><span>Pendiente</span><b id="comPendiente">Q0.00</b></div><div class="dato"><span>Pagada</span><b id="comPagada">Q0.00</b></div></div>
+<div id="comAviso" role="status"></div><div id="listaComisiones" style="overflow:auto;margin-top:12px"></div>
+<div id="comPagoBox" class="oculto"><p>Seleccione un vendedor y marque hasta 20 comisiones pendientes por pago.</p><label>M&#233;todo de pago</label><select id="comMetodo"><option value="EFECTIVO">EFECTIVO (retiro de caja)</option><option value="TRANSFERENCIA">TRANSFERENCIA (sin retiro de efectivo)</option></select><label>Referencia / nota</label><input id="comNota" maxlength="200" placeholder="Comprobante de transferencia u observaci&#243;n"><div id="comSeleccion" class="sub"></div><button id="comPagar" type="button" class="btnVerde" onclick="pagarComisionesUI()">Registrar pago de seleccionadas</button></div>
+<button id="comReanudar" class="btnAzul oculto" type="button" onclick="pagarComisionesUI(true)">Consultar / reanudar el mismo pago</button>
+<h4>Historial de pagos</h4><div id="comHistorial" style="overflow:auto"></div></div>
   </div>
 
 
@@ -1495,7 +1502,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.11.08-TASA-POS-61';
+const VERSION_SISTEMA_UI='2026.11.11-COMISIONES-PAGOS-62';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -8200,12 +8207,54 @@ function cancelarPedidoUI(){
   });
 }
 
+let COMISIONES_VISTA=[],COMISIONES_CARGA=0,COMISIONES_PAGANDO=false,COMISIONES_REANUDAR=null;
+function clavePagoComisiones(){return 'adelaida-pago-comisiones-'+SESION.usuario+'-'+SUCURSAL;}
+function seleccionComisiones(){return COMISIONES_VISTA.filter((x,i)=>x.estado==='PENDIENTE'&&$('comCheck'+i)&&$('comCheck'+i).checked);}
+function actualizarSeleccionComisiones(){
+  const items=seleccionComisiones(),monto=items.reduce((s,x)=>s+Math.round(Number(x.comision)*100),0)/100;
+  $('comSeleccion').textContent=items.length+' comisiones seleccionadas: '+Q(monto);
+  $('comPagar').disabled=COMISIONES_PAGANDO||!$('comVendedor').value||!items.length||!!COMISIONES_REANUDAR;
+}
+function marcarComisiones(valor){let n=0;COMISIONES_VISTA.forEach((x,i)=>{if($('comCheck'+i))$('comCheck'+i).checked=valor&&n++<20;});actualizarSeleccionComisiones();}
 function cargarComisiones(){
-  if(!SESION||!['ADMIN','VENDEDOR'].includes(SESION.rol)) return;
-  api('comisiones',{},r=>{
-    if(!r.ok) return;
-    $('comTotalVentas').textContent=Q(r.totalVentas); $('comTotal').textContent=Q(r.totalComision);
-    $('listaComisiones').innerHTML='<table class="tabla"><thead><tr><th>Fecha</th><th>Venta</th><th>Vendedor</th><th>Total</th><th>Comisi\u00f3n</th></tr></thead><tbody>'+(r.registros||[]).map(x=>'<tr><td>'+esc(x.fecha)+'</td><td>'+esc(x.numeroVenta)+'</td><td>'+esc(x.vendedor)+'</td><td>'+Q(x.totalVenta)+'</td><td><b>'+Q(x.comision)+'</b></td></tr>').join('')+'</tbody></table>';
+  if(!SESION||!['ADMIN','VENDEDOR'].includes(SESION.rol)||COMISIONES_PAGANDO)return;
+  const carga=++COMISIONES_CARGA,vendedor=$('comVendedor').value,estado=$('comEstado').value,sucursal=SUCURSAL;
+  api('comisiones',{vendedor,estado},r=>{
+    if(carga!==COMISIONES_CARGA||sucursal!==SUCURSAL)return;
+    if(!r||!r.ok)return msg('comAviso',r&&r.error||'No se pudieron cargar comisiones.','error');
+    const sel=$('comVendedor');sel.innerHTML='';sel.add(new Option('Todos los vendedores',''));
+    (r.vendedores||[]).forEach(v=>sel.add(new Option(v,v)));sel.value=SESION.rol==='VENDEDOR'?((r.vendedores||[])[0]||SESION.usuario):vendedor;sel.disabled=SESION.rol!=='ADMIN';
+    COMISIONES_VISTA=r.registros||[];
+    $('comTotalVentas').textContent=Q(r.totalVentas);$('comTotal').textContent=Q(r.totalComision);$('comPendiente').textContent=Q(r.totalPendiente);$('comPagada').textContent=Q(r.totalPagada);
+    const admin=SESION.rol==='ADMIN',seleccionar=admin&&!!sel.value;
+    $('comPagoBox').classList.toggle('oculto',!admin);
+    $('listaComisiones').innerHTML=(r.hayMas?'<p>Se muestran las 200 primeras coincidencias. Los totales incluyen todas. Filtre por vendedor/estado; al pagar este bloque, seleccione Pendientes para ver las siguientes.</p>':'')+'<table class="tabla"><thead><tr>'+(seleccionar?'<th><input type="checkbox" aria-label="Marcar hasta 20 pendientes visibles" onchange="marcarComisiones(this.checked)"></th>':'')+'<th>Fecha</th><th>Venta</th><th>Vendedor</th><th>Total</th><th>Comisi\u00f3n</th><th>Estado</th><th>Pago</th></tr></thead><tbody>'+COMISIONES_VISTA.map((x,i)=>'<tr>'+(seleccionar?'<td>'+(x.estado==='PENDIENTE'&&x.comision>0?'<input type="checkbox" id="comCheck'+i+'" aria-label="Pagar comision '+esc(x.numeroVenta)+'" onchange="actualizarSeleccionComisiones()">':'')+'</td>':'')+'<td>'+esc(x.fecha)+'</td><td>'+esc(x.numeroVenta)+'</td><td>'+esc(x.vendedor)+'</td><td>'+Q(x.totalVenta)+'</td><td><b>'+Q(x.comision)+'</b></td><td>'+esc(x.estado)+'</td><td>'+esc(x.fechaPago||'')+' '+esc(x.pagoId||'')+'</td></tr>').join('')+'</tbody></table>';
+    $('comHistorial').innerHTML='<table class="tabla"><thead><tr><th>Fecha</th><th>Comprobante</th><th>Vendedor</th><th>Monto</th><th>Metodo</th><th>Registro</th><th>Nota</th></tr></thead><tbody>'+(r.pagos||[]).map(p=>'<tr><td>'+esc(p.fecha)+'</td><td>'+esc(p.pagoId)+'</td><td>'+esc(p.vendedor)+'</td><td>'+Q(p.monto)+'</td><td>'+esc(p.metodo)+'</td><td>'+esc(p.usuario)+'</td><td>'+esc(p.nota)+'</td></tr>').join('')+'</tbody></table>';
+    COMISIONES_REANUDAR=null;
+    if(admin){try{COMISIONES_REANUDAR=JSON.parse(localStorage.getItem(clavePagoComisiones())||'null');}catch(e){}if(!COMISIONES_REANUDAR&&r.reanudables&&r.reanudables.length)COMISIONES_REANUDAR=r.reanudables[0];}
+    $('comReanudar').classList.toggle('oculto',!COMISIONES_REANUDAR);actualizarSeleccionComisiones();
+  });
+}
+function pagarComisionesUI(reanudar=false){
+  if(COMISIONES_PAGANDO||!SESION||SESION.rol!=='ADMIN')return;
+  let p=COMISIONES_REANUDAR;
+  if(!p){
+    const seleccion=seleccionComisiones();if(!seleccion.length||!$('comVendedor').value)return msg('comAviso','Seleccione un vendedor y sus comisiones pendientes.','error');
+    if(seleccion.length>20)return msg('comAviso','Seleccione hasta 20 comisiones por pago.','error');
+    p={idSolicitud:'PAGCOM-'+(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2)),vendedor:$('comVendedor').value,items:seleccion.map(x=>({fila:x.fila,firma:x.firma})),montoEsperado:seleccion.reduce((s,x)=>s+Math.round(Number(x.comision)*100),0)/100,metodo:$('comMetodo').value,nota:$('comNota').value,sucursal:SUCURSAL};
+    if(!confirm('Registrar pago de '+Q(p.montoEsperado)+' a '+p.vendedor+' por '+p.metodo+'?'+(p.metodo==='EFECTIVO'?' Se retirara de su caja abierta.':'')))return;
+  }
+  if(p.sucursal!==SUCURSAL)return msg('comAviso','Cambie a '+p.sucursal+' para consultar este pago.','error');
+  const key=clavePagoComisiones();try{localStorage.setItem(key,JSON.stringify(p));}catch(e){}
+  COMISIONES_REANUDAR=p;COMISIONES_PAGANDO=true;actualizarSeleccionComisiones();$('comReanudar').disabled=true;msg('comAviso','Registrando / consultando pago. Espere la confirmacion.','info');
+  api('pagarcomisiones',{...p,items:JSON.stringify(p.items)},r=>{
+    COMISIONES_PAGANDO=false;$('comReanudar').disabled=false;
+    if(!r||!r.ok){
+      if(r&&r.sinCambios){try{localStorage.removeItem(key);}catch(e){}COMISIONES_REANUDAR=null;}
+      $('comReanudar').classList.toggle('oculto',!COMISIONES_REANUDAR);actualizarSeleccionComisiones();
+      return msg('comAviso',(r&&r.error||'No se recibio confirmacion.')+(COMISIONES_REANUDAR?' Use Consultar / reanudar el mismo pago; no registre otro.':''),'error');
+    }
+    try{localStorage.removeItem(key);}catch(e){}COMISIONES_REANUDAR=null;$('comReanudar').classList.add('oculto');$('comNota').value='';msg('comAviso','Pago confirmado: '+r.pagoId+' - '+Q(r.monto)+(r.yaProcesado?' (ya registrado, sin duplicar)':''),'ok');cargarComisiones();
   });
 }
 
@@ -12652,7 +12701,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.11.08-TASA-POS-61';
+  const APP_VERSION='2026.11.11-COMISIONES-PAGOS-62';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
