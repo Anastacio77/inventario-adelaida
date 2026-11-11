@@ -391,9 +391,10 @@ document.addEventListener('click',e=>{
         <label>Motivo / nota</label>
         <textarea id="nota" placeholder="Ej. merma, da&#241;o, correcci&#243;n autorizada..."></textarea>
 
-        <button class="btnRojo w100" style="margin-top:12px" onclick="mover('SALIDA')">
+        <button class="btnRojo w100" style="margin-top:12px" id="btnSalidaInventario" onclick="mover('SALIDA')">
           &#8722; Registrar ajuste de salida
         </button>
+        <div id="salidaEstado" role="status" aria-live="polite"></div>
       </div>
     </div>
     <div id="inventarioCurvasCard" class="card">
@@ -427,9 +428,9 @@ document.addEventListener('click',e=>{
         Aqu&#237; solo se permite un ajuste de salida.
       </div>
 
-      <button class="btnRojo w100" style="margin-top:10px" onclick="moverCurvaUI('SALIDA')">
+      <button class="btnRojo w100" style="margin-top:10px" id="btnSalidaCurva" onclick="moverCurvaUI('SALIDA')">
         &#8722; Registrar salida por curva
-      </button>
+      </button><div id="salidaCurvaEstado" role="status" aria-live="polite"></div>
 
       <div id="mensajeCurvas"></div>
     </div>
@@ -1502,7 +1503,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.11.11-COMISIONES-PAGOS-62';
+const VERSION_SISTEMA_UI='2026.11.11-SALIDAS-SEGURAS-63';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -1806,6 +1807,7 @@ function verOtrosModulosPOS(){
  const menu=$('tabs');if(menu)menu.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function vista(v){
+  if(v==='inventario'&&typeof avisosSalidaPendiente==='function')avisosSalidaPendiente();
   if(v==='traslados')recuperarListaTraslado();
   if(v==='nuevo'&&$('masivoPanel'))$('vistaNuevo').prepend($('masivoPanel'));
   ocultarVistas();
@@ -5186,61 +5188,51 @@ function consultar(cod){
   );
 }
 
-function mover(tipo){
-  if(!productoActual){
-    return;
-  }
-
-  if(String(tipo||'').toUpperCase()==='ENTRADA'){
-    return msg(
-      'mensaje',
-      'Las entradas deben registrarse desde Compras y recibirse desde la orden de compra.',
-      'error'
-    );
-  }
-
-  api(
-    'movimiento',
-    {
-      codigo:
-        productoActual.codigo,
-      tipo,
-      cantidad:
-        Number(
-          $('cantidad').value
-        ),
-      lote:
-        $('movLote').value,
-      nota:
-        $('nota').value
-    },
-    r=>{
-      if(!r.ok){
-        return msg(
-          'mensaje',
-          r.error,
-          'error'
-        );
-      }
-
-      productoActual=
-        r.producto;
-
-      $('pExistencia').textContent=
-        r.producto.existencia;
-
-      $('pExistenciaTotal').textContent=
-        r.producto.existenciaTotal;
-
-      cargarResumen();
-
-      msg(
-        'mensaje',
-        r.mensaje,
-        'ok'
-      );
+let SALIDA_ENVIANDO=false;
+function claveSalida(kind){return 'adelaida-salida-'+SESION.usuario+'-'+SUCURSAL+'-'+kind;}
+function pendienteSalida(kind){try{return JSON.parse(localStorage.getItem(claveSalida(kind))||'null');}catch(e){return null;}}
+function avisosSalidaPendiente(){
+  if(!SESION||SALIDA_ENVIANDO)return;
+  ['UNIDAD','CURVA'].forEach(kind=>{const p=pendienteSalida(kind);if(!p)return;const id=kind==='UNIDAD'?'salidaEstado':'salidaCurvaEstado',b=$(kind==='UNIDAD'?'btnSalidaInventario':'btnSalidaCurva');if(b)b.textContent='Consultar la misma salida';msg(id,'Hay una salida pendiente de confirmar: '+p.idSolicitud+'. Consulte la misma solicitud antes de registrar otra.','info');});
+}
+function enviarSalidaSegura(kind,p){
+  if(SALIDA_ENVIANDO)return;
+  const key=claveSalida(kind),pendiente=pendienteSalida(kind);
+  if(!pendiente&&pendienteSalida(kind==='UNIDAD'?'CURVA':'UNIDAD'))return msg(kind==='UNIDAD'?'salidaEstado':'salidaCurvaEstado','Hay otra salida pendiente de confirmar. Consulte primero esa misma solicitud.','error');
+  p=pendiente||p;if(!p)return;
+  if(!p.idSolicitud)p.idSolicitud='SAL-'+(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2));
+  p.sucursal=p.sucursal||SUCURSAL;
+  try{localStorage.setItem(key,JSON.stringify(p));}catch(e){return msg(kind==='UNIDAD'?'salidaEstado':'salidaCurvaEstado','No se pudo guardar el identificador de salida. Libere almacenamiento e intente otra vez.','error');}
+  SALIDA_ENVIANDO=true;
+  const id=kind==='UNIDAD'?'salidaEstado':'salidaCurvaEstado',boton=$(kind==='UNIDAD'?'btnSalidaInventario':'btnSalidaCurva'),suc=p.sucursal;
+  ['btnSalidaInventario','btnSalidaCurva'].forEach(b=>{if($(b))$(b).disabled=true;});
+  boton.textContent='Procesando salida...';msg(id,'Procesando salida. Espere la confirmacion; no vuelva a registrarla.','info');
+  api(kind==='UNIDAD'?'movimiento':'movimientocurva',p,r=>{
+    SALIDA_ENVIANDO=false;['btnSalidaInventario','btnSalidaCurva'].forEach(b=>{if($(b))$(b).disabled=false;});
+    if(!r||!r.ok){
+      if(r&&r.sinCambios){try{localStorage.removeItem(key);}catch(e){}boton.textContent=kind==='UNIDAD'?'Registrar ajuste de salida':'Registrar salida por curva';}
+      else boton.textContent='Consultar la misma salida';
+      return msg(id,(r&&r.error||'No se recibio confirmacion de la salida.')+(!(r&&r.sinCambios)?' Use Consultar la misma salida. Se conserva el identificador para evitar duplicados.':''),'error');
     }
-  );
+    try{localStorage.removeItem(key);}catch(e){}
+    boton.textContent=kind==='UNIDAD'?'Registrar ajuste de salida':'Registrar salida por curva';
+    msg(id,'Salida completada. '+(r.operacion||p.idSolicitud)+(r.yaProcesado?' (ya estaba registrada; no se duplico)':''),'ok');
+    if(suc===SUCURSAL){
+      if(kind==='UNIDAD'&&productoActual&&productoActual.codigo===p.codigo){productoActual=r.producto;$('pExistencia').textContent=r.producto.existencia;$('pExistenciaTotal').textContent=r.producto.existenciaTotal;$('cantidad').value='';}
+      if(kind==='CURVA'){$('invCurvaSelect').value='';setTimeout(actualizarCorridasCurvaUI,300);}
+      cargarResumen();CATALOGO_POS=[];CATALOGO_POS_TS=0;precargarCatalogoPos(true);
+    }
+  });
+}
+
+function mover(tipo){
+  if(SALIDA_ENVIANDO)return;
+  if(pendienteSalida('UNIDAD'))return enviarSalidaSegura('UNIDAD');
+  if(!productoActual)return;
+  if(tipo!=='SALIDA')return msg('salidaEstado','Las entradas se registran desde Compras.','error');
+  const cantidad=Number($('cantidad').value);
+  if(!Number.isSafeInteger(cantidad)||cantidad<=0)return msg('salidaEstado','Ingrese una cantidad entera positiva.','error');
+  enviarSalidaSegura('UNIDAD',{codigo:productoActual.codigo,tipo,cantidad,lote:$('movLote').value,nota:$('nota').value});
 }
 
 function codigoAuto(){
@@ -12507,6 +12499,8 @@ function actualizarCorridasCurvaUI(){
 }
 
 function moverCurvaUI(tipo){
+  if(SALIDA_ENVIANDO)return;
+  if(pendienteSalida('CURVA'))return enviarSalidaSegura('CURVA');
   if(String(tipo||'').toUpperCase()==='ENTRADA'){
     return msg(
       'mensajeCurvas',
@@ -12576,36 +12570,7 @@ function moverCurvaUI(tipo){
     return;
   }
 
-  api(
-    'movimientocurva',
-    {
-      tipo,
-      cajas,
-      nota:$('invCurvaNota').value,
-      items:JSON.stringify(items)
-    },
-    r=>{
-      if(!r||!r.ok){
-        return msg(
-          'mensajeCurvas',
-          (r&&r.error)||'No se pudo registrar la curva.',
-          'error'
-        );
-      }
-
-      msg(
-        'mensajeCurvas',
-        r.mensaje+' \u00b7 Total: '+r.total,
-        'ok'
-      );
-
-      cargarResumen();
-      CATALOGO_POS=[];
-      CATALOGO_POS_TS=0;
-      precargarCatalogoPos(true);
-      setTimeout(actualizarCorridasCurvaUI,300);
-    }
-  );
+  enviarSalidaSegura('CURVA',{tipo,cajas,nota:$('invCurvaNota').value,items:JSON.stringify(items)});
 }
 
 function cargarReportes(){
@@ -12701,7 +12666,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.11.11-COMISIONES-PAGOS-62';
+  const APP_VERSION='2026.11.11-SALIDAS-SEGURAS-63';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
