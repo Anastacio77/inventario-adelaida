@@ -884,7 +884,7 @@ document.addEventListener('click',e=>{
       <label>Nota</label>
       <textarea id="trasNota"></textarea>
 
-      <button type="button" onclick="agregarProductoTraslado()">Agregar producto al traslado</button><div id="trasListaProductos"></div><div id="trasResumenCantidades" class="mensaje info" role="status" aria-live="polite">Referencias: 0 &middot; Total pares / unidades: 0</div><button id="btnDespacharTraslado" class="btnAzul w100" style="margin-top:12px" onclick="hacerTraslado()">Despachar traslado</button>
+      <button type="button" onclick="agregarProductoTraslado()">Agregar producto al traslado</button><div id="trasListaProductos"></div><div id="trasResumenCantidades" class="mensaje info" role="status" aria-live="polite">Referencias: 0 &middot; Total pares / unidades: 0</div><button id="btnConsultarDespacho" type="button" class="btnGris w100" hidden onclick="consultarDespachoPendiente()">Consultar despacho pendiente (sin reenviar)</button><button id="btnDespacharTraslado" class="btnAzul w100" style="margin-top:12px" onclick="hacerTraslado()">Despachar traslado</button>
 
       <div id="mensajeTraslado"></div>
       <button id="btnImprimirUltimoTraslado" class="btnNegro w100 oculto" type="button" style="margin-top:10px" onclick="imprimirUltimoTraslado()">&#128424; Imprimir &#250;ltimo traslado</button>
@@ -1503,7 +1503,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.11.14-TOTALES-TRASLADO-64';
+const VERSION_SISTEMA_UI='2026.11.14-LIMPIEZA-TRASLADO-65';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -6090,9 +6090,10 @@ function imprimirUltimoTraslado(){
 let TRAS_PRODUCTOS=[];
 function claveListaTraslado(){return 'adelaida-traslado-multiple-'+TOKEN.slice(0,16)+'-'+SUCURSAL;}
 function guardarListaTraslado(){try{localStorage.setItem(claveListaTraslado(),JSON.stringify({items:TRAS_PRODUCTOS,id:TRASLADO_SOLICITUD_ID,destino:$('trasDestino').value,nota:$('trasNota').value}));}catch(e){}}
-function recuperarListaTraslado(){if(TRASLADO_ENVIANDO||TRAS_PRODUCTOS.length)return;try{const d=JSON.parse(localStorage.getItem(claveListaTraslado())||'null');if(!d)return;TRAS_PRODUCTOS=d.items||[];TRASLADO_SOLICITUD_ID=d.id||'';$('trasDestino').value=d.destino||'';$('trasNota').value=d.nota||'';if(TRASLADO_SOLICITUD_ID)['trasDestino','trasNota','trasCodigo','trasCantidad','trasProductoSelect'].forEach(id=>$(id).disabled=true);renderProductosTraslado();}catch(e){}}
+function recuperarListaTraslado(){if(TRASLADO_ENVIANDO||TRAS_PRODUCTOS.length)return;try{const d=JSON.parse(localStorage.getItem(claveListaTraslado())||'null');if(!d)return;TRAS_PRODUCTOS=d.items||[];TRASLADO_SOLICITUD_ID=d.id||'';$('trasDestino').value=d.destino||'';$('trasNota').value=d.nota||'';if(TRASLADO_SOLICITUD_ID)['trasDestino','trasNota','trasCodigo','trasCantidad','trasProductoSelect'].forEach(id=>$(id).disabled=true);renderProductosTraslado();if(TRASLADO_SOLICITUD_ID)consultarDespachoPendiente();}catch(e){}}
 
 function renderProductosTraslado(){
+ if($('btnConsultarDespacho'))$('btnConsultarDespacho').hidden=!TRASLADO_SOLICITUD_ID;
  const resumen=$('trasResumenCantidades');if(resumen)resumen.textContent='Referencias: '+TRAS_PRODUCTOS.length+' \u00b7 Total pares / unidades: '+TRAS_PRODUCTOS.reduce((s,x)=>s+(Number.isSafeInteger(Number(x.cantidad))&&Number(x.cantidad)>0?Number(x.cantidad):0),0);
  guardarListaTraslado();
  $('trasListaProductos').innerHTML=TRAS_PRODUCTOS.length?'<div style="overflow-x:auto"><table><thead><tr><th>Producto</th><th>Existencia en origen</th><th>Cantidad</th><th></th></tr></thead><tbody>'+TRAS_PRODUCTOS.map((x,i)=>'<tr><td>'+esc([x.marca,x.modelo,x.color,x.talla,x.codigo].filter(Boolean).join(' / '))+'</td><td style="text-align:center;font-weight:700">'+esc(x.existencia==null?'-':x.existencia)+'</td><td><input style="min-width:70px;width:90px;max-width:100%" type="number" min="1" value="'+x.cantidad+'" '+(TRASLADO_ENVIANDO||TRASLADO_SOLICITUD_ID?'disabled':'')+' onchange="editarCantidadTraslado('+i+',this.value)"></td><td><button type="button" '+(TRASLADO_ENVIANDO||TRASLADO_SOLICITUD_ID||!Number.isSafeInteger(Number(x.existencia))||Number(x.existencia)<=0?'disabled':'')+' onclick="trasladarTodoFila('+i+')">Trasladar todo</button> <button '+(TRASLADO_ENVIANDO||TRASLADO_SOLICITUD_ID?'disabled':'')+' onclick="quitarProductoTraslado('+i+')">Quitar</button></td></tr>').join('')+'</tbody></table></div>':'';
@@ -6128,19 +6129,50 @@ function trasladarTodoFila(i){
  if(!Number.isSafeInteger(cantidad)||cantidad<=0)return msg('mensajeTraslado','La referencia no tiene existencia disponible.','error');
  editarCantidadTraslado(i,cantidad);
 }
+let TRASLADO_CONSULTANDO=false;
+function contextoDespachoTraslado(){return {id:TRASLADO_SOLICITUD_ID,key:claveListaTraslado(),origen:SUCURSAL,destino:$('trasDestino').value,nota:$('trasNota').value,items:TRAS_PRODUCTOS.map(x=>({...x}))};}
+function finalizarDespachoTraslado(r,c){
+  if(!r||!r.ok||!r.numeroTraslado)return false;
+  // Only clear the confirmed draft, never a new list or another branch's form.
+  if(c.key!==claveListaTraslado()||TRASLADO_SOLICITUD_ID!==c.id){try{const d=JSON.parse(localStorage.getItem(c.key)||'null');if(d&&d.id===c.id)localStorage.removeItem(c.key);}catch(e){}return false;}
+  try{localStorage.removeItem(c.key);}catch(e){}
+  ULTIMO_TRASLADO_IMPRESION={...r,items:c.items,nota:c.nota,fecha:new Date().toLocaleString(),usuario:SESION.nombre||SESION.usuario};
+  TRAS_PRODUCTOS=[];TRASLADO_SOLICITUD_ID='';TRASLADO_ENVIANDO=false;
+  $('trasListaProductos').innerHTML='';
+  ['trasDestino','trasNota','trasCodigo','trasProductoSelect'].forEach(id=>{$(id).value='';$(id).disabled=false;});
+  $('trasCantidad').value=1;$('trasCantidad').disabled=false;
+  if($('sugerenciasTras')){$('sugerenciasTras').innerHTML='';$('sugerenciasTras').classList.add('oculto');}
+  $('btnDespacharTraslado').disabled=false;$('btnDespacharTraslado').textContent='Despachar traslado';
+  renderProductosTraslado();$('btnImprimirUltimoTraslado').classList.remove('oculto');
+  msg('mensajeTraslado','Traslado '+r.numeroTraslado+' confirmado: '+c.items.length+' referencias, '+c.items.reduce((n,x)=>n+Number(x.cantidad),0)+' pares / unidades. Listo para otro traslado. '+(r.estado==='RECIBIDO'?'Recibido en destino.':'Pendiente de recepcion en destino.'),'ok');
+  PRODUCTOS_TRASLADO_TS=0;cargarResumen();cargarProductosTrasladoOrigen(true);cargarTraslados();return true;
+}
+function consultarDespachoPendiente(contexto){
+  if(TRASLADO_CONSULTANDO||TRASLADO_ENVIANDO||!TRASLADO_SOLICITUD_ID)return;
+  const c=contexto||contextoDespachoTraslado();if(c.key!==claveListaTraslado()||c.id!==TRASLADO_SOLICITUD_ID)return;
+  c.consultas=(c.consultas||0)+1;TRASLADO_CONSULTANDO=true;const boton=$('btnConsultarDespacho');if(boton)boton.disabled=true;
+  msg('mensajeTraslado','Consultando si el despacho se completo. No se enviara otro traslado.','info');
+  api('consultardespachotraslado',{origen:c.origen,destino:c.destino,idSolicitud:c.id,items:JSON.stringify(c.items.map(x=>({codigo:x.codigo,cantidad:x.cantidad})))},r=>{
+    TRASLADO_CONSULTANDO=false;if(boton)boton.disabled=false;
+    if(c.key!==claveListaTraslado()||c.id!==TRASLADO_SOLICITUD_ID)return;
+    if(r&&r.ok&&r.confirmado)return finalizarDespachoTraslado(r,c);
+    if(r&&r.seguirConsultando&&c.consultas<6)setTimeout(()=>consultarDespachoPendiente(c),5000);
+    renderProductosTraslado();msg('mensajeTraslado',(r&&r.error)||(r&&r.mensaje)||'No se pudo confirmar el despacho. Se conserva la lista y su identificador. Use Consultar despacho pendiente.','error');
+  });
+}
+
 function hacerTraslado(){
- if(TRASLADO_ENVIANDO)return;
+ if(TRASLADO_ENVIANDO||TRASLADO_CONSULTANDO)return;
  if(!TRAS_PRODUCTOS.length)agregarProductoTraslado();if(!TRAS_PRODUCTOS.length)return;
  if(TRAS_PRODUCTOS[0].origen!==SUCURSAL)return msg('mensajeTraslado','Vuelva a la sucursal origen.','error');
  if(!TRASLADO_SOLICITUD_ID)TRASLADO_SOLICITUD_ID='TSOL-'+Date.now()+'-'+Math.random().toString(36).slice(2,10);
- const items=TRAS_PRODUCTOS.map(x=>({...x})),destino=$('trasDestino').value,nota=$('trasNota').value;
+ const items=TRAS_PRODUCTOS.map(x=>({...x})),destino=$('trasDestino').value,nota=$('trasNota').value,contexto=contextoDespachoTraslado();
  guardarListaTraslado();TRASLADO_ENVIANDO=true;['trasDestino','trasNota','trasCodigo','trasCantidad','trasProductoSelect'].forEach(id=>$(id).disabled=true);renderProductosTraslado();$('btnDespacharTraslado').disabled=true;
  msg('mensajeTraslado','Despachando '+items.length+' referencias en un solo traslado...','info');
  api('traslado',{origen:SUCURSAL,destino,nota,items:JSON.stringify(items.map(x=>({codigo:x.codigo,cantidad:x.cantidad}))),idSolicitud:TRASLADO_SOLICITUD_ID},r=>{
  TRASLADO_ENVIANDO=false;$('btnDespacharTraslado').disabled=false;
- if(!r||!r.ok){if(r&&!r.reintentable&&!/Tiempo agotado|No se pudo conectar|lock timeout|another process was holding|TRASLADO_OCUPADO|Service error|Spreadsheets|REVISION NECESARIA|Catalogo incompleto/i.test(r.error||'')){TRASLADO_SOLICITUD_ID='';['trasDestino','trasNota','trasCodigo','trasCantidad','trasProductoSelect'].forEach(id=>$(id).disabled=false);}renderProductosTraslado();const error=(r&&r.error)||'No se pudo conectar. Reintente esta misma lista sin duplicarla.';return msg('mensajeTraslado',/lock timeout|another process was holding/i.test(error)?'El sistema esta ocupado. Espere 30 segundos y pulse Despachar traslado para reintentar la misma lista sin duplicarla.':error,'error');}
- ULTIMO_TRASLADO_IMPRESION={...r,items,nota,fecha:new Date().toLocaleString(),usuario:SESION.nombre||SESION.usuario};TRAS_PRODUCTOS=[];TRASLADO_SOLICITUD_ID='';
- ['trasDestino','trasNota','trasCodigo','trasCantidad','trasProductoSelect'].forEach(id=>$(id).disabled=false);$('trasNota').value='';renderProductosTraslado();$('btnImprimirUltimoTraslado').classList.remove('oculto');PRODUCTOS_TRASLADO_TS=0;cargarResumen();cargarProductosTrasladoOrigen(true);cargarTraslados();msg('mensajeTraslado','Traslado '+r.numeroTraslado+': '+items.length+' referencias. Pendiente de recepcion en destino.','ok');
+ if(!r||!r.ok){if(r&&!r.reintentable&&!/Tiempo agotado|No se pudo conectar|lock timeout|another process was holding|TRASLADO_OCUPADO|Service error|Spreadsheets|REVISION NECESARIA|Catalogo incompleto/i.test(r.error||'')){TRASLADO_SOLICITUD_ID='';['trasDestino','trasNota','trasCodigo','trasCantidad','trasProductoSelect'].forEach(id=>$(id).disabled=false);}renderProductosTraslado();const error=(r&&r.error)||'No se pudo conectar. Reintente esta misma lista sin duplicarla.';msg('mensajeTraslado',/lock timeout|another process was holding/i.test(error)?'El sistema esta ocupado. Se conserva la misma solicitud.':error,'error');if(TRASLADO_SOLICITUD_ID)consultarDespachoPendiente(contexto);return;}
+ finalizarDespachoTraslado(r,contexto);
  });
 }
 
@@ -12667,7 +12699,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.11.14-TOTALES-TRASLADO-64';
+  const APP_VERSION='2026.11.14-LIMPIEZA-TRASLADO-65';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
