@@ -1,4 +1,4 @@
-const CACHE_NAME = 'adelaida-pos-2026.11.14-LIMPIEZA-TRASLADO-65';
+const CACHE_NAME = 'adelaida-pos-2026.11.16-INDIVIDUAL-SIN-TALLA-66';
 const CORE = ['./', './index.html', './manifest.webmanifest', './html2pdf.bundle.min.js'];
 
 self.addEventListener('install', event => {
