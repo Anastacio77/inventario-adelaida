@@ -471,7 +471,7 @@ document.addEventListener('click',e=>{
           <div><label>Marca</label><input id="bmMarca"></div><div><label>Modelo</label><input id="bmModelo"></div>
           <div><label>Color</label><input id="bmColor"></div><div><label>Tipo</label><select id="bmTipo" onchange="bmEscalas()"><option>INDIVIDUAL</option><option>CORRIDA</option></select></div>
           <div><label>Escala</label><select id="bmEscala" onchange="bmTallas()"></select><button onclick="bmEscalas()">Cargar escalas</button></div>
-          <div><label>Tallas separadas por coma</label><input id="bmTallas" placeholder="37,38,39,40,41,42,43"></div>
+          <div><label>Tallas separadas por coma (opcional en INDIVIDUAL)</label><input id="bmTallas" placeholder="37,38,39,40,41,42,43"></div>
           <div><label>Cantidad por talla (una para todas o una por talla)</label><input id="bmCantidades" placeholder="1,2,2,2,1,1,1"></div>
           <div><label>Costo unitario Q</label><input id="bmCosto" type="number" min="0" step="0.01" value="0"></div>
           <div><label>Precio base Q</label><input id="bmPrecio" type="number" min="0" step="0.01" value="0"></div>
@@ -539,7 +539,7 @@ document.addEventListener('click',e=>{
 
           <div>
             <label>Talla</label>
-            <input id="nTalla" oninput="codigoAuto()">
+            <input placeholder="Opcional: producto sin talla" id="nTalla" oninput="codigoAuto()">
           </div>
 
           <div>
@@ -1503,7 +1503,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.11.14-LIMPIEZA-TRASLADO-65';
+const VERSION_SISTEMA_UI='2026.11.16-INDIVIDUAL-SIN-TALLA-66';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -5252,15 +5252,14 @@ function codigoAuto(){
     );
 
   $('codigoAuto').textContent=
-    m&&c&&t
+    m&&c
     ?
     (
       'C\u00f3digo autom\u00e1tico: '+
       m+
       '-'+
       colorSKU($('nColor').value)+
-      '-'+
-      t
+      (t?'-'+t:'')
     )
     :
     'C\u00f3digo autom\u00e1tico: \u2014';
@@ -12699,7 +12698,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.11.14-LIMPIEZA-TRASLADO-65';
+  const APP_VERSION='2026.11.16-INDIVIDUAL-SIN-TALLA-66';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
@@ -12923,7 +12922,7 @@ function bmMatriz(a){
   if(a.length<2)throw Error('Incluya encabezados y al menos una fila.');
   const aliases={existencia:'cantidad',unidades:'cantidad',preciobase:'precio',precioventa:'precio',costounitario:'costo',tipoingreso:'tipo',stockminimo:'stockMinimo',articulo:'categoria'};
   const heads=a[0].map(h=>aliases[bmHeader(h)]||BM_COLS.find(k=>bmHeader(k)===bmHeader(h))||'');
-  ['marca','modelo','color','talla','costo','precio',...($('bmModo').value==='CATALOGO'?[]:['cantidad'])].forEach(k=>{if(!heads.includes(k))throw Error('Falta columna '+k+'.');});
+  ['marca','modelo','color','costo','precio',...($('bmModo').value==='CATALOGO'?[]:['cantidad'])].forEach(k=>{if(!heads.includes(k))throw Error('Falta columna '+k+'.');});
   if(heads.filter(Boolean).length!==new Set(heads.filter(Boolean)).size)throw Error('Encabezados duplicados.');
   return a.slice(1).filter(r=>r.some(v=>String(v??'').trim())).map(r=>{const x={};heads.forEach((h,i)=>{if(h)x[h]=r[i]??'';});x.tipo=String(x.tipo||'INDIVIDUAL').trim().toUpperCase();x.escala=String(x.escala||'').trim().toUpperCase();return x;});
 }
@@ -13025,10 +13024,10 @@ async function bmResolverXML(){
  filas.forEach((x,i)=>Object.assign(x,r.productos[i]));bmDraft();bmRender();
 }
 async function bmImportar(input){try{const f=input.files[0];if(!f)return;if(BM.enviado||BM_BUSY)throw Error('Termine la carga pendiente primero.');if(f.size>5*1024*1024)throw Error('Archivo demasiado grande (m\u00e1ximo 5 MB).');if(/\.xml$/.test(f.name.toLowerCase())){if($('bmModo').value!=='COMPRA')throw Error('Seleccione Mercanc\u00eda nueva: crear orden de compra antes de importar el XML.');BM_BUSY=true;bmRender();const xml=bmXML(await f.text());const incluidos=await bmCodigosXML(xml.filas);BM_BUSY=false;bmAppend(xml.filas);$('bmNota').value=xml.nota.slice(0,200);bmMsg('XML agregado: '+xml.filas.length+' l\u00edneas, total Q'+xml.total.toFixed(2)+'. Marca, color y talla detectados: revise los campos. '+incluidos+' c\u00f3digos incluidos del cat\u00e1logo. Complete los campos vac\u00edos y seleccione el proveedor.');return;}let rows;if(/\.xlsx$/.test(f.name.toLowerCase())){rows=await bmXLSX(await f.arrayBuffer());}else if(/\.xls$/.test(f.name.toLowerCase()))throw Error('Guarde el libro antiguo .xls como .xlsx o CSV.');else rows=bmCSV(await f.text());bmAppend(bmMatriz(rows));bmMsg('Archivo agregado. Revise la vista previa antes de guardar.');}catch(e){bmMsg(e.message,true);}finally{BM_BUSY=false;bmRender();input.value='';}}
-function bmAgregarModelo(){try{const tallas=$('bmTallas').value.split(',').map(s=>s.trim()).filter(Boolean),q=$('bmCantidades').value.split(',').map(s=>s.trim());if(!tallas.length||($('bmModo').value!=='CATALOGO'&&(!q[0]||(q.length!==1&&q.length!==tallas.length))))throw Error('Indique una cantidad para todas las tallas o una cantidad por talla.');const tipo=$('bmTipo').value,escala=tipo==='CORRIDA'?$('bmEscala').value:'';if(tipo==='CORRIDA'&&!escala)throw Error('Seleccione una escala.');bmAppend(tallas.map((t,i)=>({marca:$('bmMarca').value,modelo:$('bmModelo').value,color:$('bmColor').value,talla:t,cantidad:$('bmModo').value==='CATALOGO'?0:(q.length===1?q[0]:q[i]),costo:$('bmCosto').value,precio:$('bmPrecio').value,tipo,escala,stockMinimo:2})));bmMsg('Modelo agregado. Puede agregar el siguiente o editar cantidades.');}catch(e){bmMsg(e.message,true);}}
+function bmAgregarModelo(){try{const tallas=$('bmTallas').value.split(',').map(s=>s.trim()).filter(Boolean),q=$('bmCantidades').value.split(',').map(s=>s.trim());if(!tallas.length&&$('bmTipo').value==='INDIVIDUAL')tallas.push('');if(!tallas.length||($('bmModo').value!=='CATALOGO'&&(!q[0]||(q.length!==1&&q.length!==tallas.length))))throw Error('Indique una cantidad para todas las tallas o una cantidad por talla.');const tipo=$('bmTipo').value,escala=tipo==='CORRIDA'?$('bmEscala').value:'';if(tipo==='CORRIDA'&&!escala)throw Error('Seleccione una escala.');bmAppend(tallas.map((t,i)=>({marca:$('bmMarca').value,modelo:$('bmModelo').value,color:$('bmColor').value,talla:t,cantidad:$('bmModo').value==='CATALOGO'?0:(q.length===1?q[0]:q[i]),costo:$('bmCosto').value,precio:$('bmPrecio').value,tipo,escala,stockMinimo:2})));bmMsg('Modelo agregado. Puede agregar el siguiente o editar cantidades.');}catch(e){bmMsg(e.message,true);}}
 function colorSKU(v){const clean=x=>String(x||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]/g,'');const partes=String(v||'').trim().split(/[\/\s]+/).map(clean).filter(Boolean);return partes.length>1?partes.map(x=>x.charAt(0)).join(''):clean(v).slice(0,2);}
-function bmCodigo(x){if(x.xml)return String(x.codigo||'').trim().toUpperCase();if(x.codigoMaestro)return x.codigoMaestro;const c=v=>String(v||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]/g,'');return c(x.modelo)+'-'+colorSKU(x.color)+'-'+c(x.talla);}
-function bmValidar(){const seen=new Set();return BM.filas.map((r,i)=>{const x={};BM_COLS.forEach(k=>x[k]=String(r[k]??'').trim());if(r.codigoMaestro)x.codigoMaestro=r.codigoMaestro;if(r.xml){x.xml=true;x.codigo=String(r.codigo||'').trim().toUpperCase();x.descripcion=r.descripcion;if(!x.codigo)throw Error('Fila '+(i+1)+': falta c\u00f3digo.');}x.tipo=(x.tipo||'INDIVIDUAL').toUpperCase();x.escala=x.tipo==='CORRIDA'?x.escala.toUpperCase():'';['cantidad','costo','precio','stockMinimo'].forEach(k=>{x[k]=bmNumero(x[k]);if(!Number.isFinite(x[k])||x[k]<0)throw Error('Fila '+(i+1)+': '+k+' inv\u00e1lido.');});if($('bmModo').value==='CATALOGO')x.cantidad=0;if(!Number.isSafeInteger(x.cantidad)||($('bmModo').value!=='CATALOGO'&&x.cantidad<=0))throw Error('Fila '+(i+1)+': cantidad entera positiva requerida.');['marca','modelo','color','talla'].forEach(k=>{if(!x[k])throw Error('Fila '+(i+1)+': falta '+k+'.');});if(!['INDIVIDUAL','CORRIDA'].includes(x.tipo)||(x.tipo==='CORRIDA'&&!x.escala))throw Error('Fila '+(i+1)+': tipo o escala inv\u00e1lido.');const cod=bmCodigo(x);if(seen.has(cod))throw Error('C\u00f3digo repetido '+cod+'. Combine las cantidades en una sola fila.');seen.add(cod);return x;});}
+function bmCodigo(x){if(x.xml)return String(x.codigo||'').trim().toUpperCase();if(x.codigoMaestro)return x.codigoMaestro;const c=v=>String(v||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]/g,'');return c(x.modelo)+'-'+colorSKU(x.color)+(c(x.talla)?'-'+c(x.talla):'');}
+function bmValidar(){const seen=new Set();return BM.filas.map((r,i)=>{const x={};BM_COLS.forEach(k=>x[k]=String(r[k]??'').trim());if(r.codigoMaestro)x.codigoMaestro=r.codigoMaestro;if(r.xml){x.xml=true;x.codigo=String(r.codigo||'').trim().toUpperCase();x.descripcion=r.descripcion;if(!x.codigo)throw Error('Fila '+(i+1)+': falta c\u00f3digo.');}x.tipo=(x.tipo||'INDIVIDUAL').toUpperCase();x.escala=x.tipo==='CORRIDA'?x.escala.toUpperCase():'';['cantidad','costo','precio','stockMinimo'].forEach(k=>{x[k]=bmNumero(x[k]);if(!Number.isFinite(x[k])||x[k]<0)throw Error('Fila '+(i+1)+': '+k+' inv\u00e1lido.');});if($('bmModo').value==='CATALOGO')x.cantidad=0;if(!Number.isSafeInteger(x.cantidad)||($('bmModo').value!=='CATALOGO'&&x.cantidad<=0))throw Error('Fila '+(i+1)+': cantidad entera positiva requerida.');['marca','modelo','color',...(x.tipo==='CORRIDA'?['talla']:[])].forEach(k=>{if(!x[k])throw Error('Fila '+(i+1)+': falta '+k+'.');});if(!['INDIVIDUAL','CORRIDA'].includes(x.tipo)||(x.tipo==='CORRIDA'&&!x.escala))throw Error('Fila '+(i+1)+': tipo o escala inv\u00e1lido.');const cod=bmCodigo(x);if(seen.has(cod))throw Error('C\u00f3digo repetido '+cod+'. Combine las cantidades en una sola fila.');seen.add(cod);return x;});}
 function bmCostoConFlete(x){
   const costo=bmNumero(x.costo),unidades=BM.filas.reduce((s,r)=>s+(Number.isFinite(bmNumero(r.cantidad))&&bmNumero(r.cantidad)>0?bmNumero(r.cantidad):0),0);
   const flete=bmNumero($('bmFlete').value);
