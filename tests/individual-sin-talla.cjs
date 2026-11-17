@@ -1,0 +1,13 @@
+const fs=require('fs'),vm=require('vm'),a=require('assert');const gs=fs.readFileSync(process.argv[2]||'entrega/Code_Individual_Sin_Talla_66.gs','utf8'),html=fs.readFileSync(process.argv[3]||'entrega/index.html','utf8');
+const clean=v=>String(v||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]/g,'');let catalogo=[];
+const c={limpia_:clean,norm_:v=>String(v||'').trim().toUpperCase(),CONFIG:{PRODUCTOS:'Productos'},hoja_:()=>({getDataRange:()=>({getValues:()=>[[],...catalogo]})}),escalaExiste_:()=>true,tallasEscala_:()=>['37','38']};vm.createContext(c);
+vm.runInContext(gs.slice(gs.indexOf('function colorSKU_('),gs.indexOf('function qr_(')),c);vm.runInContext(gs.slice(gs.indexOf('function masivoFila_('),gs.indexOf('PERMISO_ACCION.masivocodigos')),c);
+const base={marca:"Baby's W",modelo:'901-M',color:'VARIOS',talla:'',tipo:'INDIVIDUAL',cantidad:0,costo:115,precio:162};
+let r=c.masivoFila_(base);a.equal(r.codigo,'901M-VA');a.equal(r.talla,'');a.equal(r.escala,'');a.equal(r.cantidad,0);
+a.equal(c.masivoFila_({...base,talla:'U'}).codigo,'901M-VA-U');a.throws(()=>c.masivoFila_({...base,tipo:'CORRIDA',escala:'E'}),/talla/);a.throws(()=>c.masivoFila_({...base,talla:'---'}),/generar/);
+catalogo=[['HISTORICO','','901-M','','VARIOS','']];a.equal(c.masivoFila_(base).codigo,'HISTORICO');a.equal(c.codigo_('901-M','VARIOS','37',[]),'901M-VA-37');
+const ui={BM:{filas:[base]},BM_COLS:['marca','modelo','color','talla','cantidad','costo','precio','tipo','escala','categoria','ubicacion','stockMinimo','lote'],$:()=>({value:'CATALOGO'}),bmNumero:v=>Number(v)||0};vm.createContext(ui);
+vm.runInContext(html.slice(html.indexOf('function colorSKU('),html.indexOf('function bmCostoConFlete(')),ui);a.equal(ui.bmValidar()[0].talla,'');a.equal(ui.bmCodigo(base),'901M-VA');
+ui.BM.filas=[{...base,tipo:'CORRIDA',escala:'E'}];a.throws(()=>ui.bmValidar(),/talla/);ui.BM.filas=[base,{...base}];a.throws(()=>ui.bmValidar(),/repetido/);
+for(const m of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi))new vm.Script(m[1]);new vm.Script(gs);new vm.Script(fs.readFileSync('entrega/sw.js','utf8'));
+console.log('OK individual sin talla, codigos anteriores/tallas conservados, corrida requiere talla y duplicados bloqueados');
