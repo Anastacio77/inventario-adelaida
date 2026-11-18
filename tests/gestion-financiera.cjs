@@ -39,3 +39,7 @@ const ui={SESION:{usuario:'admin',rol:'ADMIN'},SUCURSAL:'La Paz',$:id=>nodes[id]
 vm.createContext(ui);vm.runInContext(html.slice(html.indexOf('let FIN_DATOS='),html.indexOf('function cargarReportes(')),ui);vm.runInContext("FIN_DATOS={sucursal:'La Paz',porVincular:[]}",ui);ui.cargarFinanzas=()=>{};
 ui.guardarFinanzas();a.equal(calls.length,1);const firstId=calls[0].p.idSolicitud;ui.guardarFinanzas();a.equal(calls.length,1);callback({ok:false,error:'Tiempo agotado'});a.equal(storage.size,1);a(!nodes.finReanudar.hidden);nodes.finMonto.value='999';ui.guardarFinanzas('REANUDAR');a.equal(calls[1].p.idSolicitud,firstId);a.equal(calls[1].p.monto,'12');callback({ok:true,documento:'FIN1',yaProcesado:true});a.equal(storage.size,0);a.equal(nodes.finMonto.value,'');
 console.log('OK interfaz finanzas: bloqueo doble clic, ID persistente, mismo monto al reanudar y limpieza confirmada');
+
+a.equal(c.finDia_('2026-11-01T01:30:00Z'),'2026-10-31');a.equal(c.finDia_('2026-11-01'),'2026-11-01');
+const oldLock=c.LockService;c.LockService={getDocumentLock:()=>({waitLock(){throw Error('Bloqueo ocupado')},releaseLock(){}})};a.equal(save(req()).sinCambios,false);c.LockService=oldLock;
+console.log('OK fechas Guatemala en limite mensual y timeout de lock conserva solicitud');
