@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert'),path=require('path');
-const html=fs.readFileSync(process.argv[2]||path.join(__dirname,'../index.html'),'utf8');const b=fs.readFileSync(process.argv[3]||path.join(__dirname,'../Code_Gestion_Financiera_67.gs'),'utf8');
+const html=fs.readFileSync(process.argv[2]||path.join(__dirname,'../index.html'),'utf8');const b=fs.readFileSync(process.argv[3]||path.join(__dirname,'../Code_Contabilidad_General_68.gs'),'utf8');
 for(const m of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g))new vm.Script(m[1]);new vm.Script(b);
 assert(html.includes('Agregar producto al traslado'));assert(html.includes('items:JSON.stringify(items.map'));assert(html.includes('Array.isArray(t.items)'));
 let rows=[],calls=[],restored=false,locked=0;
