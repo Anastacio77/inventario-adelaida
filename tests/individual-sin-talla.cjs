@@ -1,4 +1,4 @@
-const fs=require('fs'),vm=require('vm'),a=require('assert');const gs=fs.readFileSync(process.argv[2]||'entrega/Code_Gestion_Financiera_67.gs','utf8'),html=fs.readFileSync(process.argv[3]||'entrega/index.html','utf8');
+const fs=require('fs'),vm=require('vm'),a=require('assert');const gs=fs.readFileSync(process.argv[2]||'entrega/Code_Contabilidad_General_68.gs','utf8'),html=fs.readFileSync(process.argv[3]||'entrega/index.html','utf8');
 const clean=v=>String(v||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]/g,'');let catalogo=[];
 const c={limpia_:clean,norm_:v=>String(v||'').trim().toUpperCase(),CONFIG:{PRODUCTOS:'Productos'},hoja_:()=>({getDataRange:()=>({getValues:()=>[[],...catalogo]})}),escalaExiste_:()=>true,tallasEscala_:()=>['37','38']};vm.createContext(c);
 vm.runInContext(gs.slice(gs.indexOf('function colorSKU_('),gs.indexOf('function qr_(')),c);vm.runInContext(gs.slice(gs.indexOf('function masivoFila_('),gs.indexOf('PERMISO_ACCION.masivocodigos')),c);
