@@ -133,6 +133,7 @@ document.addEventListener('click',e=>{
     <button id="tabDevoluciones" onclick="vista('devoluciones');cargarDevoluciones();cargarVentasDevolucion()">&#8617;&#65039; Devoluciones</button>
     <button id="tabCompras" onclick="vista('compras');mostrarListaCompras();cargarProveedores();cargarCompras()">&#128666; Compras</button>
     <button id="tabCaja" onclick="vista('caja');cargarCaja()">&#128181; Caja</button>
+    <button id="tabFinanzas" onclick="vista('finanzas');cargarFinanzas()">Gestion financiera</button>
     <button id="tabReportes" onclick="vista('reportes');cargarReportes()">&#128202; Reportes</button>
     <button id="tabClientes" onclick="vista('clientes');cargarClientes();cargarCreditos()">&#128100; Clientes</button>
     <button id="tabConfig" onclick="vista('config')">&#9881; Configuraci&#243;n</button>
@@ -1416,6 +1417,13 @@ document.addEventListener('click',e=>{
     </div>
   </div>
 
+  <div id="vistaFinanzas" class="vistaApp oculto">
+ <div class="card"><h3>Gestion financiera</h3><p>Sucursal actual. Importes en quetzales. Ventas, cobros y pagos existentes se consultan automaticamente; no vuelva a registrarlos como ingresos o gastos nuevos.</p><label>Mes del resumen</label><input id="finMes" type="month"><button class="btnAzul" onclick="cargarFinanzas()">Actualizar resumen</button><button class="btnGris" onclick="exportarFinanzas()">Exportar Excel</button><button class="btnGris" onclick="imprimirFinanzas()">Imprimir / PDF</button><div id="finMensaje" role="status"></div><div id="finResumen" class="grid2"></div><div id="finPendientes"></div></div>
+ <div class="card"><h3>Cuentas bancarias</h3><div id="finCuentas"></div><details><summary>Agregar cuenta</summary><div class="grid2"><div><label>Nombre de cuenta</label><input id="finNombre" maxlength="100"></div><div><label>Banco</label><input id="finBanco" maxlength="100"></div><div><label>Referencia de cuenta (opcional)</label><input id="finReferencia" maxlength="100" placeholder="Alias o ultimos digitos"></div><div><label>Saldo inicial Q</label><input id="finInicial" type="number" min="0" step="0.01" value="0"></div></div><p>El saldo inicial representa dinero que ya tiene la cuenta. No se cuenta como ingreso. Concilie solo cobros y pagos que no esten incluidos en ese saldo.</p><button id="finCrear" class="btnAzul" onclick="guardarFinanzas('CUENTA')">Guardar cuenta</button></details></div>
+ <div class="card"><h3>Registrar movimiento</h3><div class="grid2"><div><label>Operacion</label><select id="finTipo" onchange="camposFinanzas()"><option value="GASTO">Gasto nuevo</option><option value="INGRESO">Otro ingreso nuevo</option><option value="TRANSFERENCIA">Transferencia entre cuentas / caja</option><option value="VINCULAR">Vincular cobro o pago existente a banco</option></select></div><div><label>Fecha del documento</label><input id="finFecha" type="date"></div><div id="finOrigenBox"><label>Cuenta de salida</label><select id="finOrigen"></select></div><div id="finDestinoBox"><label>Cuenta de entrada</label><select id="finDestino"></select></div><div id="finFuenteBox"><label>Movimiento existente por vincular</label><select id="finFuente" onchange="camposFinanzas()"></select></div><div id="finMontoBox"><label>Monto Q</label><input id="finMonto" type="number" min="0.01" step="0.01"></div><div id="finCategoriaBox"><label>Categoria</label><select id="finCategoria"><option>Alquiler</option><option>Servicios</option><option>Salarios</option><option>Transporte</option><option>Suministros</option><option>Mantenimiento</option><option>Impuestos</option><option>Otros</option></select></div><div><label>Descripcion / comprobante</label><input id="finNota" maxlength="200"></div></div><p>Vincular actualiza el saldo bancario sin volver a sumar el cobro o pago al resumen. Caja actual requiere caja abierta. Registrar transferencia no ejecuta operaciones bancarias. Para gastos de caja se usa la caja abierta hoy, aunque el documento tenga otra fecha.</p><button id="finGuardar" class="btnVerde" onclick="guardarFinanzas()">Registrar movimiento</button><div id="finOperacionMensaje" role="status"></div><button id="finReanudar" class="btnAzul" hidden onclick="guardarFinanzas('REANUDAR')">Consultar / reanudar misma operacion</button></div>
+ <div class="card"><h3>Movimientos del mes</h3><div id="finMovimientos" style="overflow:auto"></div><h4>Cobros y pagos automaticos del mes</h4><div id="finFuentesTabla" style="overflow:auto"></div><p>El resumen muestra registros operativos, no utilidad contable. Compras no equivalen a costo de lo vendido; saldos por cobrar/pagar y bancarios son actuales. Gastos pendientes de pago no se registran en esta version.</p></div><div id="finImpresion" class="ticket oculto"></div>
+</div>
+
   <div id="vistaReportes" class="vistaApp oculto">
     <div class="card">
       <h3 style="margin-top:0">Reportes y estad&#237;sticas</h3>
@@ -1503,7 +1511,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.11.16-INDIVIDUAL-SIN-TALLA-66';
+const VERSION_SISTEMA_UI='2026.11.18-GESTION-FINANCIERA-67';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -1814,7 +1822,7 @@ function vista(v){
   const el=$('vista'+v.charAt(0).toUpperCase()+v.slice(1));
   if(el) el.classList.remove('oculto');
   posicionarMenuModulos(v);
-  ['inicio','pos','pedidos','ventas','inventario','nuevo','traslados','stockglobal','usuarios','trazabilidad','comisiones','devoluciones','compras','caja','reportes','clientes','config'].forEach(n=>{
+  ['inicio','pos','pedidos','ventas','inventario','nuevo','traslados','stockglobal','usuarios','trazabilidad','comisiones','devoluciones','compras','caja','reportes','finanzas','clientes','config'].forEach(n=>{
     const b=$('tab'+n.charAt(0).toUpperCase()+n.slice(1));
     if(b) b.classList.toggle('activo',n===v);
   });
@@ -2421,6 +2429,7 @@ function iniciarApp(u){
   mostrarSegunPermiso('tabCompras','COMPRAS');
   mostrarSegunPermiso('tabCaja','CAJA');
   mostrarSegunPermiso('tabReportes','REPORTES');
+  mostrarSegunPermiso('tabFinanzas','REPORTES');if(SESION.rol!=='ADMIN')$('tabFinanzas').classList.add('oculto');
   mostrarSegunPermiso('tabClientes','CLIENTES');
   mostrarSegunPermiso('tabUsuarios','USUARIOS');
   mostrarSegunPermiso('tabConfig','CONFIG');
@@ -8253,7 +8262,7 @@ function cargarComisiones(){
     const admin=SESION.rol==='ADMIN',seleccionar=admin&&!!sel.value;
     $('comPagoBox').classList.toggle('oculto',!admin);
     $('listaComisiones').innerHTML=(r.hayMas?'<p>Se muestran las 200 primeras coincidencias. Los totales incluyen todas. Filtre por vendedor/estado; al pagar este bloque, seleccione Pendientes para ver las siguientes.</p>':'')+'<table class="tabla"><thead><tr>'+(seleccionar?'<th><input type="checkbox" aria-label="Marcar hasta 20 pendientes visibles" onchange="marcarComisiones(this.checked)"></th>':'')+'<th>Fecha</th><th>Venta</th><th>Vendedor</th><th>Total</th><th>Comisi\u00f3n</th><th>Estado</th><th>Pago</th></tr></thead><tbody>'+COMISIONES_VISTA.map((x,i)=>'<tr>'+(seleccionar?'<td>'+(x.estado==='PENDIENTE'&&x.comision>0?'<input type="checkbox" id="comCheck'+i+'" aria-label="Pagar comision '+esc(x.numeroVenta)+'" onchange="actualizarSeleccionComisiones()">':'')+'</td>':'')+'<td>'+esc(x.fecha)+'</td><td>'+esc(x.numeroVenta)+'</td><td>'+esc(x.vendedor)+'</td><td>'+Q(x.totalVenta)+'</td><td><b>'+Q(x.comision)+'</b></td><td>'+esc(x.estado)+'</td><td>'+esc(x.fechaPago||'')+' '+esc(x.pagoId||'')+'</td></tr>').join('')+'</tbody></table>';
-    $('comHistorial').innerHTML='<table class="tabla"><thead><tr><th>Fecha</th><th>Comprobante</th><th>Vendedor</th><th>Monto</th><th>Metodo</th><th>Registro</th><th>Nota</th></tr></thead><tbody>'+(r.pagos||[]).map(p=>'<tr><td>'+esc(p.fecha)+'</td><td>'+esc(p.pagoId)+'</td><td>'+esc(p.vendedor)+'</td><td>'+Q(p.monto)+'</td><td>'+esc(p.metodo)+'</td><td>'+esc(p.usuario)+'</td><td>'+esc(p.nota)+'</td></tr>').join('')+'</tbody></table>';
+    $('comHistorial').innerHTML='<table class="ticketTabla"><thead><tr><th>Fecha</th><th>Comprobante</th><th>Vendedor</th><th>Monto</th><th>Metodo</th><th>Registro</th><th>Nota</th></tr></thead><tbody>'+(r.pagos||[]).map(p=>'<tr><td>'+esc(p.fecha)+'</td><td>'+esc(p.pagoId)+'</td><td>'+esc(p.vendedor)+'</td><td>'+Q(p.monto)+'</td><td>'+esc(p.metodo)+'</td><td>'+esc(p.usuario)+'</td><td>'+esc(p.nota)+'</td></tr>').join('')+'</tbody></table>';
     COMISIONES_REANUDAR=null;
     if(admin){try{COMISIONES_REANUDAR=JSON.parse(localStorage.getItem(clavePagoComisiones())||'null');}catch(e){}if(!COMISIONES_REANUDAR&&r.reanudables&&r.reanudables.length)COMISIONES_REANUDAR=r.reanudables[0];}
     $('comReanudar').classList.toggle('oculto',!COMISIONES_REANUDAR);actualizarSeleccionComisiones();
@@ -12605,6 +12614,53 @@ function moverCurvaUI(tipo){
   enviarSalidaSegura('CURVA',{tipo,cajas,nota:$('invCurvaNota').value,items:JSON.stringify(items)});
 }
 
+let FIN_DATOS=null,FIN_CARGA=0,FIN_ENVIANDO=false,FIN_PENDIENTE=null;
+function finKey(){return 'adelaida-finanzas-'+SESION.usuario+'-'+SUCURSAL;}
+function camposFinanzas(){
+ const tipo=$('finTipo').value,fuente=FIN_DATOS&&(FIN_DATOS.porVincular||[]).find(x=>x.id===$('finFuente').value);
+ $('finOrigenBox').classList.toggle('oculto',tipo==='INGRESO'||(tipo==='VINCULAR'&&fuente&&fuente.signo>0));
+ $('finDestinoBox').classList.toggle('oculto',tipo==='GASTO'||(tipo==='VINCULAR'&&fuente&&fuente.signo<0));
+ $('finFuenteBox').classList.toggle('oculto',tipo!=='VINCULAR');$('finMontoBox').classList.toggle('oculto',tipo==='VINCULAR');$('finCategoriaBox').classList.toggle('oculto',!['GASTO','INGRESO'].includes(tipo));
+ ['finOrigen','finDestino'].forEach(id=>{const sel=$(id),prev=sel.value;sel.innerHTML='';if(tipo!=='VINCULAR')sel.add(new Option('Caja actual','CAJA'));(FIN_DATOS&&FIN_DATOS.cuentas||[]).forEach(x=>sel.add(new Option(x.nombre+' - '+Q(x.saldo),x.id)));if([...sel.options].some(x=>x.value===prev))sel.value=prev;});
+}
+function cargarFinanzas(){
+ if(!SESION||SESION.rol!=='ADMIN'||FIN_ENVIANDO)return;const id=++FIN_CARGA,suc=SUCURSAL;FIN_DATOS=null;$('finCrear').disabled=true;$('finGuardar').disabled=true;
+ api('finanzas',{mes:$('finMes').value},r=>{
+  if(id!==FIN_CARGA||suc!==SUCURSAL)return;if(!r||!r.ok)return msg('finMensaje',r&&r.error||'No se pudo cargar el resumen.','error');
+  FIN_DATOS=r;$('finMes').value=r.mes;if(!$('finFecha').value)$('finFecha').value=r.hoy;
+  $('finResumen').innerHTML=r.resumen.map(x=>'<div class="dato"><span>'+esc(x.nombre)+'</span><b>'+Q(x.valor)+'</b></div>').join('');
+  $('finCuentas').innerHTML='<table class="tabla"><tr><th>Cuenta</th><th>Banco</th><th>Referencia</th><th>Saldo actual</th></tr>'+r.cuentas.map(x=>'<tr><td>'+esc(x.nombre)+'</td><td>'+esc(x.banco)+'</td><td>'+esc(x.referencia)+'</td><td>'+Q(x.saldo)+'</td></tr>').join('')+'</table>';
+  const sel=$('finFuente'),prev=sel.value;sel.innerHTML='';sel.add(new Option('Seleccione cobro o pago existente',''));r.porVincular.forEach(x=>sel.add(new Option(x.fecha+' '+x.concepto+' '+Q(x.monto),x.id)));sel.value=prev;
+  $('finMovimientos').innerHTML=tablaFinanzas(r.movimientos);$('finFuentesTabla').innerHTML=tablaFinanzas(r.fuentesMes);
+  FIN_PENDIENTE=null;try{FIN_PENDIENTE=JSON.parse(localStorage.getItem(finKey())||'null');}catch(e){}if(!FIN_PENDIENTE&&r.reanudables.length)FIN_PENDIENTE=r.reanudables[0];
+  $('finReanudar').hidden=!FIN_PENDIENTE;$('finCrear').disabled=!!FIN_PENDIENTE;$('finGuardar').disabled=!!FIN_PENDIENTE;
+  $('finPendientes').textContent=FIN_PENDIENTE?'Operacion pendiente: '+FIN_PENDIENTE.tipo+' - '+FIN_PENDIENTE.idSolicitud+'. Consulte/reanude esta misma operacion.':r.pendientes?'Hay operaciones pendientes de otro administrador. Deben confirmarse antes de registrar otra.':'';
+  camposFinanzas();msg('finMensaje','Resumen actualizado para '+r.sucursal+' - '+r.mes,'ok');
+ });
+}
+function tablaFinanzas(filas){return '<table class="ticketTabla"><thead><tr><th>Fecha</th><th>Documento</th><th>Concepto</th><th>Monto Q</th><th>Origen</th><th>Destino</th></tr></thead><tbody>'+filas.map(x=>'<tr><td>'+esc(x.fecha)+'</td><td>'+esc(x.id)+'</td><td>'+esc(x.concepto)+'</td><td>'+Q(x.monto)+'</td><td>'+esc(x.origen||'')+'</td><td>'+esc(x.destino||'')+'</td></tr>').join('')+'</tbody></table>';}
+function guardarFinanzas(accion){
+ if(FIN_ENVIANDO||!SESION||SESION.rol!=='ADMIN'||!FIN_DATOS||FIN_DATOS.sucursal!==SUCURSAL)return;
+ let p=FIN_PENDIENTE;
+ if(!p){p={idSolicitud:'FIN-'+(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2)),tipo:accion==='CUENTA'?'CUENTA':$('finTipo').value,nombre:$('finNombre').value,banco:$('finBanco').value,referencia:$('finReferencia').value,monto:accion==='CUENTA'?$('finInicial').value:$('finMonto').value,origen:$('finOrigen').value,destino:$('finDestino').value,fuente:$('finFuente').value,categoria:$('finCategoria').value,nota:$('finNota').value,fecha:$('finFecha').value,sucursal:SUCURSAL};
+  const fuente=FIN_DATOS.porVincular.find(x=>x.id===p.fuente),importe=p.tipo==='VINCULAR'?(fuente?fuente.monto:0):Number(p.monto);if(!confirm('Registrar '+(p.tipo==='CUENTA'?'cuenta bancaria':p.tipo)+' por '+Q(importe)+' en '+SUCURSAL+'?'))return;
+ }
+ if(p.sucursal!==SUCURSAL)return msg('finOperacionMensaje','Cambie a '+p.sucursal+' para consultar la operacion.','error');
+ const key=finKey(),usuarioFin=SESION.usuario;try{localStorage.setItem(key,JSON.stringify(p));}catch(e){return msg('finOperacionMensaje','No se pudo guardar el identificador. Revise almacenamiento del navegador.','error');}
+ FIN_PENDIENTE=p;FIN_ENVIANDO=true;$('finCrear').disabled=true;$('finGuardar').disabled=true;$('finReanudar').disabled=true;msg('finOperacionMensaje','Procesando operacion financiera...','info');
+ api('finanzasguardar',p,r=>{
+  FIN_ENVIANDO=false;$('finReanudar').disabled=false;if(!SESION||usuarioFin!==SESION.usuario||p.sucursal!==SUCURSAL){if(r&&r.ok||r&&r.sinCambios)try{localStorage.removeItem(key);}catch(e){}cargarFinanzas();return;}
+  if(!r||!r.ok){if(r&&r.sinCambios){try{localStorage.removeItem(key);}catch(e){}FIN_PENDIENTE=null;}$('finReanudar').hidden=!FIN_PENDIENTE;$('finCrear').disabled=!!FIN_PENDIENTE;$('finGuardar').disabled=!!FIN_PENDIENTE;return msg('finOperacionMensaje',(r&&r.error||'No se recibio confirmacion.')+(FIN_PENDIENTE?' Consulte/reanude la misma operacion.':''),'error');}
+  try{localStorage.removeItem(key);}catch(e){}FIN_PENDIENTE=null;msg('finOperacionMensaje','Operacion confirmada: '+r.documento+(r.yaProcesado?' (sin duplicar)':''),'ok');
+  ['finNombre','finBanco','finReferencia','finMonto','finNota'].forEach(id=>$(id).value='');$('finInicial').value=0;cargarFinanzas();
+ });
+}
+function exportarFinanzas(){
+ if(!FIN_DATOS||FIN_DATOS.sucursal!==SUCURSAL)return;const r=FIN_DATOS,filas=[...r.resumen.map(x=>['Resumen',x.nombre,x.valor,'','','']),...r.cuentas.map(x=>['Saldo actual',x.nombre,x.saldo,x.banco,x.referencia,'']),...[...r.movimientos,...r.fuentesMes].map(x=>[x.fecha,x.concepto,x.monto,x.id,x.origen||'',x.destino||''])];
+ descargarTablaExcel(['Fecha / seccion','Concepto','Monto GTQ','Documento / banco','Origen / referencia','Destino'],filas,'Finanzas_'+r.sucursal.replace(/[^A-Za-z0-9]/g,'_')+'_'+r.mes,'Finanzas');
+}
+function imprimirFinanzas(){if(!FIN_DATOS||FIN_DATOS.sucursal!==SUCURSAL)return;const r=FIN_DATOS;$('finImpresion').innerHTML='<h2>COMERCIAL ADELAIDA</h2><h3>Gestion financiera</h3><p>'+esc(r.sucursal)+' - '+esc(r.mes)+' - GTQ</p>'+r.resumen.map(x=>'<div class="lineaTotal"><span>'+esc(x.nombre)+'</span><b>'+Q(x.valor)+'</b></div>').join('')+'<h4>Saldos bancarios actuales</h4>'+r.cuentas.map(x=>'<div class="lineaTotal"><span>'+esc(x.nombre)+' - '+esc(x.banco)+'</span><b>'+Q(x.saldo)+'</b></div>').join('')+'<h4>Movimientos del mes</h4>'+tablaFinanzas(r.movimientos)+'<h4>Cobros y pagos existentes</h4>'+tablaFinanzas(r.fuentesMes)+'<p>Resumen de registros operativos; no es utilidad contable. Saldos de cuentas son actuales.</p>';imprimirTicket('finImpresion','CARTA');}
+
 function cargarReportes(){
   if(!SESION||SESION.rol!=='ADMIN') return;
 
@@ -12698,7 +12754,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.11.16-INDIVIDUAL-SIN-TALLA-66';
+  const APP_VERSION='2026.11.18-GESTION-FINANCIERA-67';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
