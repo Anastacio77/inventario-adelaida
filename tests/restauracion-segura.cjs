@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
-const s=fs.readFileSync(process.argv[2]||'entrega/Code_Gestion_Financiera_67.gs','utf8');
+const s=fs.readFileSync(process.argv[2]||'entrega/Code_Contabilidad_General_68.gs','utf8');
 const code=s.slice(s.indexOf('function trasladoRestaurar_('),s.indexOf('function trasladoControl_('));
 let escrito,limpiado=0,flushed=0;
 const hoja={getLastRow:()=>4,getRange:(r,c,n,m)=>({setValues(v){escrito=v},clearContent(){assert(escrito);assert(flushed);limpiado++}}),clearContents(){throw Error('Nunca vaciar la hoja');}};
