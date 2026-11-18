@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
-const b=fs.readFileSync(process.argv[2]||'entrega/Code_Gestion_Financiera_67.gs','utf8');
+const b=fs.readFileSync(process.argv[2]||'entrega/Code_Contabilidad_General_68.gs','utf8');
 const source=b.slice(b.indexOf('function masivoEspacio_('),b.indexOf('function masivoConfirmar_('));
 class Sheet{
  constructor(rows){this.rows=rows;this.fail=false;}
