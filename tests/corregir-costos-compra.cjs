@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert'),crypto=require('crypto');
-const b=fs.readFileSync(process.argv[2]||'entrega/Code_Contabilidad_General_68.gs','utf8');
+const b=fs.readFileSync(process.argv[2]||'entrega/Code_Interfaz_Modular_69.gs','utf8');
 const source=b.slice(b.indexOf("PERMISO_ACCION.corregircostoscompra='COMPRAS';"),b.indexOf('function recibirCompra_(token,p){'));
 class Sheet{constructor(rows){this.rows=rows;}getDataRange(){return {getValues:()=>this.rows.map(r=>r.slice())};}getLastRow(){return this.rows.length;}appendRow(r){this.rows.push(r.slice());}getRange(row,col,n=1,m=1){const s=this;return {getValue:()=>s.rows[row-1]?.[col-1],setValue(v){return this.setValues([[v]]);},setValues(v){if(s.fail&&--s.fail===0)throw Error('interrupted');for(let i=0;i<n;i++){s.rows[row+i-1]??=[];for(let j=0;j<m;j++)s.rows[row+i-1][col+j-1]=v[i][j];}return this;}};}}
 function scenario(){const nc='COM-test',cab=Array(19).fill('');Object.assign(cab,{1:nc,4:'Bodega Principal',5:'RECIBIDA',6:12591,7:0,8:12591,16:'PENDIENTE',18:0});
