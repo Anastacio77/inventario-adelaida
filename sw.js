@@ -1,4 +1,4 @@
-const CACHE_NAME = 'adelaida-pos-2026.11.18-CONTABILIDAD-GENERAL-68';
+const CACHE_NAME = 'adelaida-pos-2026.11.19-INTERFAZ-MODULAR-69';
 const CORE = ['./', './index.html', './manifest.webmanifest', './html2pdf.bundle.min.js'];
 
 self.addEventListener('install', event => {
