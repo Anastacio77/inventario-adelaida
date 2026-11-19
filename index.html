@@ -74,6 +74,16 @@ document.addEventListener('click',e=>{
 #pwaUpdateBar .pwaTxt b{display:block;margin-bottom:2px}
 #pwaUpdateBar button{padding:10px 12px;border-radius:10px}
 @media(max-width:560px){#pwaUpdateBar{left:8px;right:8px;bottom:8px;align-items:stretch;flex-direction:column}#pwaUpdateBar .pwaBtns{display:flex;gap:8px}#pwaUpdateBar .pwaBtns button{flex:1}}
+/* Independent workspaces, preserving the original application forms. */
+body.nav69-activa{background:#f1f4f9;color:#17253d}body.nav69-activa .app{max-width:1600px;width:auto;margin:20px 28px 40px 274px;padding:0}body.nav69-activa .header{border:1px solid #e2e8f0;box-shadow:none;margin-bottom:16px}body.nav69-activa .header>h1,body.nav69-activa .header>.sub,body.nav69-activa .posNavegacion{display:none!important}body.nav69-activa:not([data-modulo69="inicio"]) #resumen{display:none!important}
+.nav69-menu{display:none}body.nav69-activa .nav69-menu{display:block;position:fixed;left:16px;top:16px;bottom:16px;width:230px;overflow:auto;border-radius:20px;background:#14243c;color:#fff;padding:18px 12px;box-sizing:border-box;z-index:80;box-shadow:0 10px 35px #14243c20}.nav69-menu>summary{cursor:pointer;font-weight:750;padding:12px;border-radius:12px}.nav69-marca{font-weight:850;letter-spacing:.08em;font-size:12px;padding:12px 10px 20px;color:#b9cce9}.nav69-menu #tabs{display:flex;flex-direction:column;gap:5px;margin:0}.nav69-menu #tabs button{text-align:left;background:transparent;color:#c9d6e9;border-radius:11px;padding:11px 12px;font-size:14px}.nav69-menu #tabs button:hover{background:#ffffff12;color:#fff}.nav69-menu #tabs button.activo{background:#2672ed;color:#fff;box-shadow:0 4px 12px #0002}.nav69-menu #tabs button:focus-visible,.nav69-opciones button:focus-visible{outline:3px solid #80b7ff;outline-offset:2px}
+.nav69-cabecera{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:4px 0 18px;scroll-margin-top:12px}.nav69-cabecera h2{font-size:28px;line-height:1.2;margin:4px 0;color:#14243c}.nav69-ruta{font-size:10px;letter-spacing:.16em;font-weight:800;color:#61758f}.nav69-sucursal{font-size:13px;color:#61758f}.nav69-opciones{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 18px;border-bottom:1px solid #dce4f0;padding-bottom:12px}.nav69-opciones button{background:#e5ebf4;color:#435771;border:1px solid transparent;padding:9px 14px;font-size:14px;border-radius:10px}.nav69-opciones button.nav69-elegida{background:#fff;color:#175fce;border-color:#b8d0f5;box-shadow:0 3px 9px #1f4d9210}.nav69-opciones button[hidden]{display:none!important}.nav69-inactivo{display:none!important}body.nav69-activa .card{border:1px solid #e2e8f0;box-shadow:0 6px 20px #19375806;border-radius:18px}
+@media(min-width:901px){.nav69-menu>summary{display:none}}
+@media(max-width:900px){body.nav69-activa .app{margin:12px;padding:0}body.nav69-activa .nav69-menu{position:sticky;top:0;left:auto;bottom:auto;width:auto;max-height:75vh;margin:0;padding:5px 12px;border-radius:0 0 16px 16px}.nav69-menu .nav69-marca{padding:10px}.nav69-menu #tabs{display:grid;grid-template-columns:1fr 1fr}.nav69-cabecera h2{font-size:23px}.nav69-opciones{flex-wrap:nowrap;overflow-x:auto;padding:2px 2px 10px}.nav69-opciones button{flex-shrink:0}.nav69-cabecera{margin-top:14px}.nav69-cabecera>button{padding:10px}}
+@media print{.nav69-menu,.nav69-cabecera,.nav69-opciones{display:none!important}body.nav69-activa .app{margin:0}}
+
+body:not(.nav69-activa) .nav69-cabecera,body:not(.nav69-activa) .nav69-opciones{display:none!important}
+
 </style>
 </head>
 <body>
@@ -1525,7 +1535,7 @@ document.addEventListener('click',e=>{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.11.18-CONTABILIDAD-GENERAL-68';
+const VERSION_SISTEMA_UI='2026.11.19-INTERFAZ-MODULAR-69';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -1816,7 +1826,60 @@ function volverLogin(){
     );
 }
 
+// Presentation only: retain original nodes, handlers, permissions and pending forms.
+const NAV69={modulo:'inicio',secciones:new Map(),grupos:new Map(),observador:null};
+function nav69Nombre(v){const b=$('tab'+v.charAt(0).toUpperCase()+v.slice(1));return b?b.textContent.replace(/^[^A-Za-z0-9]+/,'').trim():v;}
+function nav69Menu(){let menu=$('nav69Menu');if(menu)return menu;menu=document.createElement('details');menu.id='nav69Menu';menu.className='nav69-menu noPrint';const summary=document.createElement('summary');summary.textContent='Elegir modulo';menu.appendChild(summary);const marca=document.createElement('div');marca.className='nav69-marca';marca.textContent='COMERCIAL ADELAIDA';menu.appendChild(marca);document.body.prepend(menu);menu.appendChild($('tabs'));const media=window.matchMedia('(max-width: 900px)'),ajustar=()=>{menu.open=!media.matches;};ajustar();media.addEventListener('change',ajustar);const suc=$('sucursalActual');if(suc)suc.addEventListener('change',()=>document.querySelectorAll('.nav69-sucursal').forEach(e=>e.textContent='Sucursal: '+SUCURSAL));return menu;}
+function nav69Clasificar(v,el,i){
+ const id=el.id||'',h=el.querySelector('h3,h4,summary,b'),titulo=h?h.textContent.trim():'';
+ if(v==='inicio')return ['resumen','Resumen'];
+ if(v==='pos')return /ticket/.test(id)?['comprobantes','Comprobantes']:['venta','Venta actual'];
+ if(v==='compras'){
+  if(id==='compListaCard')return ['lista','Ordenes de compra'];if(id==='compDetalleCard'||id==='recepcionCompraCard')return ['detalle','Detalle / recepcion'];
+  if(id==='bmEnCompras'||/Importaci.n masiva/.test(titulo))return ['masivo','Importacion masiva'];
+  if(el.querySelector('#ccNumero'))return ['costos','Corregir costos'];if(el.querySelector('#provNombre'))return ['proveedores','Proveedores'];if(el.querySelector('#compProveedor'))return ['nueva','Nueva compra'];if(el.querySelector('#histComprasProveedor'))return ['historial','Historial por proveedor'];
+ }
+ if(v==='inventario'){if(id==='inventarioCurvasCard')return ['curvas','Paquetes / curvas'];if(id==='productoCard'||el.querySelector('#codigo'))return ['referencia','Consultar / movimientos'];return ['existencias','Existencias'];}
+ if(v==='nuevo'){if(id==='masivoPanel')return ['masivo','Ingreso masivo'];if(el.querySelector('#nombresPreciosFilas'))return ['precios','Nombres de precios'];if(el.querySelector('#exportarQRExcel'))return ['etiquetas','Exportar productos / QR'];return ['individual','Producto individual / corrida'];}
+ if(v==='traslados')return el.querySelector('#listaTraslados')?['historial','Traslados de la sucursal']:['nuevo','Nuevo traslado'];
+ if(v==='pedidos')return id==='pedidoListaCard'?['lista','Pedidos']:['detalle','Detalle / cobro'];
+ if(v==='ventas')return id==='ticketHistorialCard'?['detalle','Comprobante']:['historial','Historial de ventas'];
+ if(v==='clientes')return el.querySelector('#listaCreditos')?['creditos','Creditos / abonos']:['clientes','Clientes'];
+ if(v==='devoluciones')return id==='devHistorialCard'?['historial','Historial']:id==='devDetalleCard'?['detalle','Comprobante']:['registro','Registrar devolucion / cambio'];
+ return [id||'opcion'+i,titulo||'Opcion '+(i+1)];
+}
+function nav69Preparar(v){
+ const raiz=$('vista'+v.charAt(0).toUpperCase()+v.slice(1));if(!raiz)return;
+ let cab=raiz.querySelector(':scope > .nav69-cabecera');if(!cab){cab=document.createElement('div');cab.className='nav69-cabecera noPrint';const info=document.createElement('div'),ruta=document.createElement('div');ruta.className='nav69-ruta';ruta.textContent='AREA DE TRABAJO';const titulo=document.createElement('h2');titulo.textContent=nav69Nombre(v);const suc=document.createElement('div');suc.className='nav69-sucursal';info.append(ruta,titulo,suc);const boton=document.createElement('button');boton.type='button';boton.className='btnGris';boton.textContent='Modulos';boton.onclick=abrirMenu69;cab.append(info,boton);raiz.prepend(cab);}
+ cab.querySelector('.nav69-sucursal').textContent='Sucursal: '+SUCURSAL;
+ let barra=raiz.querySelector(':scope > .nav69-opciones');if(!barra){barra=document.createElement('nav');barra.className='nav69-opciones noPrint';barra.setAttribute('aria-label','Opciones de '+nav69Nombre(v));cab.after(barra);}
+ const candidatos=v==='contabilidad'?[...raiz.querySelectorAll('#ctContenido > .card')]:[...raiz.children].filter(e=>e.classList.contains('card')||e.id==='bmEnCompras');
+ const grupos=new Map();candidatos.forEach((el,i)=>{if(el.classList.contains('posNavegacion'))return;const [key,nombre]=nav69Clasificar(v,el,i);if(!grupos.has(key))grupos.set(key,{nombre,elementos:[]});grupos.get(key).elementos.push(el);el.dataset.nav69Modulo=v;el.dataset.nav69Seccion=key;});
+ NAV69.grupos.set(v,grupos);barra.replaceChildren();grupos.forEach((g,key)=>{const b=document.createElement('button');b.type='button';b.textContent=g.nombre;b.dataset.nav69Opcion=key;b.onclick=()=>seleccionarSeccion69(v,key);barra.appendChild(b);});
+ const defecto={compras:'lista',inventario:'existencias',nuevo:'individual',traslados:'nuevo',pedidos:'lista',ventas:'historial',clientes:'clientes',pos:'venta',devoluciones:'registro'};
+ seleccionarSeccion69(v,NAV69.secciones.get(v)||defecto[v]||grupos.keys().next().value,false);
+}
+function seleccionarSeccion69(v,key,desplazar=true){
+ const grupos=NAV69.grupos.get(v);if(!grupos||!grupos.size)return;const disponible=k=>grupos.has(k)&&grupos.get(k).elementos.some(e=>!e.classList.contains('oculto'));
+ if(!disponible(key))key=[...grupos.keys()].find(disponible)||grupos.keys().next().value;NAV69.secciones.set(v,key);
+ grupos.forEach((g,k)=>g.elementos.forEach(e=>{e.classList.toggle('nav69-inactivo',k!==key);if(e.id==='bmEnCompras'&&e.contains($('masivoPanel')))$('masivoPanel').classList.remove('nav69-inactivo');}));
+ const raiz=$('vista'+v.charAt(0).toUpperCase()+v.slice(1));raiz.querySelectorAll(':scope > .nav69-opciones button').forEach(b=>{b.classList.toggle('nav69-elegida',b.dataset.nav69Opcion===key);b.setAttribute('aria-pressed',String(b.dataset.nav69Opcion===key));b.hidden=!disponible(b.dataset.nav69Opcion);});
+ if(desplazar)raiz.querySelector('.nav69-cabecera').scrollIntoView({behavior:'auto',block:'start'});
+}
+function abrirMenu69(){const m=nav69Menu();m.open=true;const b=$('tabs').querySelector('button.activo:not(.oculto)')||$('tabs').querySelector('button:not(.oculto)');if(b)b.focus();}
+function actualizarNavegacion69(v){
+ if(!SESION)return;NAV69.modulo=v;const menu=nav69Menu();if($('tabs').parentElement!==menu)menu.appendChild($('tabs'));document.body.classList.add('nav69-activa');document.body.dataset.modulo69=v;
+ nav69Preparar(v);if($('posSucursalVisible'))$('posSucursalVisible').textContent='Sucursal: '+SUCURSAL;
+ $('tabs').querySelectorAll('button').forEach(b=>{if(b.id==='tab'+v.charAt(0).toUpperCase()+v.slice(1))b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
+ menu.open=!window.matchMedia('(max-width: 900px)').matches;
+ if(!NAV69.observador){NAV69.observador=new MutationObserver(cambios=>{cambios.forEach(c=>{const e=c.target;if(e.id==='tabs'&&e.classList.contains('oculto'))return cerrarNavegacion69();if(!e.dataset.nav69Modulo||!c.oldValue)return;const antes=c.oldValue.split(/\s+/).includes('oculto'),ahora=e.classList.contains('oculto');if(antes&&!ahora&&e.dataset.nav69Modulo===NAV69.modulo){seleccionarSeccion69(e.dataset.nav69Modulo,e.dataset.nav69Seccion);}else if(!antes&&ahora&&e.dataset.nav69Modulo===NAV69.modulo&&NAV69.secciones.get(NAV69.modulo)===e.dataset.nav69Seccion){const grupo=NAV69.grupos.get(NAV69.modulo).get(e.dataset.nav69Seccion);if(grupo.elementos.every(x=>x.classList.contains('oculto'))){const volver={pos:'venta',compras:'lista',pedidos:'lista',ventas:'historial',devoluciones:'registro'};seleccionarSeccion69(NAV69.modulo,volver[NAV69.modulo]);}} });});document.querySelectorAll('.vistaApp').forEach(r=>NAV69.observador.observe(r,{attributes:true,attributeFilter:['class'],attributeOldValue:true,subtree:true}));NAV69.observador.observe($('tabs'),{attributes:true,attributeFilter:['class']});}
+ const raiz=$('vista'+v.charAt(0).toUpperCase()+v.slice(1));if(raiz)raiz.scrollIntoView({behavior:'auto',block:'start'});
+}
+function cerrarNavegacion69(){document.body.classList.remove('nav69-activa');if($('nav69Menu'))$('nav69Menu').open=false;document.querySelectorAll('.nav69-inactivo').forEach(e=>e.classList.remove('nav69-inactivo'));}
+function mostrarAccion69(id){const e=$(id);if(!e||!SESION)return;const raiz=e.closest('.vistaApp');if(!raiz||raiz.classList.contains('oculto'))return;nav69Preparar(NAV69.modulo);const panel=e.closest('[data-nav69-seccion]');if(panel)seleccionarSeccion69(NAV69.modulo,panel.dataset.nav69Seccion);}
+
 function posicionarMenuModulos(v){
+ if(typeof actualizarNavegacion69==='function'){actualizarNavegacion69(v);return;}
  const menu=$('tabs'),ancla=$('ubicacionMenuModulos'),pos=$('vistaPos');if(!menu||!ancla||!pos)return;
  if(v==='pos'){
   pos.insertAdjacentElement('afterend',menu);
@@ -1826,6 +1889,7 @@ function posicionarMenuModulos(v){
  if(modulo)modulo.scrollIntoView({behavior:'auto',block:'start'});
 }
 function verOtrosModulosPOS(){
+ if(typeof abrirMenu69==='function'){abrirMenu69();return;}
  const menu=$('tabs');if(menu)menu.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function vista(v){
@@ -2560,6 +2624,7 @@ function ajustarUsuarioSucursal(){
 }
 
 function cerrarSesion(){
+ if(typeof cerrarNavegacion69==='function')cerrarNavegacion69();
   TOKEN='';
   SESION=null;
 
@@ -8013,6 +8078,7 @@ function guardarPedido(){
 
 
 function mostrarListaPedidos(){
+ if(typeof mostrarAccion69==='function')mostrarAccion69('pedidoListaCard');
   const lista=$('pedidoListaCard');
   const detalle=$('pedidoDetalleCard');
   const ticket=$('ticketPedidoCard');
@@ -9695,6 +9761,7 @@ function cancelarEdicionCompra(){
  if(COMPRA_GUARDANDO)return;COMPRA_EDICION=null;COMPRA_ITEMS=[];renderCompraItems();$('compGuardarOrden').textContent='Guardar borrador';$('compCancelarEdicion').hidden=true;$('compEdicionInfo').textContent='';
 }
 function editarCompraBorrador(numero){
+ if(typeof mostrarAccion69==='function')mostrarAccion69('compProveedor');
  if(COMPRA_GUARDANDO)return;
  if(COMPRA_ITEMS.length&&!confirm('Reemplazar los productos del formulario por este borrador?'))return;
  api('gestionarcompraborrador',{numeroCompra:numero,operacion:'CONSULTAR'},r=>{
@@ -9786,6 +9853,7 @@ function crearCompraUI(){
 }
 
 function mostrarListaCompras(){
+ if(typeof mostrarAccion69==='function')mostrarAccion69('compListaCard');
   const lista=$('compListaCard');
   const detalle=$('compDetalleCard');
 
@@ -10076,6 +10144,7 @@ function corregirDuplicadoCompraUI(numero,boton){
 }
 
 function recibirCompraUI(numero,boton){
+ if(typeof mostrarAccion69==='function')mostrarAccion69('recepcionCompraCard');
   if(COMPRAS_RECIBIENDO.has(numero)){
     return;
   }
@@ -10318,6 +10387,7 @@ function ticketCompraHTML(r,id){
 }
 
 function abrirDetalleCompra(numeroCompra,imprimir=false,exportar=false){
+ if(typeof mostrarAccion69==='function')mostrarAccion69('compDetalleCard');
   const lista=$('compListaCard');
   const card=$('compDetalleCard');
   const ticket=$('compDetalleTicket');
@@ -10816,6 +10886,7 @@ function limpiarClienteUI(){
   $('cliLimite').value='0';$('cliEdicion').textContent='';$('cliGuardar').textContent='Guardar cliente';$('cliNombre').focus();
 }
 function editarClienteUI(i){
+ if(typeof mostrarAccion69==='function')mostrarAccion69('cliNombre');
   if(CLIENTE_GUARDANDO) return;
   const c=CLIENTES_LISTA[i];if(!c) return;
   const campos={cliId:'clienteId',cliNombre:'nombre',cliNit:'nit',cliTelefono:'telefono',cliWhatsapp:'whatsapp',cliDireccion:'direccion',cliLimite:'limiteCredito'};
@@ -12847,7 +12918,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.11.18-CONTABILIDAD-GENERAL-68';
+  const APP_VERSION='2026.11.19-INTERFAZ-MODULAR-69';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
@@ -13020,7 +13091,7 @@ function bmLeerPrecios(){return (BM.precios||[]).map(p=>{
 function bmProveedores(){api('proveedores',{q:''},r=>{if(!r.ok)return bmMsg(r.error,true);const elegido=$('bmProveedor').value||$('compProveedor').value; $('bmProveedor').innerHTML='<option value="">Seleccione</option>'+(r.proveedores||[]).map(x=>'<option value="'+esc(x.proveedorId)+'">'+esc(x.nombre)+'</option>').join('');if(Array.from($('bmProveedor').options).some(o=>o.value===elegido))$('bmProveedor').value=elegido;bmCargarModelosProveedor();});}
 let BM_CATALOGO_PROVEEDOR=[],BM_PROVEEDOR_CARGADO='';
 function bmAbrirCompras(){
- vista('compras');$('bmEnCompras').append($('masivoPanel'));
+ vista('compras');$('bmEnCompras').append($('masivoPanel'));if(typeof mostrarAccion69==='function')mostrarAccion69('bmEnCompras');
  if(!BM.enviado){$('bmModo').value='COMPRA';bmModoUI();}bmRender();$('masivoPanel').scrollIntoView({behavior:'smooth',block:'start'});
 }
 async function bmCargarModelosProveedor(){
