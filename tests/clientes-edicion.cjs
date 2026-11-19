@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
-const gs=process.argv[2]||'entrega/Code_Contabilidad_General_68.gs';
+const gs=process.argv[2]||'entrega/Code_Interfaz_Modular_69.gs';
 const source=fs.readFileSync(gs,'utf8');
 function sheet(rows){return {rows,getLastRow:()=>rows.length,getDataRange:()=>({getValues:()=>rows.map(r=>r.slice())}),getRange:(r,c,n=1,m=1)=>({getValues:()=>rows.slice(r-1,r-1+n).map(x=>x.slice(c-1,c-1+m)),getValue:()=>rows[r-1][c-1],setValues:vs=>vs.forEach((row,i)=>row.forEach((v,j)=>rows[r-1+i][c-1+j]=v))}),appendRow:r=>rows.push(r),deleteRow:r=>rows.splice(r-1,1)};}
 const cliente=['C1','Ana','CF','111','222','Direccion',100,0,'SI','fecha original'];
