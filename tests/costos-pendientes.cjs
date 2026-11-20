@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert'),crypto=require('crypto');
-const backend=fs.readFileSync(process.argv[2]||'entrega/Code_Pedido_Pestana_70.gs','utf8');
+const backend=fs.readFileSync(process.argv[2]||'entrega/Code_Interfaz_Intuitiva_71.gs','utf8');
 const source=backend.slice(backend.indexOf("PERMISO_ACCION.corregircostoscompra='COMPRAS';"),backend.indexOf('function recibirCompra_(token,p){'));
 class Sheet{constructor(rows){this.rows=rows;}getDataRange(){return{getValues:()=>this.rows.map(r=>r.slice())}}getLastRow(){return this.rows.length}appendRow(r){this.rows.push(r.slice())}getRange(row,col,n=1,m=1){const s=this;return{getValue:()=>s.rows[row-1]?.[col-1],setValue(v){return this.setValues([[v]])},setValues(v){if(s.fail&&--s.fail===0)throw Error('interrupted');for(let i=0;i<n;i++)for(let j=0;j<m;j++)s.rows[row+i-1][col+j-1]=v[i][j];return this}}}}
 function setup(){const nc='COM-20261030-112402-879CB29C',cab=Array(19).fill('');Object.assign(cab,{1:nc,4:'Bodega Principal',5:'PENDIENTE',6:56659.75,7:0,8:56659.75,13:'CREDITO',14:30,16:'PENDIENTE',18:1340});const det=[['header']],prod=[['header']],ed=[];
