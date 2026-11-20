@@ -16,5 +16,5 @@ assert(html.includes("verCostoFlete=$('bmModo').value==='COMPRA'"));
 assert(!html.includes("BM_COLS=['costoConFlete'"));
 for(const m of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi))new vm.Script(m[1]);
 new vm.Script(fs.readFileSync('entrega/sw.js','utf8'));
-new vm.Script(fs.readFileSync('entrega/Code_Interfaz_Modular_69.gs','utf8'));
+new vm.Script(fs.readFileSync('entrega/Code_Pedido_Pestana_70.gs','utf8'));
 console.log('Costo + flete: reparto por unidad, recalculo, cero/invalidos y sintaxis OK');
