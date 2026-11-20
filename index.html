@@ -199,7 +199,7 @@ body:not(.nav69-activa) .nav69-cabecera,body:not(.nav69-activa) .nav69-opciones{
     </div>
   </div>
 
-  <div id="vistaPos" class="vistaApp oculto" style="scroll-margin-top:12px">
+  <div id="vistaPos" class="vistaApp oculto" style="scroll-margin-top:12px"><div id="pedidoPestanaEstado70" class="oculto noPrint"></div>
     <div class="card noPrint posNavegacion" style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><b>Punto de venta</b><div id="posSucursalVisible" class="sub"></div></div><button class="btnGris" type="button" onclick="verOtrosModulosPOS()">Otros m&#243;dulos &#8595;</button></div>
     <div class="card">
       <div class="fila" style="margin-bottom:10px;align-items:center">
@@ -1535,7 +1535,7 @@ body:not(.nav69-activa) .nav69-cabecera,body:not(.nav69-activa) .nav69-opciones{
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.11.19-INTERFAZ-MODULAR-69';
+const VERSION_SISTEMA_UI='2026.11.19-PEDIDO-PESTANA-70';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -4170,7 +4170,7 @@ function cambiarMonedaDocumento(id,codigo){
 }
 function prepararMonedaDocumento(v,id,tipo){
   const el=$(id);
-  if(!el||!['ticket','ticketPedido','pedidoDetalle','ticketHistorial'].includes(id))return {formato:Q,nota:''};
+  if(!el||!['ticket','ticketPedido','pedidoDetalle','ticketHistorial','ticketPedidoPOS70'].includes(id))return {formato:Q,nota:''};
   let e=VISTA_MONEDA_DOCUMENTOS.get(id);
   if(!e||e.datos!==v){e={datos:v,tipo,codigo:v.tasaNegociada?v.tasaNegociada.codigo:'GTQ'};VISTA_MONEDA_DOCUMENTOS.set(id,e);}
   const d=tasaVistaDocumento(e.codigo,v);e.codigo=d.codigo;
@@ -8023,7 +8023,40 @@ function comprobanteAnticipoHTML(p,id){
     '<hr><div class="centro">Pago recibido en concepto de anticipo para reserva de pedido.</div>';
 }
 
+// Reserve the new browsing context inside the user's click; never open a POS overlay.
+let PEDIDO_PESTANA70_BUSY=null,PEDIDO_PESTANA70_ULTIMO=null;
+function firmaFormularioPedido70(){return JSON.stringify({carrito,campos:['posCliente','posNit','posNota','posVendedor','posMoneda','posTasaNegociada','posDescuento'].map(id=>$(id)?$(id).value:''),borrador:typeof BORRADOR_POS_ACTUAL_ID==='undefined'?'':BORRADOR_POS_ACTUAL_ID});}
+function usuarioPedido70(ctx){return SESION&&SESION.usuario===ctx.usuario;}
+function estadoPestanaPedido70(ctx,texto,error=false){try{const w=ctx.ventana;if(!w||w.closed)return;const d=w.document;d.open();d.write('<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pedido - Comercial Adelaida</title></head><body style="font:18px system-ui;padding:24px;background:#f4f6fa"><h2>Comercial Adelaida</h2><p id="estadoPedido70" role="status"></p><p id="avisoPedido70"></p></body></html>');d.close();d.getElementById('estadoPedido70').textContent=texto;d.getElementById('avisoPedido70').textContent=error?'Vuelva al POS. Ante una respuesta incierta, consulte Pedidos antes de repetir el guardado.':'El POS permanece en la pestana original. Espere a que termine la carga del comprobante.';}catch(e){ctx.ventana=null;}}
+function abrirPestanaPedido70(ctx){try{ctx.ventana=window.open('about:blank','_blank');if(ctx.ventana)ctx.ventana.opener=null;}catch(e){ctx.ventana=null;}estadoPestanaPedido70(ctx,ctx.numero?'Cargando comprobante '+ctx.numero+'...':'Guardando pedido...');return ctx.ventana;}
+function bloquearPedido70(ctx,bloquear){if(bloquear){ctx.botones=[...document.querySelectorAll('#btnGuardarPedido,#btnReservarPedido,#btnCobrarVenta,#reservaPosBox button')].map(b=>({b,disabled:b.disabled}));ctx.botones.forEach(x=>x.b.disabled=true);}else(ctx.botones||[]).forEach(x=>x.b.disabled=x.disabled);}
+function iniciarPedido70(){const ctx={usuario:SESION.usuario,sucursal:SUCURSAL,firma:firmaFormularioPedido70(),ventana:null,numero:'',datos:null,pago:null,leyendo:false};PEDIDO_PESTANA70_BUSY=ctx;PEDIDO_PESTANA70_ULTIMO=ctx;bloquearPedido70(ctx,true);abrirPestanaPedido70(ctx);msg('mensajePos','Guardando pedido... El comprobante se abrira en otra pestana.','info');return ctx;}
+function enlacePedido70(ctx,texto){if(ctx!==PEDIDO_PESTANA70_ULTIMO||!usuarioPedido70(ctx)||SUCURSAL!==ctx.sucursal)return;const box=$('pedidoPestanaEstado70');if(!box)return;box.classList.remove('oculto');box.replaceChildren();const p=document.createElement('p');p.textContent=texto;const b=document.createElement('button');b.type='button';b.className='btnGris';b.textContent=ctx.datos?'Abrir comprobante en otra pestana':'Consultar / abrir comprobante';b.disabled=!!ctx.leyendo;b.onclick=()=>{if(!usuarioPedido70(ctx))return;if(ctx.datos)return abrirComprobanteListo70(ctx);if(!ctx.ventana||ctx.ventana.closed)abrirPestanaPedido70(ctx);consultarComprobantePedido70(ctx);};box.append(p,b);}
+function terminarPedido70(ctx,r){if(PEDIDO_PESTANA70_BUSY===ctx){PEDIDO_PESTANA70_BUSY=null;bloquearPedido70(ctx,false);}if(!r||!r.ok){estadoPestanaPedido70(ctx,(r&&r.error)||'No se recibio confirmacion del pedido.',true);if(usuarioPedido70(ctx)&&SUCURSAL===ctx.sucursal)msg('mensajePos',((r&&r.error)||'No se recibio confirmacion.')+' Si la respuesta es incierta, revise Pedidos antes de repetir.','error');return false;}ctx.numero=String(r.numeroPedido||'');ctx.pago=r.pago||null;if(!usuarioPedido70(ctx)){estadoPestanaPedido70(ctx,'El pedido fue guardado. La sesion cambio; consulte el pedido desde su cuenta.',true);return false;}const coincide=SUCURSAL===ctx.sucursal&&firmaFormularioPedido70()===ctx.firma;if(coincide){quitarBorradorPosCompletado();limpiarPosDespues();msg('mensajePos','Pedido guardado: '+ctx.numero+'. Comprobante en otra pestana.','ok');}estadoPestanaPedido70(ctx,'Pedido '+ctx.numero+' guardado. Cargando comprobante...');consultarComprobantePedido70(ctx);return true;}
+function consultarComprobantePedido70(ctx){if(ctx.leyendo||!ctx.numero||!usuarioPedido70(ctx))return;ctx.leyendo=true;enlacePedido70(ctx,'Pedido '+ctx.numero+' guardado. Cargando su comprobante...');api('detallepedido',{numeroPedido:ctx.numero,sucursal:ctx.sucursal},r=>{ctx.leyendo=false;if(!usuarioPedido70(ctx)){estadoPestanaPedido70(ctx,'La sesion cambio. Consulte el pedido desde su cuenta.',true);return;}if(!r||!r.ok||String(r.numeroPedido)!==ctx.numero||String(r.sucursal)!==ctx.sucursal){estadoPestanaPedido70(ctx,'Pedido guardado, pero no se pudo consultar el comprobante. No vuelva a guardarlo.',true);return enlacePedido70(ctx,'Pedido '+ctx.numero+' guardado. Pulse Consultar / abrir para reintentar solo la consulta.');}ctx.datos=r;mostrarComprobantePedido70(ctx);});}
+function copiasPedido70(ctx){
+ const host=document.createElement('div');host.className='oculto';host.setAttribute('aria-hidden','true');const el=document.createElement('div');el.id='ticketPedidoPOS70';host.appendChild(el);document.body.appendChild(host);const copias=[],v=ctx.datos;
+ try{pedidoHTML(v,el.id);const select=$('monedaSelect_'+el.id),codigo=select?select.value:'GTQ',codigos=select?[...select.options].map(o=>o.value):['GTQ'];codigos.forEach(c=>{if(select)cambiarMonedaDocumento(el.id,c);const d=tasaVistaDocumento(c,v),importe=n=>c==='GTQ'?Q(n):d.simbolo+(Number(n||0)/d.tipoCambio).toFixed(2);let extra='';if(v.tipoPedido==='RESERVA')extra='<hr><div><b>Anticipo:</b> '+importe(v.anticipo)+'</div><div><b>Saldo pendiente:</b> '+importe(v.saldoPendiente)+'</div><div><b>Vigencia:</b> '+esc(v.fechaVencimiento||'')+'</div>';copias.push({id:'PEDIDO-'+c,nombre:'Pedido - '+c,html:el.innerHTML+extra});});if(ctx.pago){const anticipo=document.createElement('div');anticipo.id='anticipoPOS70';host.appendChild(anticipo);comprobanteAnticipoHTML(ctx.pago,anticipo.id);copias.push({id:'ANTICIPO-GTQ',nombre:'Comprobante de anticipo - GTQ',html:anticipo.innerHTML});}return {copias,inicial:'PEDIDO-'+codigo};}
+ finally{VISTA_MONEDA_DOCUMENTOS.delete(el.id);host.remove();}
+}
+function crearVistaComprobante70(ctx){
+ const {copias,inicial}=copiasPedido70(ctx);const html='<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pedido - Comercial Adelaida</title><style>*{box-sizing:border-box}body{margin:0;background:#eef2f7;color:#17253d;font:16px system-ui}.controles70{padding:14px;background:#fff;display:flex;flex-wrap:wrap;gap:10px;align-items:center;border-bottom:1px solid #d8e0ec}button,select{font:inherit;padding:12px;border-radius:10px;border:1px solid #cad5e4;background:#fff;cursor:pointer}button{background:#1766d9;color:white;font-weight:700}.nota70{padding:8px 16px;margin:0;font-size:13px}.papel70{padding:18px;overflow:auto}.ticket{background:white;color:#111;padding:20px;max-width:960px;min-width:740px;margin:auto;font-family:monospace}.ticket h2,.centro{text-align:center}table{width:100%;border-collapse:collapse}th,td{border:1px solid #222;padding:4px;text-align:center}.descripcion{text-align:left}.derecha{text-align:right}.lineaTotal{display:flex;justify-content:space-between;margin-top:6px}.sub{font-size:12px}.ticket hr{border:0;border-top:1px dashed #333}@media print{.controles70,.nota70{display:none}.ticket{min-width:0;padding:0}.papel70{padding:0}}</style></head><body><nav class="controles70" aria-label="Opciones del comprobante"><label>Ver comprobante <select id="documentoPedido70"></select></label><button type="button" id="imprimirPedido70">Imprimir / PDF - media carta</button><button type="button" id="cartaPedido70">Carta vertical</button><button type="button" id="cerrarPedido70">Cerrar esta pestana</button></nav><p class="nota70">El POS permanece disponible en la pestana original. La impresion y el PDF se preparan aqui.</p><main class="papel70"><div id="contenidoPedido70" class="ticket"></div></main></body></html>';
+  const recurso=new URL('./html2pdf.bundle.min.js',location.href).href,exp="new URL('./html2pdf.bundle.min.js',location.href).href",fuentes=[imprimirDocumentoEscritorioHTML.toString(),imprimirDocumentoHTML.toString()].map(f=>f.split(exp).join(JSON.stringify(recurso))).join('\n');
+  const script=fuentes+'\nconst COPIAS_PEDIDO70='+JSON.stringify(copias)+';\n'+
+   'const selector=document.getElementById("documentoPedido70");COPIAS_PEDIDO70.forEach(c=>{const o=document.createElement("option");o.value=c.id;o.textContent=c.nombre;selector.appendChild(o);});selector.value='+JSON.stringify(inicial)+';\n'+
+   'function actualizarPedido70(){const c=COPIAS_PEDIDO70.find(c=>c.id===selector.value)||COPIAS_PEDIDO70[0];document.getElementById("contenidoPedido70").innerHTML=c.html;}selector.onchange=actualizarPedido70;actualizarPedido70();\n'+
+   'document.getElementById("imprimirPedido70").onclick=()=>imprimirDocumentoHTML(document.getElementById("contenidoPedido70").innerHTML,"MEDIA");document.getElementById("cartaPedido70").onclick=()=>imprimirDocumentoHTML(document.getElementById("contenidoPedido70").innerHTML,"CARTA");document.getElementById("cerrarPedido70").onclick=()=>window.close();';
+ return {html,script,titulo:'Pedido '+ctx.numero+' - Comercial Adelaida'};
+}
+function abrirComprobanteListo70(ctx){if(!usuarioPedido70(ctx)||!ctx.datos)return;try{if(ctx.ventana&&!ctx.ventana.closed&&ctx.vistaLista){ctx.ventana.focus();return;}const vista=ctx.vista70||(ctx.vista70=crearVistaComprobante70(ctx));if(!ctx.url70){const codigo=vista.script.replace(/<\/script/gi,'<\\/script'),completo=vista.html.replace('<title>Pedido - Comercial Adelaida</title>','<title>'+esc(vista.titulo)+'</title>').replace('</body>','<scr'+'ipt>'+codigo+'</scr'+'ipt></body>');ctx.url70=URL.createObjectURL(new Blob([completo],{type:'text/html;charset=utf-8'}));}const a=document.createElement('a');a.href=ctx.url70;a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();enlacePedido70(ctx,'Comprobante listo. Si no abre, permita nuevas pestanas para esta aplicacion. No vuelva a guardar el pedido.');}catch(e){enlacePedido70(ctx,'No se pudo abrir el comprobante. Consulte el pedido guardado en Pedidos.');}}
+function mostrarComprobantePedido70(ctx){
+ if(!usuarioPedido70(ctx)||!ctx.datos)return;try{const vista=ctx.vista70||(ctx.vista70=crearVistaComprobante70(ctx)),w=ctx.ventana;if(!w||w.closed)return enlacePedido70(ctx,'Pedido '+ctx.numero+' guardado. El navegador bloqueo la pestana o esta fue cerrada. Pulse Abrir comprobante.');const d=w.document;d.open();d.write(vista.html);d.close();d.title=vista.titulo;const script=d.createElement('script');script.textContent=vista.script;d.body.appendChild(script);ctx.vistaLista=true;
+  enlacePedido70(ctx,'Comprobante '+ctx.numero+' abierto en otra pestana. Puede continuar usando el POS.');
+ }catch(e){estadoPestanaPedido70(ctx,'Pedido guardado. No se pudo preparar la vista. Reintente solo la consulta.',true);enlacePedido70(ctx,'Pedido '+ctx.numero+' guardado. Pulse Abrir comprobante para reintentar la vista.');}
+}
+
 function guardarReservaPos(){
+  if(PEDIDO_PESTANA70_BUSY)return;
   if(!validarTasaPos())return;
   if(!carrito.length) return msg('mensajePos','Carrito vac\u00edo.','error');
   const cliente=$('posCliente').value.trim();
@@ -8040,6 +8073,7 @@ function guardarReservaPos(){
     return msg('mensajePos','Para recibir anticipo debe existir caja abierta.','error');
   }
 
+  const ctx70=iniciarPedido70();
   api('reservarpedido',{
     moneda:$('posMoneda').value,tasaNegociada:tasaNegociadaPos(),
     items:JSON.stringify(carrito.map(x=>({codigo:x.codigo,cantidad:x.cantidad,precioVenta:Number(x.precioVenta??x.precio)||0,precioNivelId:x.precioNivelId||''}))),
@@ -8047,32 +8081,22 @@ function guardarReservaPos(){
     vendedor:$('posVendedor').value,duracion,unidadDuracion:$('resUnidad').value,
     anticipo,metodoAnticipo:$('resMetodo').value
   },r=>{
-    if(!r||!r.ok) return msg('mensajePos',(r&&r.error)||'No se pudo registrar la reserva.','error');
-    if(r.pago){
-      comprobanteAnticipoHTML(r.pago,'ticketReservaPos');
-      $('ticketReservaPosCard').classList.remove('oculto');
-    }
-    const numero=r.numeroPedido,vence=r.fechaVencimiento;
-    quitarBorradorPosCompletado();
-    limpiarPosDespues();
-    CATALOGO_POS=[];CATALOGO_POS_TS=0;precargarCatalogoPos(true);
-    msg('mensajePos','Reserva '+numero+' registrada hasta '+vence+(r.anticipo>0?' \u00b7 Anticipo '+Q(r.anticipo):''),'ok');
+    if(terminarPedido70(ctx70,r)&&ctx70.sucursal===SUCURSAL){CATALOGO_POS=[];CATALOGO_POS_TS=0;precargarCatalogoPos(true);}
   });
 }
 
 function guardarPedido(){
+  if(PEDIDO_PESTANA70_BUSY)return;
   if(!validarTasaPos())return;
   if(!carrito.length) return msg('mensajePos','Carrito vac\u00edo.','error');
   const t=total();
+  const ctx70=iniciarPedido70();
   api('guardarpedido',{
     moneda:$('posMoneda').value,tasaNegociada:tasaNegociadaPos(),
     items:JSON.stringify(carrito.map(x=>({codigo:x.codigo,cantidad:x.cantidad,precioVenta:Number(x.precioVenta??x.precio)||0,precioNivelId:x.precioNivelId||''}))),
     cliente:$('posCliente').value,nit:$('posNit').value,descuento:t.desc,nota:$('posNota').value,vendedor:$('posVendedor').value
   },r=>{
-    if(!r.ok) return msg('mensajePos',r.error,'error');
-    quitarBorradorPosCompletado();
-    limpiarPosDespues();
-    msg('mensajePos','Pedido guardado: '+r.numeroPedido,'ok');
+    terminarPedido70(ctx70,r);
   });
 }
 
@@ -12918,7 +12942,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.11.19-INTERFAZ-MODULAR-69';
+  const APP_VERSION='2026.11.19-PEDIDO-PESTANA-70';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
