@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
-const gs=fs.readFileSync(process.argv[2]||'entrega/Code_Interfaz_Modular_69.gs','utf8'),html=fs.readFileSync(process.argv[3]||'entrega/index.html','utf8');
+const gs=fs.readFileSync(process.argv[2]||'entrega/Code_Pedido_Pestana_70.gs','utf8'),html=fs.readFileSync(process.argv[3]||'entrega/index.html','utf8');
 const source=gs.slice(gs.indexOf('function recibirCompra_(token,p){'),gs.indexOf('function listarCuentasPorPagar_'));
 const cab=Array(19).fill('');Object.assign(cab,{1:'COM-A',4:'Origen',5:'RECIBIDA'});
 let reads=0,writes=0;const det=[['','COM-A','A','',40,47.75,1910,40],['','COM-A','B','',5,55.25,276.25,5]];
