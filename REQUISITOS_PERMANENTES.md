@@ -128,3 +128,9 @@ El archivo Apps Script se distribuye en el paquete privado; no publicar credenci
 - Reanudar la misma solicitud ante tiempo agotado; bloquear conflictos y otras escrituras si queda pendiente. No restaurar salidas sin lotes recuperables.
 - Movimientos manuales y sus anulaciones requieren revision contable; no crear reversas aisladas si el original no se contabilizo.
 - Conservar todas las mejoras 66-72 y pruebas de pedidos/pagos/divisas/contabilidad.
+
+
+## 76 - Ajuste de entrada
+- Solo ADMIN: cantidad positiva, costo explicito, motivo y referencia opcional; lote unico y movimiento AJUSTE ENTRADA con cantidades antes/despues. Sin cambiar precios ni pagos a proveedores.
+- ControlAjustesEntrada duradero, mismo ID al reintentar, solicitud inmutable y bloqueo de escrituras hasta resolver conflictos; no duplicar lotes ni existencias.
+- Mercancia nueva por Compras; correccion de salidas por Anular salida; ajustes pendientes de revision contable.
