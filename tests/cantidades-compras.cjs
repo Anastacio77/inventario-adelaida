@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
-const gs=fs.readFileSync(process.argv[2]||'entrega/Code_Interfaz_Intuitiva_71.gs','utf8');
+const gs=fs.readFileSync(process.argv[2]||'entrega/Code_Stock_Sucursales_72.gs','utf8');
 const fn=gs.slice(gs.indexOf('function listarCompras_(token,p){'),gs.indexOf('function detalleCompra_'));
 let reads=0;const cab=(id,suc,prov,state,total)=>{const r=Array(19).fill('');Object.assign(r,{1:id,2:prov,4:suc,5:state,8:total});return r;};
 const rows=[cab('A','Origen','P','PENDIENTE',56764.75),cab('B','Destino','P','RECIBIDA',99),cab('C','Origen','Q','PARCIAL',20)];
