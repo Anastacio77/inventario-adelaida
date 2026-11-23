@@ -41,6 +41,11 @@ let bc=list().conciliacion;const x=bc.extracto.find(x=>x.monto===100);a(!save(re
 bc.extracto.forEach(x=>ok(req('CONCILIAR',{extracto:x.id,linea:bc.libro.find(y=>y.monto===x.monto).id})));bc=list().conciliacion;a.equal(bc.cruces.length,4);a.equal(bc.sinBanco,0);a.equal(bc.sinLibro,0);a.equal(bc.diferenciaAjustada,0);a(!save(req('CONCILIAR',{extracto:x.id,linea:bc.libro.find(y=>y.monto===100).id})).ok);ok(req('DESCONCILIAR',{cruce:bc.cruces[0].id}));a.equal(list().conciliacion.cruces.length,3);
 // Reversal preserves original entries and changes totals through opposite lines.
 p=req('ASIENTO',{fecha:day,tipo:'MANUAL',referencia:'X',concepto:'Gasto para reversar',lineas:[line('5201',15,0),line('1101',0,15)]});const original=ok(p).documento,antes=list().resultados.resultado;ok(req('REVERSA',{poliza:original,fecha:'2026-11-18',motivo:'Correccion de captura'}));a.equal(list().resultados.resultado,antes+15);a(!save(req('REVERSA',{poliza:original,fecha:'2026-11-18',motivo:'No repetir'})).ok);
+// Manual inventory issue and linked journal reversal remain balanced, without guessing classification.
+const inventarioAntes=list().saldos.find(x=>x.codigo==='1104').saldo;
+const salidaPoliza=ok(req('ASIENTO',{fecha:day,tipo:'AJUSTE',referencia:'SAL-PRUEBA-FILA-2',concepto:'Salida manual documentada',lineas:[line('5101',60,0),line('1104',0,60)]})).documento;
+const reversaSalida=req('REVERSA',{poliza:salidaPoliza,fecha:'2026-11-18',motivo:'ANULACION salida duplicada, lotes originales restaurados'});
+ok(reversaSalida);a(save(reversaSalida).yaProcesado);a.equal(list().saldos.find(x=>x.codigo==='1104').saldo,inventarioAntes);a.equal(list().balance.diferencia,0);
 // Independent branch ledger and consolidated reports.
 ok(req('INICIO',{desde:'2026-11-01'},'Terminal'));ok(req('ASIENTO',{fecha:day,tipo:'MANUAL',referencia:'VT',concepto:'Venta sucursal Terminal',lineas:[line('1101',30,0),line('4101',0,30)]},'Terminal'));a.equal(list({sucursal:'Terminal'}).resultados.ingresos,30);a.equal(list().consolidado.resultados.ingresos,list().resultados.ingresos+30);a.equal(list().consolidado.balance.diferencia,0);
 // Month lock prevents backdating, current month cannot be closed.
