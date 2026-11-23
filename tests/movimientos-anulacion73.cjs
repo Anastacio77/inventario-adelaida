@@ -47,10 +47,30 @@ for(const m of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi))new vm.Scr
 console.log('OK historial filtros/permisos, reversa exacta de lotes, idempotencia, 44 cortes simulados, bloqueo pendiente/conflictos, original inmutable, curva por fila y UI segura/reintento.');
 
 for(const separador of [' · Lotes ','·Lotes ',' • Lotes ',' \u00b7\u00a0Lotes\u00a0',' Lotes ']){
- const caso=fixture();caso.sheets.Movimientos.rows[1][14]='Regalo para abuelo Jano'+separador+'LOT-A:2';
+ const caso=fixture();caso.sheets.Movimientos.rows[1][14]='Motivo ficticio de prueba'+separador+'LOT-A:2';
  const solicitud=caso.request(),res=caso.save(solicitud);assert(res.ok,res.error);assert(caso.save(solicitud).yaProcesado);assert.equal(caso.sheets.ExistenciasSucursales.rows[1][2],5);
 }
-const caso=fixture();assert.equal(caso.ctx.miLeerLotes75_('Regalo para abuelo Jano · Lotes LOT-20261118-173029-972:1')[0].id,'LOT-20261118-173029-972');
-assert.throws(()=>caso.ctx.miLeerLotes75_('Regalo para abuelo Jano'));
+const caso=fixture();assert.equal(caso.ctx.miLeerLotes75_('Motivo ficticio de prueba · Lotes LOT-PRUEBA-75:1')[0].id,'LOT-PRUEBA-75');
+assert.throws(()=>caso.ctx.miLeerLotes75_('Motivo ficticio de prueba'));
 assert.throws(()=>caso.ctx.miLeerLotes75_('Lotes LOT-A:1 texto ajeno'));
 console.log('OK lectura lotes: nota de captura, espacios variables/NBSP, delimitadores y repeticion sin duplicar.');
+// Adjusting entry creates its own lot and immutable movement; it is never a purchase or reversal.
+function entradaReq(){return {idSolicitud:'AE76-prueba0001',codigo:'SKU',cantidad:2,costo:12.75,motivo:'Diferencia de conteo verificada',loteReferencia:'Conteo noviembre',sucursal:'LAPAZ'};}
+let e=fixture(),ep=entradaReq(),er=e.ctx.ajusteEntrada76_('t',ep);assert(er.ok,er.error);assert.equal(er.existencia,5);assert.equal(e.sheets.Productos.rows[1][8],6);assert.equal(e.sheets.Lotes.rows.at(-1)[6],12.75);assert.equal(e.sheets.Lotes.rows.at(-1)[4],2);assert.equal(e.sheets.Movimientos.rows.at(-1)[7],'AJUSTE ENTRADA');assert.equal(e.sheets.Movimientos.rows.at(-1)[9],3);assert.equal(e.sheets.Movimientos.rows.at(-1)[10],5);assert(e.ctx.ajusteEntrada76_('t',ep).yaProcesado);assert.equal(e.sheets.Movimientos.rows.length,3);assert(!e.ctx.ajusteEntrada76_('t',{...ep,cantidad:3}).ok);
+e=fixture();e.role('BODEGA');assert.throws(()=>e.ctx.ajusteEntrada76_('t',ep));
+for(const patch of [{cantidad:0},{cantidad:1.5},{costo:''},{costo:-1},{costo:0.00001},{motivo:'corto'},{motivo:'=SUM(1,2)'},{loteReferencia:'=A1'}]){e=fixture();assert(!e.ctx.ajusteEntrada76_('t',{...entradaReq(),...patch}).ok);assert.equal(e.sheets.Movimientos.rows.length,2);}
+for(let cut=1;cut<=42;cut++){
+ e=fixture();ep=entradaReq();e.setFail(cut);er=e.ctx.ajusteEntrada76_('t',ep);e.setFail(0);
+ if(!er.ok){assert(er.requiereRevision);assert.throws(()=>e.ctx.miBloquearEscritura73_('venta'));assert(!e.ctx.ajusteEntrada76_('t',{...ep,idSolicitud:'AE76-segundo0002'}).ok);assert(!e.save(e.request()).ok);er=e.ctx.ajusteEntrada76_('t',ep);assert(er.ok,er.error);}
+ assert(e.ctx.ajusteEntrada76_('t',ep).yaProcesado);assert.equal(e.sheets.ExistenciasSucursales.rows[1][2],5);assert.equal(e.sheets.Movimientos.rows.length,3);assert.equal(e.sheets.Lotes.rows.length,4);
+}
+e=fixture();e.sheets.Lotes.rows[1][5]=99;assert(!e.ctx.ajusteEntrada76_('t',entradaReq()).ok);assert.equal(e.sheets.Movimientos.rows.length,2);
+// A missing branch row may be created at zero only when its lot balance is also zero.
+e=fixture();e.sheets.ExistenciasSucursales.rows.splice(1,1);e.sheets.Lotes.rows.splice(1,1);e.sheets.Productos.rows[1][8]=1;er=e.ctx.ajusteEntrada76_('t',entradaReq());assert(er.ok,er.error);assert.equal(er.existencia,2);
+console.log('OK ajuste entrada: ADMIN, costo/motivo, lote nuevo, historial, sucursal, controles y 42 cortes/reanudaciones sin duplicar.');
+const ids76=Object.fromEntries(['ajusteEntrada76','ae76Enviar','ae76Cantidad','ae76Costo','ae76Motivo','ae76Referencia','ae76Estado','pExistencia'].map(id=>[id,{value:'',disabled:false,hidden:false,textContent:''}])),store76=new Map(),calls76=[];
+const front76={SESION:{usuario:'admin',rol:'ADMIN'},TOKEN:'t',SUCURSAL:'LAPAZ',productoActual:{codigo:'SKU',sucursal:'LAPAZ',existencia:3},CATALOGO_POS:[],CATALOGO_POS_TS:0,crypto:{randomUUID:()=> 'uuid-prueba-0001'},Date,Math,Number,JSON,String,$:id=>ids76[id],Q:n=>'Q'+n,confirm:()=>true,msg:(id,text)=>ids76[id].textContent=text,api:(accion,p,cb)=>calls76.push({accion,p,cb}),localStorage:{getItem:k=>store76.get(k)||null,setItem:(k,v)=>store76.set(k,v),removeItem:k=>store76.delete(k)}};
+vm.createContext(front76);vm.runInContext(html.slice(html.indexOf('let AE76_BUSY='),html.indexOf('let SALIDA_ENVIANDO=')),front76);
+front76.prepararEntrada76();assert(!ids76.ajusteEntrada76.hidden);front76.SESION.rol='BODEGA';front76.prepararEntrada76();assert(ids76.ajusteEntrada76.hidden);front76.SESION.rol='ADMIN';
+ids76.ae76Cantidad.value='2';ids76.ae76Costo.value='12.75';ids76.ae76Motivo.value='Diferencia confirmada';front76.registrarEntrada76();front76.registrarEntrada76();assert.equal(calls76.length,1);assert(ids76.ae76Enviar.disabled);calls76[0].cb({ok:false,error:'Tiempo agotado'});ids76.ae76Cantidad.value='99';front76.registrarEntrada76();assert.equal(calls76.length,2);assert.deepEqual(calls76[0].p,calls76[1].p);calls76[1].cb({ok:true,documento:'AE76-test',cantidad:2,lote:'LOT-AE76-test',existencia:5,existenciaTotal:6});assert.equal(store76.size,0);assert.equal(ids76.ae76Cantidad.value,'');assert.equal(front76.productoActual.existencia,5);
+console.log('OK formulario entrada: permisos, confirmacion, doble clic, motivo/costo y reconsulta inmutable ante tiempo agotado.');
