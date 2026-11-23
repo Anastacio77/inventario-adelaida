@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
-const source=fs.readFileSync(process.argv[2]||'entrega/Code_Interfaz_Intuitiva_71.gs','utf8');
+const source=fs.readFileSync(process.argv[2]||'entrega/Code_Stock_Sucursales_72.gs','utf8');
 const code=source.slice(source.indexOf('function nitIdentificadorCliente_('),source.indexOf('function registrarCreditoVenta_('));
 const rows=[['ID','Nombre','NIT','Telefono','WhatsApp','Direccion','Limite','Saldo','Activo','Fecha']];
 let seq=0;
