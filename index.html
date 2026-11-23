@@ -400,7 +400,7 @@ body.ux71-activa #ux71EstadoCompras{position:sticky;top:8px;z-index:35;backgroun
 
       <div id="movimientoBox">
         <div class="mensaje info" style="margin-top:12px">
-          <b>Entradas bloqueadas desde Inventario.</b>
+          <b>Mercancia nueva desde Compras.</b>
           La mercanc&#237;a nueva debe registrarse en <b>Compras</b> y entrar a existencia &#250;nicamente al
           <b>recibir la orden de compra</b>. Traslados y devoluciones conservan sus propios flujos.
         </div>
@@ -417,6 +417,14 @@ body.ux71-activa #ux71EstadoCompras{position:sticky;top:8px;z-index:35;backgroun
           &#8722; Registrar ajuste de salida
         </button>
         <div id="salidaEstado" role="status" aria-live="polite"></div>
+        <details id="ajusteEntrada76" hidden style="margin-top:16px"><summary>Ajuste de entrada (administrador)</summary>
+        <p>Correccion justificada de existencia. Genera un lote nuevo con costo; para revertir una salida use Anular salida en el historial.</p>
+        <label>Cantidad *</label><input id="ae76Cantidad" type="number" min="1" step="1">
+        <label>Costo unitario Q *</label><input id="ae76Costo" type="number" min="0" step="0.0001">
+        <label>Referencia del lote (opcional)</label><input id="ae76Referencia" maxlength="100" placeholder="El sistema genera un identificador de lote unico">
+        <label>Motivo obligatorio *</label><textarea id="ae76Motivo" minlength="8" maxlength="200"></textarea>
+        <button id="ae76Enviar" class="btnVerde" onclick="registrarEntrada76()">Registrar ajuste de entrada</button>
+        <div id="ae76Estado" role="status" aria-live="polite"></div></details>
       </div>
     </div>
     <div id="historialMovimientosCard73" class="card">
@@ -1567,7 +1575,7 @@ body.ux71-activa #ux71EstadoCompras{position:sticky;top:8px;z-index:35;backgroun
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.11.23-LECTURA-LOTES-75';
+const VERSION_SISTEMA_UI='2026.11.23-AJUSTE-ENTRADA-76';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -5324,6 +5332,7 @@ function consultar(cod){
       }
 
       productoActual=p;
+      prepararEntrada76();
       cargarAtributosProducto();
 
       $('pCodigo').textContent=
@@ -5463,6 +5472,39 @@ function anularMovimiento73(){
   msg('hmMensaje73',r.documento+': '+r.cantidad+' unidades restauradas para '+r.codigo+'. Existencia: '+r.existencia+'. Original conservado. Revise la reversa contable si habia contabilizado la salida. Pulse Consultar para actualizar.','ok');
  });
 }
+let AE76_BUSY=false;
+function claveEntrada76(){return 'adelaida-entrada76-'+SESION.usuario+'-'+SUCURSAL;}
+function pendienteEntrada76(){try{return JSON.parse(localStorage.getItem(claveEntrada76())||'null');}catch(e){return null;}}
+function prepararEntrada76(){
+ const box=$('ajusteEntrada76');if(!box)return;
+ box.hidden=!SESION||SESION.rol!=='ADMIN';if(box.hidden)return;
+ const p=pendienteEntrada76();$('ae76Enviar').textContent=p?'Consultar / reanudar MISMO ajuste':'Registrar ajuste de entrada';
+ if(p)msg('ae76Estado','Ajuste pendiente: '+p.codigo+' | '+p.cantidad+' unidades | '+p.idSolicitud+'. Se consultara la misma solicitud, sin modificar sus datos.','info');
+}
+function registrarEntrada76(){
+ if(AE76_BUSY||!SESION||SESION.rol!=='ADMIN')return;
+ let p=pendienteEntrada76();
+ if(!p){
+  if(!productoActual||productoActual.sucursal!==SUCURSAL)return msg('ae76Estado','Consulte el producto en la sucursal actual.','error');
+  const cantidad=Number($('ae76Cantidad').value),costoRaw=$('ae76Costo').value,costo=Number(costoRaw),motivo=$('ae76Motivo').value.trim(),loteReferencia=$('ae76Referencia').value.trim();
+  if(!Number.isSafeInteger(cantidad)||cantidad<=0||!costoRaw.trim()||!Number.isFinite(costo)||costo<0||motivo.length<8||motivo.length>200)return msg('ae76Estado','Indique cantidad positiva, costo unitario y motivo de 8 a 200 caracteres.','error');
+  p={idSolicitud:'AE76-'+(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2)),codigo:productoActual.codigo,cantidad,costo,motivo,loteReferencia,sucursal:SUCURSAL};
+ }
+ if(!confirm('AJUSTE DE ENTRADA: '+p.codigo+' | '+p.cantidad+' unidades | Costo unitario '+Q(p.costo)+' | '+p.sucursal+' | '+p.motivo+' ¿Confirmar?'))return;
+ const key=claveEntrada76(),token=TOKEN,usuario=SESION.usuario;
+ try{localStorage.setItem(key,JSON.stringify(p));}catch(e){return msg('ae76Estado','No se pudo conservar la solicitud. No se envio.','error');}
+ AE76_BUSY=true;$('ae76Enviar').disabled=true;msg('ae76Estado','Procesando ajuste. Espere la confirmacion.','info');
+ api('ajusteentrada',p,r=>{
+  AE76_BUSY=false;$('ae76Enviar').disabled=false;
+  if(TOKEN!==token||!SESION||SESION.usuario!==usuario||SUCURSAL!==p.sucursal)return;
+  if(!r||!r.ok){if(r&&r.sinCambios)localStorage.removeItem(key);$('ae76Enviar').textContent=r&&r.sinCambios?'Registrar ajuste de entrada':'Consultar / reanudar MISMO ajuste';return msg('ae76Estado',(r&&r.error||'No se recibio confirmacion.')+(!(r&&r.sinCambios)?' Consulte la MISMA solicitud.':''),'error');}
+  localStorage.removeItem(key);$('ae76Enviar').textContent='Registrar ajuste de entrada';['ae76Cantidad','ae76Costo','ae76Motivo','ae76Referencia'].forEach(id=>$(id).value='');
+  if(productoActual&&productoActual.codigo===p.codigo){productoActual.existencia=r.existencia;productoActual.existenciaTotal=r.existenciaTotal;$('pExistencia').textContent=r.existencia;}
+  CATALOGO_POS=[];CATALOGO_POS_TS=0;
+  msg('ae76Estado','Ajuste completado: '+r.documento+' | '+r.cantidad+' unidades | '+r.lote+' | Existencia: '+r.existencia+'. Revise su clasificacion contable.','ok');
+ });
+}
+
 let SALIDA_ENVIANDO=false;
 function claveSalida(kind){return 'adelaida-salida-'+SESION.usuario+'-'+SUCURSAL+'-'+kind;}
 function pendienteSalida(kind){try{return JSON.parse(localStorage.getItem(claveSalida(kind))||'null');}catch(e){return null;}}
@@ -13128,7 +13170,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.11.23-LECTURA-LOTES-75';
+  const APP_VERSION='2026.11.23-AJUSTE-ENTRADA-76';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
