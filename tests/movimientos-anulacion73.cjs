@@ -45,3 +45,12 @@ ui.TOKEN='TOKEN';vm.createContext(ui);vm.runInContext(html.slice(html.indexOf('c
 ui.cargarMovimientos73();t=fixture();const lista=t.history();lista.movimientos[0].nota='<img onerror=bad>';cb(lista);assert(ids.hmTabla73.innerHTML.includes('&lt;img'));ui.seleccionarMovimiento73(0);ids.hmMotivo73.value='Duplicada por error';ui.anularMovimiento73();ui.anularMovimiento73();assert.equal(calls.length,2);assert.equal(storage.size,1);cb({ok:false,error:'Tiempo agotado'});ui.anularMovimiento73();assert.deepEqual(calls[1].p,calls[2].p);cb({ok:true,documento:'AN1',codigo:'SKU',cantidad:2,existencia:5});assert.equal(storage.size,0);assert(ids.hmAnulacion73.hidden);
 for(const m of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi))new vm.Script(m[1]);
 console.log('OK historial filtros/permisos, reversa exacta de lotes, idempotencia, 44 cortes simulados, bloqueo pendiente/conflictos, original inmutable, curva por fila y UI segura/reintento.');
+
+for(const separador of [' · Lotes ','·Lotes ',' • Lotes ',' \u00b7\u00a0Lotes\u00a0',' Lotes ']){
+ const caso=fixture();caso.sheets.Movimientos.rows[1][14]='Regalo para abuelo Jano'+separador+'LOT-A:2';
+ const solicitud=caso.request(),res=caso.save(solicitud);assert(res.ok,res.error);assert(caso.save(solicitud).yaProcesado);assert.equal(caso.sheets.ExistenciasSucursales.rows[1][2],5);
+}
+const caso=fixture();assert.equal(caso.ctx.miLeerLotes75_('Regalo para abuelo Jano · Lotes LOT-20261118-173029-972:1')[0].id,'LOT-20261118-173029-972');
+assert.throws(()=>caso.ctx.miLeerLotes75_('Regalo para abuelo Jano'));
+assert.throws(()=>caso.ctx.miLeerLotes75_('Lotes LOT-A:1 texto ajeno'));
+console.log('OK lectura lotes: nota de captura, espacios variables/NBSP, delimitadores y repeticion sin duplicar.');
