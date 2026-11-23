@@ -120,3 +120,11 @@ El archivo Apps Script se distribuye en el paquete privado; no publicar credenci
 - Mostrar el detalle en sugerencias agotadas y aviso bajo el buscador. No cambiar sucursal, no usar stock ajeno para vender y no escribir en inventario.
 - Consulta autenticada, agrupada, una lectura de existencias por lote y cache breve. Nunca confundir error de consulta con cero disponibilidad; descartar respuestas de busqueda/sucursal/sesion anteriores.
 - Conservar interfaz 71, carrito, permisos, seleccion multiple, precios, FIFO y motores PDF existentes.
+
+
+## 73 - Historial y anulacion de salidas
+- Historial por codigo, fechas, sucursal autorizada, usuario y tipo, paginado.
+- Anular exclusivamente salidas manuales como ADMIN, con motivo y confirmacion. Conservar original y crear movimiento inverso; restaurar lotes/existencias una sola vez mediante control duradero.
+- Reanudar la misma solicitud ante tiempo agotado; bloquear conflictos y otras escrituras si queda pendiente. No restaurar salidas sin lotes recuperables.
+- Movimientos manuales y sus anulaciones requieren revision contable; no crear reversas aisladas si el original no se contabilizo.
+- Conservar todas las mejoras 66-72 y pruebas de pedidos/pagos/divisas/contabilidad.
