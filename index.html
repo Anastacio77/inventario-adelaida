@@ -419,6 +419,28 @@ body.ux71-activa #ux71EstadoCompras{position:sticky;top:8px;z-index:35;backgroun
         <div id="salidaEstado" role="status" aria-live="polite"></div>
       </div>
     </div>
+    <div id="historialMovimientosCard73" class="card">
+      <h3>Historial de movimientos</h3>
+      <p>Consulta por referencia/talla. Solo ADMIN puede anular salidas manuales; se conserva el original.</p>
+      <div class="grid2">
+        <div><label>Codigo (completo o parcial)</label><input id="hmCodigo73" maxlength="100"></div>
+        <div><label>Usuario</label><input id="hmUsuario73" maxlength="100"></div>
+        <div><label>Desde</label><input id="hmDesde73" type="date"></div>
+        <div><label>Hasta</label><input id="hmHasta73" type="date"></div>
+        <div><label>Sucursal (vacia: actual)</label><input id="hmSucursal73" placeholder="Codigo de sucursal autorizado"></div>
+        <div><label>Tipo exacto (vacio: todos)</label><input id="hmTipo73" list="hmTipos73"><datalist id="hmTipos73"><option value="SALIDA"><option value="SALIDA CURVA"><option value="ANULACION SALIDA"><option value="VENTA"><option value="TRASLADO SALIDA"><option value="TRASLADO ENTRADA"><option value="ENTRADA"></datalist></div>
+      </div>
+      <button id="hmBuscar73" class="btnNegro" onclick="cargarMovimientos73(0)">Consultar movimientos</button>
+      <div id="hmMensaje73" role="status" aria-live="polite"></div><div id="hmTabla73" style="overflow:auto"></div>
+      <button id="hmMas73" hidden class="btnGris" onclick="cargarMovimientos73(HM73.siguiente)">Pagina siguiente</button>
+      <div id="hmAnulacion73" hidden>
+        <h4>Revisar salida seleccionada</h4><div id="hmDetalle73"></div>
+        <label>Motivo obligatorio</label><textarea id="hmMotivo73" maxlength="200" placeholder="Explique el error y la cantidad que corresponde devolver"></textarea>
+        <p>Restaura solo esta fila y sus lotes originales. Una curva se anula por referencia/talla. Ventas y traslados tienen su propio flujo.</p>
+        <button id="hmConfirmar73" class="btnRojo" onclick="anularMovimiento73()">Confirmar anulacion de salida</button>
+        <button class="btnGris" onclick="cerrarAnulacion73()">Cerrar detalle</button>
+      </div>
+    </div>
     <div id="inventarioCurvasCard" class="card">
       <h3 style="margin-top:0">Movimientos por paquete / curva</h3>
       <div class="sub">
@@ -1545,7 +1567,7 @@ body.ux71-activa #ux71EstadoCompras{position:sticky;top:8px;z-index:35;backgroun
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.11.23-STOCK-SUCURSALES-72';
+const VERSION_SISTEMA_UI='2026.11.23-MOVIMIENTOS-73';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -1615,7 +1637,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   $('sucursalActual').addEventListener('change',()=>{
 
     const nuevaSucursal=$('sucursalActual').value;
-
+    limpiarMovimientos73();
     limpiarStock72();
     SUCURSAL=nuevaSucursal;
     BORRADOR_POS_ACTUAL_ID='';
@@ -1850,7 +1872,7 @@ function nav69Clasificar(v,el,i){
   if(id==='bmEnCompras'||/Importaci.n masiva/.test(titulo))return ['masivo','Importacion masiva'];
   if(el.querySelector('#ccNumero'))return ['costos','Corregir costos'];if(el.querySelector('#provNombre'))return ['proveedores','Proveedores'];if(el.querySelector('#compProveedor'))return ['nueva','Nueva compra'];if(el.querySelector('#histComprasProveedor'))return ['historial','Historial por proveedor'];
  }
- if(v==='inventario'){if(id==='inventarioCurvasCard')return ['curvas','Paquetes / curvas'];if(id==='productoCard'||el.querySelector('#codigo'))return ['referencia','Consultar / movimientos'];return ['existencias','Existencias'];}
+ if(v==='inventario'){if(id==='historialMovimientosCard73')return ['movimientos','Historial de movimientos'];if(id==='inventarioCurvasCard')return ['curvas','Paquetes / curvas'];if(id==='productoCard'||el.querySelector('#codigo'))return ['referencia','Consultar / movimientos'];return ['existencias','Existencias'];}
  if(v==='nuevo'){if(id==='masivoPanel')return ['masivo','Ingreso masivo'];if(el.querySelector('#nombresPreciosFilas'))return ['precios','Nombres de precios'];if(el.querySelector('#exportarQRExcel'))return ['etiquetas','Exportar productos / QR'];return ['individual','Producto individual / corrida'];}
  if(v==='traslados')return el.querySelector('#listaTraslados')?['historial','Traslados de la sucursal']:['nuevo','Nuevo traslado'];
  if(v==='pedidos')return id==='pedidoListaCard'?['lista','Pedidos']:['detalle','Detalle / cobro'];
@@ -2571,6 +2593,7 @@ function iniciarApp(u){
   if($('atributosProductoBox')) $('atributosProductoBox').classList.toggle('oculto',!tienePermiso('PRODUCTOS'));
   if($('inventarioCurvasCard')) $('inventarioCurvasCard').classList.toggle('oculto',!tienePermiso('MOV_INVENTARIO'));
   if($('movimientoBox')) $('movimientoBox').classList.toggle('oculto',!tienePermiso('MOV_INVENTARIO'));
+  if($('historialMovimientosCard73')) $('historialMovimientosCard73').classList.toggle('oculto',!tienePermiso('MOV_INVENTARIO'));
   if($('btnGuardarPedido')) $('btnGuardarPedido').classList.toggle('oculto',!tienePermiso('PEDIDOS'));
   if($('btnReservarPedido')) $('btnReservarPedido').classList.toggle('oculto',!tienePermiso('RESERVAS'));
   if($('btnCobrarVenta')) $('btnCobrarVenta').classList.toggle('oculto',!tienePermiso('COBRAR'));
@@ -2680,6 +2703,7 @@ function ajustarUsuarioSucursal(){
 }
 
 function cerrarSesion(){
+ limpiarMovimientos73();
  limpiarStock72();
  if(typeof cerrarNavegacion69==='function')cerrarNavegacion69();
   TOKEN='';
@@ -5383,6 +5407,61 @@ function consultar(cod){
   );
 }
 
+const HM73={seq:0,busy:false,filas:[],siguiente:null,seleccion:null};
+function limpiarMovimientos73(){
+ HM73.seq++;HM73.filas=[];HM73.seleccion=null;HM73.siguiente=null;
+ ['hmTabla73','hmDetalle73','hmMensaje73'].forEach(id=>{if($(id))$(id).textContent='';});
+ if($('hmAnulacion73'))$('hmAnulacion73').hidden=true;
+ if($('hmMas73'))$('hmMas73').hidden=true;
+ if($('hmBuscar73'))$('hmBuscar73').disabled=false;
+ if($('hmSucursal73'))$('hmSucursal73').value='';
+}
+function cargarMovimientos73(offset=0){
+ if(HM73.busy)return;
+ const seq=++HM73.seq,token=TOKEN,usuario=SESION&&SESION.usuario,origen=SUCURSAL;
+ const p={codigo:$('hmCodigo73').value,usuario:$('hmUsuario73').value,desde:$('hmDesde73').value,hasta:$('hmHasta73').value,tipo:$('hmTipo73').value,sucursal:$('hmSucursal73').value.trim()||SUCURSAL,offset};
+ $('hmBuscar73').disabled=true;msg('hmMensaje73','Consultando historial...','info');
+ api('historialmovimientos',p,r=>{
+  if(seq!==HM73.seq)return;
+  $('hmBuscar73').disabled=false;
+  if(!SESION||SESION.usuario!==usuario||TOKEN!==token||SUCURSAL!==origen){HM73.filas=[];$('hmTabla73').innerHTML='';return;}
+  if(!r.ok)return msg('hmMensaje73',r.error||'No se pudo consultar.','error');
+  HM73.filas=r.movimientos||[];HM73.siguiente=r.siguiente;$('hmMas73').hidden=r.siguiente===null;
+  $('hmTabla73').innerHTML='<table class="ticketTabla"><thead><tr><th>Fecha / operacion</th><th>Codigo / producto</th><th>Tipo</th><th>Cantidad</th><th>Antes / despues</th><th>Usuario / sucursal</th><th>Nota / estado</th><th>Accion</th></tr></thead><tbody>'+HM73.filas.map((m,i)=>'<tr><td>'+esc(m.fecha)+'<br>'+esc(m.operacion)+'<br>Fila '+m.fila+'</td><td>'+esc(m.codigo)+'<br>'+esc(m.descripcion)+'</td><td>'+esc(m.tipo)+'</td><td>'+m.cantidad+'</td><td>'+m.antes+' / '+m.despues+'</td><td>'+esc(m.usuario)+' / '+esc(m.sucursal)+'</td><td>'+esc(m.nota)+'<br>'+esc(m.estado)+(m.anulacion?'<br>'+esc(m.anulacion.documento):'')+'</td><td>'+(m.puedeAnular?'<button class="btnRojo" onclick="seleccionarMovimiento73('+i+')">'+(m.motivoPendiente?'Reanudar anulacion':'Revisar / anular')+'</button>':'—')+'</td></tr>').join('')+'</tbody></table>';
+  msg('hmMensaje73',r.total+' movimientos en '+r.sucursal+'. Pagina desde '+(offset+1)+'.'+((r.pendientes||[]).length?' Hay una anulacion pendiente: reanude con el mismo administrador y sucursal.':' Sin pendientes de anulacion.'),'info');
+ });
+}
+function claveAnulacion73(m){return 'adelaida-anulacion73-'+SESION.usuario+'-'+m.sucursal+'-'+m.clave;}
+function seleccionarMovimiento73(i){
+ if(HM73.busy)return;const m=HM73.filas[i];if(!m||!m.puedeAnular)return;
+ HM73.seleccion=m;let guardado=null;try{guardado=JSON.parse(localStorage.getItem(claveAnulacion73(m))||'null');}catch(e){}
+ $('hmAnulacion73').hidden=false;$('hmDetalle73').textContent=m.codigo+' | '+m.descripcion+' | '+m.cantidad+' unidades | '+m.fecha+' | '+m.operacion+' | '+m.sucursal+' | fila '+m.fila;
+ $('hmMotivo73').value=guardado&&guardado.motivo||m.motivoPendiente||'';
+ $('hmMotivo73').disabled=!!(guardado||m.motivoPendiente);
+ $('hmConfirmar73').textContent=guardado||m.motivoPendiente?'Consultar / reanudar MISMA anulacion':'Confirmar anulacion de salida';
+}
+function cerrarAnulacion73(){if(HM73.busy)return;HM73.seleccion=null;$('hmAnulacion73').hidden=true;}
+function anularMovimiento73(){
+ if(HM73.busy||!HM73.seleccion)return;const m=HM73.seleccion,motivo=$('hmMotivo73').value.trim();
+ if(motivo.length<8||motivo.length>200)return msg('hmMensaje73','Escriba un motivo de 8 a 200 caracteres.','error');
+ if(!confirm('ANULAR SOLO ESTA SALIDA: '+m.codigo+', '+m.cantidad+' unidades, '+m.sucursal+', fila '+m.fila+'. Se restauraran sus lotes una sola vez. Motivo: '+motivo+' ¿Continuar?'))return;
+ const p={clave:m.clave,motivo,sucursal:m.sucursal},key=claveAnulacion73(m);
+ try{localStorage.setItem(key,JSON.stringify(p));}catch(e){return msg('hmMensaje73','No se pudo conservar la solicitud; no se envio ningun cambio.','error');}
+ HM73.busy=true;$('hmConfirmar73').disabled=true;$('hmMotivo73').disabled=true;msg('hmMensaje73','Procesando. No registre entradas ni repita la salida.','info');
+ const usuario=SESION.usuario,token=TOKEN;
+ api('anularsalida',p,r=>{
+  HM73.busy=false;$('hmConfirmar73').disabled=false;
+  if(!SESION||SESION.usuario!==usuario||TOKEN!==token){HM73.seleccion=null;$('hmAnulacion73').hidden=true;return;}
+  if(!r.ok){
+   if(r.sinCambios){localStorage.removeItem(key);$('hmMotivo73').disabled=false;}
+   $('hmConfirmar73').textContent=r.sinCambios?'Confirmar anulacion de salida':'Consultar / reanudar MISMA anulacion';
+   return msg('hmMensaje73',(r.error||'No se recibio confirmacion.')+(r.sinCambios?'':' Conserve esta solicitud; consulte la misma anulacion antes de otra operacion.'),'error');
+  }
+  localStorage.removeItem(key);cerrarAnulacion73();$('hmTabla73').innerHTML='';HM73.filas=[];$('hmMas73').hidden=true;
+  CATALOGO_POS=[];CATALOGO_POS_TS=0;
+  msg('hmMensaje73',r.documento+': '+r.cantidad+' unidades restauradas para '+r.codigo+'. Existencia: '+r.existencia+'. Original conservado. Revise la reversa contable si habia contabilizado la salida. Pulse Consultar para actualizar.','ok');
+ });
+}
 let SALIDA_ENVIANDO=false;
 function claveSalida(kind){return 'adelaida-salida-'+SESION.usuario+'-'+SUCURSAL+'-'+kind;}
 function pendienteSalida(kind){try{return JSON.parse(localStorage.getItem(claveSalida(kind))||'null');}catch(e){return null;}}
@@ -13048,7 +13127,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.11.23-STOCK-SUCURSALES-72';
+  const APP_VERSION='2026.11.23-MOVIMIENTOS-73';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
