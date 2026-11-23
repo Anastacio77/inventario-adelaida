@@ -134,3 +134,9 @@ El archivo Apps Script se distribuye en el paquete privado; no publicar credenci
 - Solo ADMIN: cantidad positiva, costo explicito, motivo y referencia opcional; lote unico y movimiento AJUSTE ENTRADA con cantidades antes/despues. Sin cambiar precios ni pagos a proveedores.
 - ControlAjustesEntrada duradero, mismo ID al reintentar, solicitud inmutable y bloqueo de escrituras hasta resolver conflictos; no duplicar lotes ni existencias.
 - Mercancia nueva por Compras; correccion de salidas por Anular salida; ajustes pendientes de revision contable.
+
+
+## 77 - Acceso Ajustes en Inventario
+- Pestana Ajustes con buscador y formularios originales de entrada/salida, sin desplazarse por precios/atributos; conservar datos y handlers.
+- Consultar un producto desde Ajustes conserva la opcion activa. Ficha completa disponible en Consultar / movimientos.
+- Conservar permiso MOV_INVENTARIO, entrada solo ADMIN y protecciones de 76.
