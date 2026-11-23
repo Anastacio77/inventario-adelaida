@@ -1545,7 +1545,7 @@ body.ux71-activa #ux71EstadoCompras{position:sticky;top:8px;z-index:35;backgroun
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.11.19-INTERFAZ-INTUITIVA-71';
+const VERSION_SISTEMA_UI='2026.11.23-STOCK-SUCURSALES-72';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -1616,6 +1616,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
     const nuevaSucursal=$('sucursalActual').value;
 
+    limpiarStock72();
     SUCURSAL=nuevaSucursal;
     BORRADOR_POS_ACTUAL_ID='';
     localStorage.setItem('adelaida_sucursal',SUCURSAL);
@@ -1914,7 +1915,7 @@ function opcionales71(raiz,ids,titulo){if(!raiz||raiz.querySelector('.ux71-opcio
 function marcarRequerido71(id){const e=$(id);if(!e||e.dataset.ux71Obligatorio)return;e.dataset.ux71Obligatorio='1';e.setAttribute('aria-required','true');const p=e.parentElement;let label=e.previousElementSibling;if((!label||label.tagName!=='LABEL')&&p)label=p.querySelector('label');if(label){if(!label.htmlFor)label.htmlFor=id;const s=document.createElement('span');s.className='ux71-requerido';s.textContent=' *';s.setAttribute('aria-label','obligatorio');label.appendChild(s);}}
 function verPanelPos71(panel){const root=$('ux71Pos');if(!root)return;root.dataset.panel=panel;const b=$('ux71VerPedido');if(b){b.textContent=panel==='pedido'?'Seguir agregando':'Ver pedido';b.setAttribute('aria-expanded',String(panel==='pedido'));}if(window.matchMedia('(max-width: 900px)').matches)root.scrollIntoView({behavior:'auto',block:'start'});}
 function actualizarPos71(){if(!$('ux71Pos'))return;const pares=$('posPares'),total=$('posTotal');$('ux71MovilPares').textContent=(pares?pares.textContent:'0')+' unidades';$('ux71MovilTotal').textContent=total?total.textContent:'Q0.00';const selector=$('ux71Intencion');[...selector.options].forEach(o=>o.hidden=!accionPosPermitida71(o.value));if(!accionPosPermitida71(selector.value)){const primera=[...selector.options].find(o=>!o.hidden);if(primera)selector.value=primera.value;}const modo=selector.value||'venta';[['btnCobrarVenta','venta'],['btnGuardarPedido','pedido'],['btnReservarPedido','reserva']].forEach(([id,tipo])=>{const b=$(id);if(b){b.classList.toggle('ux71-secundario',tipo!==modo);b.classList.toggle('ux71-principal',tipo===modo);}});}
-function renderProductos71(){const box=$('ux71Productos');if(!box)return;box.replaceChildren();if(typeof CATALOGO_POS==='undefined'||CATALOGO_POS_SUCURSAL!==SUCURSAL){box.textContent='Cargando productos de la sucursal...';return;}const q=String($('posCodigo').value||'').toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''),palabras=q.split(/\s+/).filter(Boolean),productos=CATALOGO_POS.filter(p=>Number(p.existencia)>0&&palabras.every(t=>[p.codigo,p.marca,p.modelo,p.color,p.talla,p.categoria].join(' ').toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(t))).slice(0,24),suc=SUCURSAL;if(!productos.length){box.textContent='Sin productos con existencia para esta busqueda. Puede buscar otro codigo o modelo.';return;}productos.forEach(p=>{const b=boton71('',()=>{if(SUCURSAL!==suc||CATALOGO_POS_SUCURSAL!==suc)return;const actual=CATALOGO_POS.find(x=>String(x.codigo)===String(p.codigo));if(actual)agregarDesdeSugerencia(actual);},'ux71-producto');const t=document.createElement('strong');t.textContent=[p.marca,p.modelo].filter(Boolean).join(' ')||p.codigo;const d=document.createElement('span');d.textContent=[p.color,p.talla?'Talla '+p.talla:'',p.codigo].filter(Boolean).join(' - ');const stock=document.createElement('small');stock.textContent='Disponible: '+p.existencia+' | Agregar';b.append(t,d,stock);box.appendChild(b)});const n=document.createElement('small');n.className='ux71-ayuda';n.textContent='Hasta 24 referencias disponibles. Escriba marca, modelo, color, talla o codigo para acotar.';box.appendChild(n);}
+function renderProductos71(){if(typeof limpiarStock72==='function')limpiarStock72();const box=$('ux71Productos');if(!box)return;box.replaceChildren();if(typeof CATALOGO_POS==='undefined'||CATALOGO_POS_SUCURSAL!==SUCURSAL){box.textContent='Cargando productos de la sucursal...';return;}const q=String($('posCodigo').value||'').toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''),palabras=q.split(/\s+/).filter(Boolean),productos=CATALOGO_POS.filter(p=>Number(p.existencia)>0&&palabras.every(t=>[p.codigo,p.marca,p.modelo,p.color,p.talla,p.categoria].join(' ').toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(t))).slice(0,24),suc=SUCURSAL;if(!productos.length){box.textContent='Sin productos con existencia para esta busqueda. Puede buscar otro codigo o modelo.';return;}productos.forEach(p=>{const b=boton71('',()=>{if(SUCURSAL!==suc||CATALOGO_POS_SUCURSAL!==suc)return;const actual=CATALOGO_POS.find(x=>String(x.codigo)===String(p.codigo));if(actual)agregarDesdeSugerencia(actual);},'ux71-producto');const t=document.createElement('strong');t.textContent=[p.marca,p.modelo].filter(Boolean).join(' ')||p.codigo;const d=document.createElement('span');d.textContent=[p.color,p.talla?'Talla '+p.talla:'',p.codigo].filter(Boolean).join(' - ');const stock=document.createElement('small');stock.textContent='Disponible: '+p.existencia+' | Agregar';b.append(t,d,stock);box.appendChild(b)});const n=document.createElement('small');n.className='ux71-ayuda';n.textContent='Hasta 24 referencias disponibles. Escriba marca, modelo, color, talla o codigo para acotar.';box.appendChild(n);}
 function pos71(){if(UX71.pos){actualizarPos71();renderProductos71();return;}const buscar=$('posCodigo');if(!buscar)return;const card=buscar.closest('.card'),originales=[...card.children],rejilla=document.createElement('div');rejilla.id='ux71Pos';rejilla.className='ux71-pos';rejilla.dataset.panel='productos';const izquierda=document.createElement('section');izquierda.className='ux71-buscador';izquierda.setAttribute('aria-label','Buscar productos');const derecha=document.createElement('section');derecha.className='ux71-pedido';derecha.setAttribute('aria-label','Pedido y cobro');const h=document.createElement('h3');h.textContent='Buscar productos';izquierda.appendChild(h);const busqueda=buscar.closest('.fila'),espera=$('pedidosEsperaPosBox'),mensaje=$('mensajePos');originales.forEach((el,i)=>{if(el===mensaje)return;if([busqueda,$('btnCamPos'),$('scanPosBox'),espera].includes(el))izquierda.appendChild(el);else derecha.appendChild(el)});card.appendChild(mensaje);card.appendChild(rejilla);rejilla.append(izquierda,derecha);const productos=document.createElement('div');productos.id='ux71Productos';productos.className='ux71-productos';izquierda.appendChild(productos);const back=boton71('Seguir agregando productos',()=>verPanelPos71('productos'));back.classList.add('ux71-solo-movil');derecha.prepend(back);const label=document.createElement('label');label.htmlFor='ux71Intencion';label.textContent='\u00bfQu\u00e9 desea hacer con este pedido?';const modo=document.createElement('select');modo.id='ux71Intencion';[['venta','Cobrar venta'],['pedido','Guardar pedido'],['reserva','Reservar pedido']].forEach(([v,t])=>modo.add(new Option(t,v)));modo.onchange=actualizarPos71;derecha.prepend(modo);derecha.prepend(label);
  const barra=document.createElement('div');barra.className='ux71-resumen-movil noPrint';const cuenta=document.createElement('span');cuenta.id='ux71MovilPares';const importe=document.createElement('strong');importe.id='ux71MovilTotal';const abrir=boton71('Ver pedido',()=>verPanelPos71(rejilla.dataset.panel==='pedido'?'productos':'pedido'),'btnAzul');abrir.id='ux71VerPedido';barra.append(cuenta,importe,abrir);card.appendChild(barra);
  const datos=$('posCliente').closest('.grid2');opcionales71(derecha,['posTelefono','posWhatsapp','posDireccion','posNota'],'M\u00e1s detalles: contacto y nota (opcional)');
@@ -2679,6 +2680,7 @@ function ajustarUsuarioSucursal(){
 }
 
 function cerrarSesion(){
+ limpiarStock72();
  if(typeof cerrarNavegacion69==='function')cerrarNavegacion69();
   TOKEN='';
   SESION=null;
@@ -3069,6 +3071,7 @@ function auto(
         getT()
       );
 
+      if(modo==='pos')limpiarStock72();
       const q=
         this.value.trim();
 
@@ -3139,6 +3142,60 @@ document.addEventListener('keydown',e=>{
 
 });
 
+// Read-only cross-branch availability, batched and scoped to the current session.
+const STOCK72={cache:new Map(),pendientes:new Map(),vuelos:new Map(),timer:null,contexto:'',aviso:0};
+function codigoStock72(c){return String(c||'').trim().toUpperCase();}
+function consultarStock72(codigo,cb){
+  const contexto=TOKEN+'|'+SUCURSAL,c=codigoStock72(codigo);
+  if(STOCK72.contexto!==contexto){STOCK72.cache.clear();STOCK72.pendientes.clear();STOCK72.vuelos.clear();STOCK72.contexto=contexto;}
+  if(!c||!TOKEN){cb(null);return;}
+  const hit=STOCK72.cache.get(c);
+  if(hit&&Date.now()-hit.ts<10000){cb(hit.datos);return;}
+  if(STOCK72.vuelos.has(c)){STOCK72.vuelos.get(c).push(cb);return;}
+  if(!STOCK72.pendientes.has(c))STOCK72.pendientes.set(c,[]);
+  STOCK72.pendientes.get(c).push(cb);
+  if(STOCK72.timer)return;
+  STOCK72.timer=setTimeout(()=>{
+    STOCK72.timer=null;
+    const ctx=STOCK72.contexto,token=TOKEN,suc=SUCURSAL,lote=[...STOCK72.pendientes.entries()];
+    STOCK72.pendientes.clear();
+    if(!lote.length)return;
+    lote.forEach(([c,cbs])=>STOCK72.vuelos.set(c,cbs));
+    api('stocksucursales',{codigos:JSON.stringify(lote.map(x=>x[0]))},r=>{
+      if(TOKEN!==token||SUCURSAL!==suc||STOCK72.contexto!==ctx)return;
+      lote.forEach(([cod,cbs])=>{
+        STOCK72.vuelos.delete(cod);
+        const datos=r&&r.ok&&r.productos&&Object.prototype.hasOwnProperty.call(r.productos,cod)?r.productos[cod]:null;
+        if(datos)STOCK72.cache.set(cod,{ts:Date.now(),datos});
+        cbs.forEach(fn=>fn(datos));
+      });
+    });
+  },0);
+}
+function textoStock72(codigo,datos){
+  const base=codigo+': sin existencia en '+SUCURSAL+'. ';
+  if(!datos)return base+'No se pudo consultar otras sucursales. Vuelva a consultar.';
+  const disponibles=Object.entries(datos).filter(([s,n])=>s!==SUCURSAL&&Number(n)>0);
+  return base+(disponibles.length?'Disponible en: '+disponibles.map(([s,n])=>s+': '+Number(n)+' '+(Number(n)===1?'unidad':'unidades')).join(' | ')+'.':'Sin existencia en las otras sucursales activas.');
+}
+function detalleStock72(nodo,p){
+  const suc=SUCURSAL,token=TOKEN,input=$('posCodigo'),q=input?input.value:'';
+  nodo.textContent='Consultando existencia en otras sucursales...';
+  consultarStock72(p.codigo,datos=>{
+    if(TOKEN!==token||SUCURSAL!==suc||!nodo.isConnected||(input&&input.value!==q))return;
+    nodo.textContent=textoStock72(p.codigo,datos);
+  });
+}
+function avisarStock72(p){
+  let box=$('posStockOtras72');
+  if(!box){box=document.createElement('div');box.id='posStockOtras72';box.className='mensaje info';box.setAttribute('role','status');box.setAttribute('aria-live','polite');const buscador=$('posCodigo').closest('.fila');buscador.after(box);}
+  box.hidden=false;
+  const serial=++STOCK72.aviso,suc=SUCURSAL,token=TOKEN,q=$('posCodigo').value;
+  box.textContent=p.codigo+': sin existencia en '+suc+'. Consultando otras sucursales...';
+  consultarStock72(p.codigo,datos=>{if(serial===STOCK72.aviso&&TOKEN===token&&SUCURSAL===suc&&$('posCodigo').value===q)box.textContent=textoStock72(p.codigo,datos);});
+}
+function limpiarStock72(){STOCK72.aviso++;const box=$('posStockOtras72');if(box)box.hidden=true;}
+
 function pintarSugerencias(resultados,modo,q){
   const idLista=
     modo==='pos'
@@ -3198,7 +3255,8 @@ function pintarSugerencias(resultados,modo,q){
       ['pos','tras'].includes(modo)
     ){
       d.style.opacity='.55';
-      d.style.cursor='not-allowed';
+      d.style.cursor=modo==='pos'?'pointer':'not-allowed';
+      if(modo==='pos'){const otras=document.createElement('div');otras.className='sugDetalle';otras.style.color='#123b68';d.appendChild(otras);detalleStock72(otras,p);}
 
       const detalle=d.querySelector('.sugDetalle');
 
@@ -3217,6 +3275,7 @@ function pintarSugerencias(resultados,modo,q){
         ['pos','tras'].includes(modo)
       ){
         lista.classList.remove('oculto');
+        if(modo==='pos')avisarStock72(p);
         return;
       }
 
@@ -3402,6 +3461,7 @@ function sugerencias(q,modo){
 }
 
 function agregarDesdeSugerencia(p){
+  limpiarStock72();
 
   if(!p){
     return;
@@ -3410,11 +3470,7 @@ function agregarDesdeSugerencia(p){
   const disponible=Number(p.existencia)||0;
 
   if(disponible<=0){
-    return msg(
-      'mensajePos',
-      'Producto agotado en '+SUCURSAL+'.',
-      'error'
-    );
+    return avisarStock72(p);
   }
 
   let x=carrito.find(
@@ -3463,6 +3519,7 @@ function agregarDesdeSugerencia(p){
 }
 
   function agregar(cod,intento=0){
+  limpiarStock72();
   $('mensajePos').innerHTML='';
 
   const c=
@@ -3531,13 +3588,7 @@ function agregarDesdeSugerencia(p){
       }
 
       if(p.existencia<=0){
-        return msg(
-          'mensajePos',
-          'Producto agotado en '+
-          SUCURSAL+
-          '.',
-          'error'
-        );
+        return avisarStock72(p);
       }
 
       const x=
@@ -12997,7 +13048,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.11.19-INTERFAZ-INTUITIVA-71';
+  const APP_VERSION='2026.11.23-STOCK-SUCURSALES-72';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
