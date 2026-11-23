@@ -1567,7 +1567,7 @@ body.ux71-activa #ux71EstadoCompras{position:sticky;top:8px;z-index:35;backgroun
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.11.23-MOVIMIENTOS-73';
+const VERSION_SISTEMA_UI='2026.11.23-ANULACION-CORREGIDA-74';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -5452,7 +5452,8 @@ function anularMovimiento73(){
  api('anularsalida',p,r=>{
   HM73.busy=false;$('hmConfirmar73').disabled=false;
   if(!SESION||SESION.usuario!==usuario||TOKEN!==token){HM73.seleccion=null;$('hmAnulacion73').hidden=true;return;}
-  if(!r.ok){
+  if(!r||!r.ok){
+   r=r||{ok:false,error:'No se recibio confirmacion.'};
    if(r.sinCambios){localStorage.removeItem(key);$('hmMotivo73').disabled=false;}
    $('hmConfirmar73').textContent=r.sinCambios?'Confirmar anulacion de salida':'Consultar / reanudar MISMA anulacion';
    return msg('hmMensaje73',(r.error||'No se recibio confirmacion.')+(r.sinCambios?'':' Conserve esta solicitud; consulte la misma anulacion antes de otra operacion.'),'error');
@@ -13127,7 +13128,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.11.23-MOVIMIENTOS-73';
+  const APP_VERSION='2026.11.23-ANULACION-CORREGIDA-74';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
