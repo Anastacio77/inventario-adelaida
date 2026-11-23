@@ -1,4 +1,4 @@
-const CACHE_NAME = 'adelaida-pos-2026.11.19-INTERFAZ-INTUITIVA-71';
+const CACHE_NAME = 'adelaida-pos-2026.11.23-STOCK-SUCURSALES-72';
 const CORE = ['./', './index.html', './manifest.webmanifest', './html2pdf.bundle.min.js'];
 
 self.addEventListener('install', event => {
