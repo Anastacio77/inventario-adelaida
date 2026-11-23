@@ -94,6 +94,8 @@ body.ux71-activa #tabs .ux71-grupo button{display:block;width:100%;margin-top:4p
 
 body.ux71-activa #ux71EstadoCompras{position:sticky;top:8px;z-index:35;background:#f1f4f9;border-radius:12px}.ux71-pasos{scroll-margin-top:80px}
 
+
+#vistaInventario.ajustes77-activo #productoCard > :not(#movimientoBox):not(#ajustesResumen77){display:none!important}
 </style>
 </head>
 <body>
@@ -427,6 +429,7 @@ body.ux71-activa #ux71EstadoCompras{position:sticky;top:8px;z-index:35;backgroun
         <div id="ae76Estado" role="status" aria-live="polite"></div></details>
       </div>
     </div>
+    <div id="ajustesCard77" class="card oculto"><h3>Ajustes de inventario</h3><p>Busque la referencia y registre un ajuste de salida o entrada. Las entradas requieren administrador. Para revertir una salida use Historial de movimientos.</p></div>
     <div id="historialMovimientosCard73" class="card">
       <h3>Historial de movimientos</h3>
       <p>Consulta por referencia/talla. Solo ADMIN puede anular salidas manuales; se conserva el original.</p>
@@ -1575,7 +1578,7 @@ body.ux71-activa #ux71EstadoCompras{position:sticky;top:8px;z-index:35;backgroun
 </div>
 
 <script>
-const VERSION_SISTEMA_UI='2026.11.23-AJUSTE-ENTRADA-76';
+const VERSION_SISTEMA_UI='2026.11.23-PESTANA-AJUSTES-77';
 const DEFAULT_API_URL='https://script.google.com/macros/s/AKfycbwC8_lht-8da6pd_uaH7XtJRUjWURRgRZCNDusJke6oRv6ek86Ta5al0mtN73pK7ugaSQ/exec';
 let API_URL=localStorage.getItem('adelaida_api_url')||DEFAULT_API_URL;
 if(!localStorage.getItem('adelaida_api_url')){
@@ -1868,6 +1871,17 @@ function volverLogin(){
 }
 
 // Presentation only: retain original nodes, handlers, permissions and pending forms.
+function actualizarAjustes77(){
+ const raiz=$('vistaInventario');if(!raiz)return;
+ const activo=NAV69.secciones.get('inventario')==='ajustes';raiz.classList.toggle('ajustes77-activo',activo);
+ if(!activo)return;
+ for(const e of raiz.children){if(e.id==='productoCard'||e.querySelector('#codigo'))e.classList.remove('nav69-inactivo');}
+ let resumen=$('ajustesResumen77');if(!resumen){resumen=document.createElement('div');resumen.id='ajustesResumen77';resumen.className='mensaje info';$('productoCard').prepend(resumen);}
+ resumen.textContent=productoActual&&productoActual.sucursal===SUCURSAL?[productoActual.codigo,productoActual.marca,productoActual.modelo,productoActual.color,productoActual.talla?'Talla '+productoActual.talla:'', 'Existencia: '+productoActual.existencia].filter(Boolean).join(' | '):'Busque el producto para registrar un ajuste.';
+ const entrada=$('ajusteEntrada76');if(entrada&&!entrada.hidden)entrada.open=true;
+ const ex=$('pExistencia');if(ex&&!ex.dataset.ajustes77Observado){ex.dataset.ajustes77Observado='SI';new MutationObserver(()=>actualizarAjustes77()).observe(ex,{childList:true,characterData:true,subtree:true});}
+}
+
 const NAV69={modulo:'inicio',secciones:new Map(),grupos:new Map(),observador:null};
 function nav69Nombre(v){const b=$('tab'+v.charAt(0).toUpperCase()+v.slice(1));return b?b.textContent.replace(/^[^A-Za-z0-9]+/,'').trim():v;}
 function nav69Menu(){let menu=$('nav69Menu');if(menu)return menu;menu=document.createElement('details');menu.id='nav69Menu';menu.className='nav69-menu noPrint';const summary=document.createElement('summary');summary.textContent='Elegir modulo';menu.appendChild(summary);const marca=document.createElement('div');marca.className='nav69-marca';marca.textContent='COMERCIAL ADELAIDA';menu.appendChild(marca);document.body.prepend(menu);menu.appendChild($('tabs'));const media=window.matchMedia('(max-width: 900px)'),ajustar=()=>{menu.open=!media.matches;};ajustar();media.addEventListener('change',ajustar);const suc=$('sucursalActual');if(suc)suc.addEventListener('change',()=>document.querySelectorAll('.nav69-sucursal').forEach(e=>e.textContent='Sucursal: '+SUCURSAL));return menu;}
@@ -1880,7 +1894,7 @@ function nav69Clasificar(v,el,i){
   if(id==='bmEnCompras'||/Importaci.n masiva/.test(titulo))return ['masivo','Importacion masiva'];
   if(el.querySelector('#ccNumero'))return ['costos','Corregir costos'];if(el.querySelector('#provNombre'))return ['proveedores','Proveedores'];if(el.querySelector('#compProveedor'))return ['nueva','Nueva compra'];if(el.querySelector('#histComprasProveedor'))return ['historial','Historial por proveedor'];
  }
- if(v==='inventario'){if(id==='historialMovimientosCard73')return ['movimientos','Historial de movimientos'];if(id==='inventarioCurvasCard')return ['curvas','Paquetes / curvas'];if(id==='productoCard'||el.querySelector('#codigo'))return ['referencia','Consultar / movimientos'];return ['existencias','Existencias'];}
+ if(v==='inventario'){if(id==='ajustesCard77')return ['ajustes','Ajustes'];if(id==='historialMovimientosCard73')return ['movimientos','Historial de movimientos'];if(id==='inventarioCurvasCard')return ['curvas','Paquetes / curvas'];if(id==='productoCard'||el.querySelector('#codigo'))return ['referencia','Consultar / movimientos'];return ['existencias','Existencias'];}
  if(v==='nuevo'){if(id==='masivoPanel')return ['masivo','Ingreso masivo'];if(el.querySelector('#nombresPreciosFilas'))return ['precios','Nombres de precios'];if(el.querySelector('#exportarQRExcel'))return ['etiquetas','Exportar productos / QR'];return ['individual','Producto individual / corrida'];}
  if(v==='traslados')return el.querySelector('#listaTraslados')?['historial','Traslados de la sucursal']:['nuevo','Nuevo traslado'];
  if(v==='pedidos')return id==='pedidoListaCard'?['lista','Pedidos']:['detalle','Detalle / cobro'];
@@ -1905,6 +1919,7 @@ function seleccionarSeccion69(v,key,desplazar=true){
  if(!disponible(key))key=[...grupos.keys()].find(disponible)||grupos.keys().next().value;NAV69.secciones.set(v,key);
  grupos.forEach((g,k)=>g.elementos.forEach(e=>{e.classList.toggle('nav69-inactivo',k!==key);if(e.id==='bmEnCompras'&&e.contains($('masivoPanel')))$('masivoPanel').classList.remove('nav69-inactivo');}));
  const raiz=$('vista'+v.charAt(0).toUpperCase()+v.slice(1));raiz.querySelectorAll(':scope > .nav69-opciones button').forEach(b=>{b.classList.toggle('nav69-elegida',b.dataset.nav69Opcion===key);b.setAttribute('aria-pressed',String(b.dataset.nav69Opcion===key));b.hidden=!disponible(b.dataset.nav69Opcion);});
+ if(v==='inventario')actualizarAjustes77();
  if(desplazar)raiz.querySelector('.nav69-cabecera').scrollIntoView({behavior:'auto',block:'start'});
 }
 function abrirMenu69(){const m=nav69Menu();m.open=true;const b=$('tabs').querySelector('button.activo:not(.oculto)')||$('tabs').querySelector('button:not(.oculto)');if(b)b.focus();}
@@ -1913,7 +1928,7 @@ function actualizarNavegacion69(v){
  nav69Preparar(v);if($('posSucursalVisible'))$('posSucursalVisible').textContent='Sucursal: '+SUCURSAL;
  $('tabs').querySelectorAll('button').forEach(b=>{if(b.id==='tab'+v.charAt(0).toUpperCase()+v.slice(1))b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
  menu.open=!window.matchMedia('(max-width: 900px)').matches;
- if(!NAV69.observador){NAV69.observador=new MutationObserver(cambios=>{cambios.forEach(c=>{const e=c.target;if(e.id==='tabs'&&e.classList.contains('oculto'))return cerrarNavegacion69();if(!e.dataset.nav69Modulo||!c.oldValue)return;const antes=c.oldValue.split(/\s+/).includes('oculto'),ahora=e.classList.contains('oculto');if(antes&&!ahora&&e.dataset.nav69Modulo===NAV69.modulo){seleccionarSeccion69(e.dataset.nav69Modulo,e.dataset.nav69Seccion);}else if(!antes&&ahora&&e.dataset.nav69Modulo===NAV69.modulo&&NAV69.secciones.get(NAV69.modulo)===e.dataset.nav69Seccion){const grupo=NAV69.grupos.get(NAV69.modulo).get(e.dataset.nav69Seccion);if(grupo.elementos.every(x=>x.classList.contains('oculto'))){const volver={pos:'venta',compras:'lista',pedidos:'lista',ventas:'historial',devoluciones:'registro'};seleccionarSeccion69(NAV69.modulo,volver[NAV69.modulo]);}} });});document.querySelectorAll('.vistaApp').forEach(r=>NAV69.observador.observe(r,{attributes:true,attributeFilter:['class'],attributeOldValue:true,subtree:true}));NAV69.observador.observe($('tabs'),{attributes:true,attributeFilter:['class']});}
+ if(!NAV69.observador){NAV69.observador=new MutationObserver(cambios=>{cambios.forEach(c=>{const e=c.target;if(e.id==='tabs'&&e.classList.contains('oculto'))return cerrarNavegacion69();if(!e.dataset.nav69Modulo||!c.oldValue)return;const antes=c.oldValue.split(/\s+/).includes('oculto'),ahora=e.classList.contains('oculto');if(antes&&!ahora&&e.dataset.nav69Modulo===NAV69.modulo){seleccionarSeccion69(e.dataset.nav69Modulo,e.dataset.nav69Modulo==='inventario'&&e.dataset.nav69Seccion==='referencia'&&NAV69.secciones.get('inventario')==='ajustes'?'ajustes':e.dataset.nav69Seccion);}else if(!antes&&ahora&&e.dataset.nav69Modulo===NAV69.modulo&&NAV69.secciones.get(NAV69.modulo)===e.dataset.nav69Seccion){const grupo=NAV69.grupos.get(NAV69.modulo).get(e.dataset.nav69Seccion);if(grupo.elementos.every(x=>x.classList.contains('oculto'))){const volver={pos:'venta',compras:'lista',pedidos:'lista',ventas:'historial',devoluciones:'registro'};seleccionarSeccion69(NAV69.modulo,volver[NAV69.modulo]);}} });});document.querySelectorAll('.vistaApp').forEach(r=>NAV69.observador.observe(r,{attributes:true,attributeFilter:['class'],attributeOldValue:true,subtree:true}));NAV69.observador.observe($('tabs'),{attributes:true,attributeFilter:['class']});}
  const raiz=$('vista'+v.charAt(0).toUpperCase()+v.slice(1));if(raiz)raiz.scrollIntoView({behavior:'auto',block:'start'});
 }
 function cerrarNavegacion69(){document.body.classList.remove('nav69-activa');if($('nav69Menu'))$('nav69Menu').open=false;document.querySelectorAll('.nav69-inactivo').forEach(e=>e.classList.remove('nav69-inactivo'));}
@@ -2600,6 +2615,7 @@ function iniciarApp(u){
   mostrarSegunPermiso('tabConfig','CONFIG');
   if($('atributosProductoBox')) $('atributosProductoBox').classList.toggle('oculto',!tienePermiso('PRODUCTOS'));
   if($('inventarioCurvasCard')) $('inventarioCurvasCard').classList.toggle('oculto',!tienePermiso('MOV_INVENTARIO'));
+  if($('ajustesCard77')) $('ajustesCard77').classList.toggle('oculto',!tienePermiso('MOV_INVENTARIO'));
   if($('movimientoBox')) $('movimientoBox').classList.toggle('oculto',!tienePermiso('MOV_INVENTARIO'));
   if($('historialMovimientosCard73')) $('historialMovimientosCard73').classList.toggle('oculto',!tienePermiso('MOV_INVENTARIO'));
   if($('btnGuardarPedido')) $('btnGuardarPedido').classList.toggle('oculto',!tienePermiso('PEDIDOS'));
@@ -5333,6 +5349,7 @@ function consultar(cod){
 
       productoActual=p;
       prepararEntrada76();
+      actualizarAjustes77();
       cargarAtributosProducto();
 
       $('pCodigo').textContent=
@@ -13170,7 +13187,7 @@ function esc(v){
 </div>
 <script>
 (function(){
-  const APP_VERSION='2026.11.23-AJUSTE-ENTRADA-76';
+  const APP_VERSION='2026.11.23-PESTANA-AJUSTES-77';
   window.APP_VERSION=APP_VERSION;
   if(!('serviceWorker' in navigator)) return;
   let waitingWorker=null;
