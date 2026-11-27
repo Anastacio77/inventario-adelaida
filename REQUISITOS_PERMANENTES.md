@@ -140,3 +140,8 @@ El archivo Apps Script se distribuye en el paquete privado; no publicar credenci
 - Pestana Ajustes con buscador y formularios originales de entrada/salida, sin desplazarse por precios/atributos; conservar datos y handlers.
 - Consultar un producto desde Ajustes conserva la opcion activa. Ficha completa disponible en Consultar / movimientos.
 - Conservar permiso MOV_INVENTARIO, entrada solo ADMIN y protecciones de 76.
+
+
+## 78 - Vistas previas centradas
+- Centrar horizontalmente hoja, botones y estado de visores PDF/impresion y controles de comprobantes independientes.
+- Conservar desplazamiento en pantallas estrechas, medidas y margenes del PDF, generacion, descarga y compartir.
