@@ -1,4 +1,4 @@
-const CACHE_NAME = 'adelaida-pos-2026.11.23-PESTANA-AJUSTES-77';
+const CACHE_NAME = 'adelaida-pos-2026.11.27-VISTAS-CENTRADAS-78';
 const CORE = ['./', './index.html', './manifest.webmanifest', './html2pdf.bundle.min.js'];
 
 self.addEventListener('install', event => {
